@@ -22,8 +22,8 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   }, [doctor.hospitalId]);
 
   return (
-     <Link href={`/doctors/${doctor.id}`} className="block">
-        <div className="flex flex-col items-center text-center space-y-2">
+     <div className="flex flex-col items-center text-center space-y-2">
+        <Link href={`/doctors/${doctor.id}`} className="block">
             <Avatar className="h-24 w-24 border-4 border-primary/20">
             {doctorImage && (
                 <AvatarImage
@@ -34,16 +34,16 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             )}
             <AvatarFallback><User /></AvatarFallback>
             </Avatar>
-            <div className='w-40'>
-                <p className="font-semibold text-foreground truncate">{doctor.name}</p>
-                <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
-                 {hospital && <p className="text-xs text-muted-foreground truncate">{hospital.name}</p>}
-            </div>
-             <Button asChild size="sm" variant="accent" className="rounded-full w-full">
-                <Link href={`/doctors/${doctor.id}`}>Book</Link>
-            </Button>
+        </Link>
+        <div className='w-40'>
+            <p className="font-semibold text-foreground truncate">{doctor.name}</p>
+            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+             {hospital && <p className="text-xs text-muted-foreground truncate">{hospital.name}</p>}
         </div>
-    </Link>
+         <Button asChild size="sm" variant="accent" className="rounded-full w-full">
+            <Link href={`/doctors/${doctor.id}`}>Book</Link>
+        </Button>
+    </div>
   );
 }
 

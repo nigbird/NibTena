@@ -8,7 +8,7 @@ import {
   getHospitalById,
 } from '@/lib/data';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Search as SearchIcon } from 'lucide-react';
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { placeholderImages } from '@/lib/placeholder-images';
+import Header from '@/components/header';
 
 function DoctorCard({ doctor }: { doctor: Doctor }) {
   const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
@@ -31,9 +32,8 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   }, [doctor.hospitalId]);
 
   return (
-    <Card className="flex flex-col text-center items-center pt-6 shadow-lg transition-transform hover:-translate-y-1 h-full">
-      <CardHeader className="items-center p-4">
-        <Avatar className="h-24 w-24 mb-4 border-4 border-primary/20">
+    <Card className="flex items-start p-4 gap-4 shadow-md">
+       <Avatar className="h-20 w-20 border-2 border-primary/20">
           {doctorImage && (
             <AvatarImage
               src={doctorImage.imageUrl}
@@ -45,19 +45,16 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             <User />
           </AvatarFallback>
         </Avatar>
-        <CardTitle className="font-headline">{doctor.name}</CardTitle>
-        <Badge variant="secondary" className="mt-1">
-          {doctor.specialty}
-        </Badge>
-        {hospital && (
-          <p className="text-sm text-muted-foreground mt-2">{hospital.name}</p>
-        )}
-      </CardHeader>
-      <CardContent className="flex-grow w-full">
-        <Button asChild className="w-full" variant="accent">
-          <Link href={`/doctors/${doctor.id}`}>View Profile</Link>
-        </Button>
-      </CardContent>
+        <div className="flex-1">
+            <h3 className="font-bold text-lg">{doctor.name}</h3>
+            <Badge variant="secondary" className="mt-1">{doctor.specialty}</Badge>
+            {hospital && (
+            <p className="text-sm text-muted-foreground mt-1">{hospital.name}</p>
+            )}
+            <Button asChild size="sm" variant="accent" className="rounded-full mt-3">
+                <Link href={`/doctors/${doctor.id}`}>View Profile</Link>
+            </Button>
+        </div>
     </Card>
   );
 }
@@ -87,53 +84,47 @@ export default function SearchPage() {
   }, [selectedSpecialty, doctors]);
 
   return (
-    <div className="container py-12">
-      <div className="mb-12 text-center">
-        <h1 className="font-headline text-4xl font-bold tracking-tight">
-          Find a Doctor
-        </h1>
-        <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          Search for a doctor by their specialty to find the right care for you.
-        </p>
-      </div>
+    <>
+      <Header title="Doctors" />
+      <div className="p-4 space-y-8">
+        <div className="max-w-md mx-auto">
+            <Select
+            value={selectedSpecialty}
+            onValueChange={setSelectedSpecialty}
+            >
+            <SelectTrigger className="w-full h-12 text-base rounded-full">
+                <SearchIcon className="mr-3 h-5 w-5 text-muted-foreground" />
+                <SelectValue placeholder="Filter by specialty..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All Specialties</SelectItem>
+                {specialties.map((specialty) => (
+                <SelectItem key={specialty} value={specialty}>
+                    {specialty}
+                </SelectItem>
+                ))}
+            </SelectContent>
+            </Select>
+        </div>
 
-      <div className="max-w-md mx-auto mb-8">
-        <Select
-          value={selectedSpecialty}
-          onValueChange={setSelectedSpecialty}
-        >
-          <SelectTrigger className="w-full h-12 text-lg">
-            <SearchIcon className="mr-3 h-5 w-5" />
-            <SelectValue placeholder="Filter by specialty..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Specialties</SelectItem>
-            {specialties.map((specialty) => (
-              <SelectItem key={specialty} value={specialty}>
-                {specialty}
-              </SelectItem>
+        {filteredDoctors.length > 0 ? (
+            <div className="space-y-4">
+            {filteredDoctors.map((doctor) => (
+                <DoctorCard key={doctor.id} doctor={doctor} />
             ))}
-          </SelectContent>
-        </Select>
+            </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
+            <SearchIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-xl font-semibold font-headline">
+                No Doctors Found
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+                Try selecting a different specialty or check back later.
+            </p>
+            </div>
+        )}
       </div>
-
-      {filteredDoctors.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredDoctors.map((doctor) => (
-            <DoctorCard key={doctor.id} doctor={doctor} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
-          <SearchIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">
-            No Doctors Found
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Try selecting a different specialty or check back later.
-          </p>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

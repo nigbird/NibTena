@@ -1,13 +1,20 @@
+'use client';
+
 import { getDoctorById, getHospitalById } from '@/lib/data';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Stethoscope, User, Hospital, Wallet } from 'lucide-react';
+import { Clock, Stethoscope, User, Hospital, Wallet, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
+import { useEffect, useState, useMemo } from 'react';
+import type { Doctor, Hospital as HospitalType } from '@/lib/definitions';
+import { format, addDays } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 
 const availableSlots = [
   '09:00 AM',
@@ -21,19 +28,46 @@ const availableSlots = [
   '03:30 PM',
 ];
 
-export default async function DoctorProfilePage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function DoctorProfilePage() {
+  const params = useParams();
   const doctorId = Number(params.id);
-  const doctor = await getDoctorById(doctorId);
-  if (!doctor) {
-    notFound();
-  }
 
-  const hospital = await getHospitalById(doctor.hospitalId);
-  const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
+  const [doctor, setDoctor] = useState<Doctor | undefined>();
+  const [hospital, setHospital] = useState<HospitalType | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!doctorId) return;
+      const doctorData = await getDoctorById(doctorId);
+      if (!doctorData) {
+        notFound();
+      }
+      setDoctor(doctorData);
+      
+      const hospitalData = await getHospitalById(doctorData.hospitalId);
+      setHospital(hospitalData);
+    }
+    fetchData();
+  }, [doctorId]);
+
+  const next7Days = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
+  }, []);
+
+  const doctorImage = useMemo(() => {
+    if (!doctor) return null;
+    return placeholderImages.find((p) => p.id === doctor.imageId);
+  }, [doctor]);
+
+  if (!doctor) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Loading doctor profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-muted/20">
@@ -79,29 +113,67 @@ export default async function DoctorProfilePage({
                 <p className="text-muted-foreground">{doctor.bio}</p>
               </div>
 
-              <div>
+              <div className="space-y-6">
                 <h2 className="font-headline text-2xl font-semibold mb-4 flex items-center gap-2">
-                  <Clock className="h-6 w-6 text-accent-foreground" />
-                  Available Slots
+                  <Calendar className="h-6 w-6 text-accent-foreground" />
+                  Book an Appointment
                 </h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {availableSlots.map((slot) => (
-                    <Button
-                      key={slot}
-                      variant="outline"
-                      asChild
-                      className="transition-colors hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Link
-                        href={`/book/${doctor.id}?slot=${encodeURIComponent(
-                          slot
-                        )}`}
-                      >
+                
+                {/* Date Picker */}
+                <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
+                    <CarouselContent className="-ml-2">
+                        {next7Days.map((day, index) => (
+                            <CarouselItem key={index} className="basis-auto pl-2">
+                                <button
+                                    onClick={() => setSelectedDate(day)}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center w-20 h-24 rounded-lg transition-colors",
+                                        format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+                                        ? 'bg-primary text-primary-foreground shadow-lg'
+                                        : 'bg-background hover:bg-muted'
+                                    )}
+                                >
+                                    <span className="text-sm font-semibold">{format(day, 'EEE')}</span>
+                                    <span className="text-2xl font-bold">{format(day, 'd')}</span>
+                                    <span className="text-xs">{format(day, 'MMM')}</span>
+                                </button>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
+
+                {/* Time Slots */}
+                <div>
+                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        Available Slots for <span className="text-accent-foreground">{format(selectedDate, 'MMMM d')}</span>
+                    </h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {availableSlots.map((slot) => (
+                        <Button
+                            key={slot}
+                            variant={selectedSlot === slot ? 'accent' : 'outline'}
+                            onClick={() => setSelectedSlot(slot)}
+                            className="transition-all duration-200"
+                        >
                         {slot}
-                      </Link>
-                    </Button>
-                  ))}
+                        </Button>
+                    ))}
+                    </div>
                 </div>
+
+                <Button 
+                    asChild
+                    size="lg" 
+                    className="w-full"
+                    disabled={!selectedSlot}
+                >
+                    <Link
+                        href={`/book/${doctor.id}?slot=${encodeURIComponent(selectedSlot || '')}&date=${encodeURIComponent(format(selectedDate, 'yyyy-MM-dd'))}`}
+                    >
+                       Book Now
+                    </Link>
+                </Button>
               </div>
             </div>
           </div>

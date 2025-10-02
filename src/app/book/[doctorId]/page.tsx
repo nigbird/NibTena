@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { format } from 'date-fns';
+
 
 import { Button } from '@/components/ui/button';
 import {
@@ -48,7 +50,11 @@ export default function BookingPage({ params }: { params: { doctorId: string } }
   const doctorId = Number(params.doctorId);
   const searchParams = useSearchParams();
   const slot = searchParams.get('slot') || 'Not specified';
-  const date = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dateParam = searchParams.get('date');
+  const date = dateParam 
+    ? format(new Date(dateParam), 'EEEE, MMMM d, yyyy')
+    : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
 
   const initialState = { message: null, errors: {} };
   const bookAppointmentWithId = bookAppointment.bind(null, doctorId, slot, date);

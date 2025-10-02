@@ -1,7 +1,7 @@
 'use client';
 
 import { getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -47,11 +47,8 @@ const specialtyColors = {
 };
 
 
-export default function HospitalDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function HospitalDetailsPage() {
+  const params = useParams();
   const hospitalId = Number(params.id);
   const [hospital, setHospital] = useState<Hospital | undefined>();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -59,6 +56,8 @@ export default function HospitalDetailsPage({
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!hospitalId) return;
+    
     async function fetchData() {
       const hospitalData = await getHospitalById(hospitalId);
       if (!hospitalData) {

@@ -1,8 +1,8 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -58,7 +58,7 @@ export default function BookingPage({ params }: { params: { doctorId: string } }
 
   const initialState = { message: null, errors: {} };
   const bookAppointmentWithId = bookAppointment.bind(null, doctorId, slot, date);
-  const [state, dispatch] = useFormState<State, FormData>(bookAppointmentWithId, initialState);
+  const [state, dispatch] = useActionState<State, FormData>(bookAppointmentWithId, initialState);
   const { toast } = useToast();
 
   useEffect(() => {

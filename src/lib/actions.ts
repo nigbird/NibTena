@@ -7,9 +7,9 @@ import { addAppointment } from './data';
 
 const FormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
+  phone: z.string({ required_error: 'Please enter a phone number.' }),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
-  gender: z.enum(['male', 'female', 'other'], { required_error: 'Please select a gender.' }),
+  gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   symptoms: z.string().min(10, { message: 'Please describe your symptoms in at least 10 characters.' }),
 });
 

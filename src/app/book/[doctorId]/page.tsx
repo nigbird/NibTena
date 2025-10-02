@@ -118,7 +118,6 @@ export default function BookingPage() {
                         <SelectContent>
                             <SelectItem value="male">Male</SelectItem>
                             <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                     </Select>
                      {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}

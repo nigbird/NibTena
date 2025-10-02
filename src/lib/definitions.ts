@@ -1,0 +1,37 @@
+export type User = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: 'patient' | 'doctor' | 'hospital_admin' | 'super_admin';
+};
+
+export type Hospital = {
+  id: number;
+  name: string;
+  city: string;
+  imageId: string;
+};
+
+export type Doctor = {
+  id: number;
+  name: string;
+  specialty: string;
+  hospitalId: number;
+  imageId: string;
+  bio: string;
+};
+
+export type Appointment = {
+  id: string;
+  patientName: string;
+  patientPhone: string;
+  patientGender: string;
+  patientAge: number;
+  symptoms: string;
+  summary: string;
+  doctorId: number;
+  appointmentSlot: string;
+  appointmentDate: string;
+  status: 'confirmed' | 'cancelled' | 'completed';
+};

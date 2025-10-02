@@ -1,101 +1,202 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowRight,
-  ClipboardPenLine,
-  Search,
+  Hospital as HospitalIcon,
   Stethoscope,
+  User,
+  Search,
+  Bot,
 } from 'lucide-react';
-
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  getHospitals,
+  getDoctors,
+  getDoctorById,
+  getHospitalById,
+} from '@/lib/data';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { placeholderImages } from '@/lib/placeholder-images';
+import { useEffect, useState } from 'react';
+import type { Hospital, Doctor } from '@/lib/definitions';
 
-const features = [
-  {
-    icon: <Search className="h-8 w-8 text-primary-foreground" />,
-    title: 'Find a Doctor',
-    description: 'Easily search for hospitals and doctors by specialty and location.',
-  },
-  {
-    icon: <ClipboardPenLine className="h-8 w-8 text-primary-foreground" />,
-    title: 'Book an Appointment',
-    description: 'Choose a convenient time slot and book your appointment online.',
-  },
-  {
-    icon: <Stethoscope className="h-8 w-8 text-primary-foreground" />,
-    title: 'Consult with Experts',
-    description: 'Get professional healthcare from the comfort of your home.',
-  },
-];
+function DoctorCard({ doctor }: { doctor: Doctor }) {
+  const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
+  const [hospital, setHospital] = useState<Hospital | undefined>();
 
-export default function Home() {
-  const heroImage = placeholderImages.find(p => p.id === 'mediverse-hero');
+  useEffect(() => {
+    getHospitalById(doctor.hospitalId).then(setHospital);
+  }, [doctor.hospitalId]);
 
   return (
-    <>
-      <section className="relative w-full bg-muted/30 py-20 md:py-32 lg:py-40">
-        {heroImage && (
-            <Image
-              src={heroImage.imageUrl}
-              alt={heroImage.description}
-              fill
-              className="absolute inset-0 -z-10 h-full w-full object-cover opacity-20"
-              priority
-              data-ai-hint={heroImage.imageHint}
+    <Card className="flex flex-col text-center items-center pt-6 shadow-lg transition-transform hover:-translate-y-1 h-full">
+      <CardHeader className="items-center p-4">
+        <Avatar className="h-24 w-24 mb-4 border-4 border-primary/20">
+          {doctorImage && (
+            <AvatarImage
+              src={doctorImage.imageUrl}
+              alt={doctor.name}
+              data-ai-hint={doctorImage.imageHint}
             />
+          )}
+          <AvatarFallback>
+            <User />
+          </AvatarFallback>
+        </Avatar>
+        <CardTitle className="font-headline">{doctor.name}</CardTitle>
+        <Badge variant="secondary" className="mt-1">
+          {doctor.specialty}
+        </Badge>
+        {hospital && (
+          <p className="text-sm text-muted-foreground mt-2">{hospital.name}</p>
         )}
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-              Your Health, Simplified.
-            </h1>
-            <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              MediVerse connects you with the best doctors and hospitals. Book
-              appointments, manage your health records, and get the care you need,
-              all in one place.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Button asChild size="lg" variant="accent">
-                <Link href="/hospitals">
-                  Book an Appointment <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/doctor-dashboard">I'm a Doctor</Link>
-              </Button>
-            </div>
+      </CardHeader>
+      <CardContent className="flex-grow w-full">
+        <Button asChild className="w-full" variant="accent">
+          <Link href={`/doctors/${doctor.id}`}>View Profile</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function Home() {
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    getHospitals().then(setHospitals);
+    getDoctors().then(setDoctors);
+  }, []);
+
+  const heroBannerImage = placeholderImages.find((p) => p.id === 'hero-banner');
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Welcome Message */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold font-headline">Welcome back!</h1>
+        <p className="text-muted-foreground">How are you feeling today?</p>
+      </div>
+
+      {/* Hero Banner */}
+      {heroBannerImage && (
+        <div className="relative rounded-lg overflow-hidden bg-primary/20 p-8 mb-12 flex items-center justify-between min-h-[180px]">
+          <div className="z-10">
+            <h2 className="text-2xl font-bold text-primary-foreground">
+              Book and schedule with
+              <br />
+              the nearest doctor
+            </h2>
+            <Button asChild variant="accent" className="mt-4">
+              <Link href="/search">
+                <Search className="mr-2 h-4 w-4" /> Find Nearby
+              </Link>
+            </Button>
           </div>
+          <Image
+            src={heroBannerImage.imageUrl}
+            alt={heroBannerImage.description}
+            width={200}
+            height={200}
+            className="absolute right-4 bottom-0 z-0 opacity-80 hidden sm:block"
+            data-ai-hint={heroBannerImage.imageHint}
+          />
         </div>
+      )}
+
+      {/* Hospitals Section */}
+      <section className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold font-headline">Hospitals</h2>
+          <Button variant="link" asChild>
+            <Link href="/hospitals">
+              See All <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <Carousel
+          opts={{
+            align: 'start',
+            loop: false,
+          }}
+          className="w-full"
+        >
+          <CarouselContent>
+            {hospitals.map((hospital) => {
+              const hospitalImage = placeholderImages.find(
+                (p) => p.id === hospital.imageId
+              );
+              return (
+                <CarouselItem
+                  key={hospital.id}
+                  className="basis-1/2 md:basis-1/3 lg:basis-1/4"
+                >
+                  <Card className="overflow-hidden">
+                    {hospitalImage && (
+                      <div className="aspect-video relative overflow-hidden">
+                        <Image
+                          src={hospitalImage.imageUrl}
+                          alt={hospital.name}
+                          fill
+                          className="object-cover"
+                          data-ai-hint={hospitalImage.imageHint}
+                        />
+                      </div>
+                    )}
+                    <CardHeader className="p-4">
+                      <CardTitle className="font-headline text-base truncate">
+                        {hospital.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <Button asChild variant="outline" className="w-full">
+                        <Link href={`/hospitals/${hospital.id}`}>Details</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:inline-flex" />
+          <CarouselNext className="hidden md:inline-flex" />
+        </Carousel>
       </section>
 
-      <section id="features" className="w-full bg-background py-12 md:py-24">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center">
-            <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              How It Works
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Booking your next doctor's appointment is just a few clicks away.
-            </p>
-          </div>
-          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
-            {features.map((feature, index) => (
-              <Card key={index} className="flex flex-col items-center text-center shadow-lg">
-                <CardHeader>
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="font-headline">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      {/* Recommended Doctors Section */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold font-headline">
+            Recommended Doctors
+          </h2>
+          <Button variant="link" asChild>
+            <Link href="/search">
+              See All <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {doctors.slice(0, 4).map((doctor) => (
+            <DoctorCard key={doctor.id} doctor={doctor} />
+          ))}
         </div>
       </section>
-    </>
+    </div>
   );
 }

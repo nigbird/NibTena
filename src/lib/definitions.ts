@@ -20,6 +20,7 @@ export type Doctor = {
   hospitalId: number;
   imageId: string;
   bio: string;
+  consultationFee: number;
 };
 
 export type Appointment = {

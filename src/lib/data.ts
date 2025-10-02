@@ -7,12 +7,13 @@ const hospitals: Hospital[] = [
 ];
 
 const doctors: Doctor[] = [
-  { id: 1, name: 'Dr. Emily Carter', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-1', bio: 'Dr. Carter is a board-certified cardiologist with over 15 years of experience in treating heart conditions.' },
-  { id: 2, name: 'Dr. Benjamin Lee', specialty: 'Dermatology', hospitalId: 1, imageId: 'doctor-2', bio: 'Dr. Lee specializes in cosmetic and medical dermatology, helping patients achieve healthy skin.' },
-  { id: 3, name: 'Dr. Sophia Rodriguez', specialty: 'Neurology', hospitalId: 2, imageId: 'doctor-3', bio: 'A leading neurologist, Dr. Rodriguez focuses on degenerative brain diseases and stroke recovery.' },
-  { id: 4, name: 'Dr. Michael Chen', specialty: 'Pediatrics', hospitalId: 2, imageId: 'doctor-4', bio: 'Dr. Chen provides compassionate care for children from infancy through adolescence.' },
-  { id: 5, name: 'Dr. Olivia Garcia', specialty: 'Orthopedics', hospitalId: 3, imageId: 'doctor-5', bio: 'Specializing in sports medicine, Dr. Garcia helps athletes recover from injuries and improve performance.' },
-  { id: 6, name: 'Dr. David Kim', specialty: 'Dentistry', hospitalId: 3, imageId: 'doctor-6', bio: 'Dr. Kim offers a wide range of dental services, from routine check-ups to complex restorative procedures.' },
+  { id: 1, name: 'Dr. Emily Carter', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-1', bio: 'Dr. Carter is a board-certified cardiologist with over 15 years of experience in treating heart conditions.', consultationFee: 150 },
+  { id: 2, name: 'Dr. Benjamin Lee', specialty: 'Dermatology', hospitalId: 1, imageId: 'doctor-2', bio: 'Dr. Lee specializes in cosmetic and medical dermatology, helping patients achieve healthy skin.', consultationFee: 120 },
+  { id: 3, name: 'Dr. Sophia Rodriguez', specialty: 'Neurology', hospitalId: 2, imageId: 'doctor-3', bio: 'A leading neurologist, Dr. Rodriguez focuses on degenerative brain diseases and stroke recovery.', consultationFee: 200 },
+  { id: 4, name: 'Dr. Michael Chen', specialty: 'Pediatrics', hospitalId: 2, imageId: 'doctor-4', bio: 'Dr. Chen provides compassionate care for children from infancy through adolescence.', consultationFee: 100 },
+  { id: 5, name: 'Dr. Olivia Garcia', specialty: 'Orthopedics', hospitalId: 3, imageId: 'doctor-5', bio: 'Specializing in sports medicine, Dr. Garcia helps athletes recover from injuries and improve performance.', consultationFee: 180 },
+  { id: 6, name: 'Dr. David Kim', specialty: 'Dentistry', hospitalId: 3, imageId: 'doctor-6', bio: 'Dr. Kim offers a wide range of dental services, from routine check-ups to complex restorative procedures.', consultationFee: 90 },
+  { id: 7, name: 'Dr. Sarah Jones', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-7', bio: 'Dr. Jones brings a fresh perspective to cardiology, with a focus on preventative care and lifestyle management.', consultationFee: 160 },
 ];
 
 // In-memory store for appointments
@@ -31,7 +32,10 @@ export async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor
   return doctors.filter(d => d.hospitalId === hospitalId);
 }
 
-export async function getDoctors(): Promise<Doctor[]> {
+export async function getDoctors(specialty?: string): Promise<Doctor[]> {
+    if (specialty) {
+        return doctors.filter(d => d.specialty.toLowerCase() === specialty.toLowerCase());
+    }
     return doctors;
 }
 
@@ -55,4 +59,15 @@ export async function addAppointment(appointment: Omit<Appointment, 'id' | 'stat
     };
     appointments.push(newAppointment);
     return newAppointment;
+}
+
+export async function getSpecialties(): Promise<string[]> {
+    const specialties = new Set(doctors.map(d => d.specialty));
+    return Array.from(specialties);
+}
+
+export async function getHospitalSpecialties(hospitalId: number): Promise<string[]> {
+    const hospitalDoctors = doctors.filter(d => d.hospitalId === hospitalId);
+    const specialties = new Set(hospitalDoctors.map(d => d.specialty));
+    return Array.from(specialties);
 }

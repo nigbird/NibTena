@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -46,7 +46,8 @@ function SubmitButton() {
   );
 }
 
-export default function BookingPage({ params }: { params: { doctorId: string } }) {
+export default function BookingPage() {
+  const params = useParams();
   const doctorId = Number(params.doctorId);
   const searchParams = useSearchParams();
   const slot = searchParams.get('slot') || 'Not specified';

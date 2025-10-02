@@ -13,6 +13,7 @@ import {
   Smile,
   Sparkles,
   Star,
+  X,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { placeholderImages } from '@/lib/placeholder-images';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ export default function HospitalDetailsPage({
   const [hospital, setHospital] = useState<Hospital | undefined>();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -73,6 +75,14 @@ export default function HospitalDetailsPage({
     fetchData();
   }, [hospitalId]);
 
+  const filteredDoctors = useMemo(() => {
+    if (!selectedSpecialty) {
+      // Initially show top 5 rated as featured
+      return doctors.sort((a, b) => b.rating - a.rating).slice(0, 5);
+    }
+    return doctors.filter(doctor => doctor.specialty === selectedSpecialty);
+  }, [doctors, selectedSpecialty]);
+
   if (!hospital) {
     return <div>Loading...</div>; // Or a skeleton loader
   }
@@ -81,8 +91,6 @@ export default function HospitalDetailsPage({
     (p) => p.id === hospital.imageId
   );
   
-  const featuredDoctors = doctors.sort((a, b) => b.rating - a.rating).slice(0, 5);
-
   return (
     <div className="flex flex-col">
        <Header title={hospital.name} />
@@ -116,12 +124,16 @@ export default function HospitalDetailsPage({
                     const colorClasses = specialtyColors[specialty as keyof typeof specialtyColors] || 'bg-gray-100 text-gray-700';
                     return (
                         <CarouselItem key={specialty} className="basis-1/4 sm:basis-1/5 md:basis-1/6 pl-4">
-                             <Link href={`/search?specialty=${specialty}`} className="flex flex-col items-center justify-center space-y-2 group">
-                                <div className={cn("flex h-16 w-16 items-center justify-center rounded-full transition-all group-hover:scale-105", colorClasses)}>
+                             <button onClick={() => setSelectedSpecialty(specialty)} className="flex flex-col items-center justify-center space-y-2 group w-full">
+                                <div className={cn(
+                                    "flex h-16 w-16 items-center justify-center rounded-full transition-all group-hover:scale-105", 
+                                    colorClasses,
+                                    selectedSpecialty === specialty && 'ring-2 ring-primary'
+                                    )}>
                                     <Icon className="h-8 w-8" />
                                 </div>
                                 <p className="text-xs font-medium text-center text-muted-foreground">{specialty}</p>
-                            </Link>
+                            </button>
                         </CarouselItem>
                     )
                 })}
@@ -130,9 +142,18 @@ export default function HospitalDetailsPage({
       </div>
 
        <div className="p-4">
-        <h2 className="font-headline text-xl font-bold mb-4">Featured Doctors</h2>
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="font-headline text-xl font-bold">
+                {selectedSpecialty ? `${selectedSpecialty} Doctors` : 'Featured Doctors'}
+            </h2>
+            {selectedSpecialty && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedSpecialty(null)} className="flex items-center gap-1">
+                    <X className="h-4 w-4" /> Clear
+                </Button>
+            )}
+        </div>
         <div className="space-y-4">
-          {featuredDoctors.map((doctor) => {
+          {filteredDoctors.map((doctor) => {
             const doctorImage = placeholderImages.find(
               (p) => p.id === doctor.imageId
             );

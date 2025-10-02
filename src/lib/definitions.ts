@@ -21,6 +21,7 @@ export type Doctor = {
   imageId: string;
   bio: string;
   consultationFee: number;
+  rating: number;
 };
 
 export type Appointment = {

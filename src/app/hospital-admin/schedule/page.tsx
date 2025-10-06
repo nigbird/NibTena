@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, Settings, User } from "lucide-react";
@@ -11,6 +11,7 @@ import { getDoctorsByHospitalId } from '@/lib/data';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
+import { useToast } from '@/hooks/use-toast';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
@@ -19,6 +20,10 @@ export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [bookingWindow, setBookingWindow] = useState('30');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('18:00');
+  const { toast } = useToast();
 
   const fetchDoctors = useCallback(async () => {
     const doctorsData = await getDoctorsByHospitalId(MOCK_HOSPITAL_ID);
@@ -38,6 +43,16 @@ export default function ScheduleSettingsPage() {
     setIsDrawerOpen(false);
     setSelectedDoctor(null);
   }
+
+  const handleHospitalSettingsSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Here you would typically call a server action to save the settings
+    console.log({ bookingWindow, startTime, endTime });
+    toast({
+      title: 'Settings Saved',
+      description: 'Hospital-wide booking rules have been updated.',
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -86,40 +101,59 @@ export default function ScheduleSettingsPage() {
       </Card>
 
       {/* Hospital-Wide Booking Rules Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Hospital-Wide Booking Rules
-          </CardTitle>
-          <CardDescription>Set global policies for appointment booking.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="booking-window">Booking Window Limit (Days)</Label>
-            <Input id="booking-window" type="number" placeholder="e.g., 30" defaultValue="30" className="max-w-xs" />
-            <p className="text-sm text-muted-foreground">How many days in advance patients can book.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Hospital Working Hours</Label>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <Input type="time" defaultValue="08:00" className="max-w-xs" />
-              </div>
-              <span className="text-muted-foreground">-</span>
-              <div className="flex items-center gap-2">
-                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <Input type="time" defaultValue="18:00" className="max-w-xs" />
-              </div>
+      <form onSubmit={handleHospitalSettingsSave}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Hospital-Wide Booking Rules
+            </CardTitle>
+            <CardDescription>Set global policies for appointment booking.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="booking-window">Booking Window Limit (Days)</Label>
+              <Input 
+                id="booking-window" 
+                type="number" 
+                placeholder="e.g., 30" 
+                value={bookingWindow}
+                onChange={(e) => setBookingWindow(e.target.value)}
+                className="max-w-xs" 
+              />
+              <p className="text-sm text-muted-foreground">How many days in advance patients can book.</p>
             </div>
-            <p className="text-sm text-muted-foreground">The general opening and closing times for the hospital.</p>
-          </div>
-        </CardContent>
-        <div className="border-t px-6 py-4">
-           <Button variant="accent">Save Changes</Button>
-        </div>
-      </Card>
+            <div className="space-y-2">
+              <Label>Hospital Working Hours</Label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="time" 
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="max-w-xs" 
+                  />
+                </div>
+                <span className="text-muted-foreground">-</span>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="time" 
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="max-w-xs" 
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">The general opening and closing times for the hospital.</p>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t px-6 py-4">
+            <Button type="submit" variant="accent">Save Changes</Button>
+          </CardFooter>
+        </Card>
+      </form>
     </div>
   );
 }

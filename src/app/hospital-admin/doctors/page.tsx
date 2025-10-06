@@ -8,6 +8,7 @@ import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId } from '@/lib/data';
 import DoctorList from '@/components/hospital-admin/doctor-list';
 import DoctorFormDrawer from '@/components/hospital-admin/doctor-form-drawer';
+import { useRouter } from 'next/navigation';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_Hospital_ID = 1;
@@ -16,9 +17,11 @@ export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
+  const router = useRouter();
 
-  const fetchDoctors = () => {
-    getDoctorsByHospitalId(MOCK_Hospital_ID).then(setDoctors);
+  const fetchDoctors = async () => {
+    const doctorsData = await getDoctorsByHospitalId(MOCK_Hospital_ID);
+    setDoctors(doctorsData);
   };
 
   useEffect(() => {
@@ -39,7 +42,13 @@ export default function DoctorsPage() {
     fetchDoctors();
     setIsDrawerOpen(false);
     setEditingDoctor(null);
+    router.refresh(); // Refresh data on the client
   };
+
+  const handleAction = () => {
+    fetchDoctors();
+    router.refresh();
+  }
 
   return (
     <div className="space-y-6">
@@ -72,8 +81,8 @@ export default function DoctorsPage() {
             <DoctorList 
               doctors={doctors} 
               onEdit={handleEditClick}
-              onDelete={fetchDoctors}
-              onStatusChange={fetchDoctors}
+              onDelete={handleAction}
+              onStatusChange={handleAction}
             />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">

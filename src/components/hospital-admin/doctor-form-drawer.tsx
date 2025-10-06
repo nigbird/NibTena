@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -19,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
+import { useRouter } from 'next/navigation';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -29,10 +29,11 @@ type DoctorFormDrawerProps = {
 };
 
 function SubmitButton({ isEditing }: { isEditing: boolean }) {
-  const { pending } = useFormStatus();
+  const [isPending, startTransition] = useTransition();
+
   return (
-    <Button type="submit" disabled={pending} variant="accent">
-      {pending ? (
+    <Button type="submit" disabled={isPending} variant="accent">
+      {isPending ? (
         <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
       ) : (
         isEditing ? 'Save Changes' : 'Add Doctor'
@@ -51,6 +52,9 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const { toast } = useToast();
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [formKey, setFormKey] = useState(Date.now());
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
 
   useEffect(() => {
     getSpecialties().then(setSpecialties);
@@ -69,6 +73,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         description: state.message,
       });
       onDoctorSaved();
+      router.refresh();
     } else if (state.message && !state.success) {
       toast({
         variant: "destructive",
@@ -76,7 +81,15 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         description: state.message,
       });
     }
-  }, [state, onDoctorSaved, toast]);
+  }, [state, onDoctorSaved, toast, router]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => {
+        formAction(formData);
+    });
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -87,7 +100,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
             {isEditing ? "Update the doctor's details below." : "Enter the details for the new doctor to add them to your hospital."}
           </SheetDescription>
         </SheetHeader>
-        <form key={formKey} action={formAction} className="grid gap-4 py-4">
+        <form key={formKey} onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
               Full Name
@@ -142,7 +155,13 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
           </div>
           <div className="flex justify-end space-x-2 pt-4">
              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <SubmitButton isEditing={isEditing} />
+            <Button type="submit" disabled={isPending} variant="accent">
+                {isPending ? (
+                    <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
+                ) : (
+                    isEditing ? 'Save Changes' : 'Add Doctor'
+                )}
+            </Button>
           </div>
         </form>
       </SheetContent>

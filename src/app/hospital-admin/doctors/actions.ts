@@ -35,7 +35,7 @@ export async function addDoctor(
   doctorId: number | null, // null for add, number for edit
   prevState: DoctorFormState, 
   formData: FormData
-) {
+): Promise<DoctorFormState> {
   const validatedFields = DoctorFormSchema.safeParse({
     name: formData.get('name'),
     specialty: formData.get('specialty'),

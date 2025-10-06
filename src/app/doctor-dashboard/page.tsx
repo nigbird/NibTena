@@ -1,4 +1,8 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { getAppointmentsByDoctorId, getDoctorById } from '@/lib/data';
+import type { Appointment, Doctor } from '@/lib/definitions';
 import {
   Card,
   CardContent,
@@ -8,41 +12,59 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, Bot } from 'lucide-react';
+import Header from '@/components/header';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
 
-export default async function DoctorDashboardPage() {
-  const doctor = await getDoctorById(MOCK_DOCTOR_ID);
-  const appointments = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
+export default function DoctorDashboardPage() {
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
+      const appointmentsData = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
+      setDoctor(doctorData || null);
+      setAppointments(appointmentsData);
+    }
+    fetchData();
+  }, []);
 
   return (
-    <div className="container py-12">
-      <div className="mb-12">
-        <h1 className="font-headline text-4xl font-bold tracking-tight">
+    <>
+    <Header title="Doctor Dashboard" />
+    <div className="container py-6">
+      <div className="mb-8">
+        <h1 className="font-headline text-3xl font-bold tracking-tight">
           Welcome, {doctor?.name}
         </h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Here are your upcoming appointments for today.
+        <p className="mt-1 text-lg text-muted-foreground">
+          Here are your upcoming appointments.
         </p>
       </div>
 
       {appointments.length > 0 ? (
         <div className="space-y-6">
           {appointments.map((appointment) => (
-            <Card key={appointment.id} className="shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl font-headline">{appointment.patientName}</CardTitle>
-                <Badge variant={appointment.status === 'confirmed' ? 'default' : 'destructive'} className="bg-accent text-accent-foreground">
+            <Card key={appointment.id} className="shadow-md overflow-hidden">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4 bg-muted/50">
+                <div>
+                    <CardTitle className="text-lg font-headline">{appointment.patientName}</CardTitle>
+                    <CardDescription>Age: {appointment.patientAge}, Gender: {appointment.patientGender}</CardDescription>
+                </div>
+                <Badge variant={appointment.status === 'confirmed' ? 'accent' : 'destructive'}>
                     {appointment.status}
                 </Badge>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-4">
-                        <span className='flex items-center'><User className="mr-2 h-4 w-4" /> Age: {appointment.patientAge}, Gender: {appointment.patientGender}</span>
-                        <span className='flex items-center'><Calendar className="mr-2 h-4 w-4" /> {appointment.appointmentDate}</span>
-                        <span className='flex items-center'><Clock className="mr-2 h-4 w-4" /> {appointment.appointmentSlot}</span>
+              <CardContent className="p-4">
+                <div className="space-y-4 text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" /> 
+                        <span>{appointment.appointmentDate}</span>
+                        <span className="mx-2">|</span>
+                        <Clock className="mr-2 h-4 w-4" /> 
+                        <span>{appointment.appointmentSlot}</span>
                     </div>
                      <div className="space-y-2 pt-2">
                         <h4 className="font-semibold text-foreground">Patient's Stated Symptoms</h4>
@@ -50,7 +72,7 @@ export default async function DoctorDashboardPage() {
                     </div>
                     <div className="space-y-2 pt-2">
                         <h4 className="font-semibold text-foreground flex items-center gap-2">
-                            <Bot className="h-5 w-5 text-primary-foreground" />
+                            <Bot className="h-5 w-5 text-primary" />
                             AI-Generated Summary
                         </h4>
                         <p className="text-sm font-mono p-3 bg-primary/10 rounded-md border border-primary/20 text-primary-foreground">{appointment.summary}</p>
@@ -61,12 +83,13 @@ export default async function DoctorDashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-8">
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-xl font-semibold font-headline">No appointments today</h3>
+            <h3 className="mt-4 text-xl font-semibold font-headline">No appointments scheduled</h3>
             <p className="mt-2 text-sm text-muted-foreground">Your schedule is clear. Enjoy your day!</p>
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Users, Calendar, BriefcaseMedical, LineChart } from 'lucide-react';
-import Header from '@/components/header';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 
@@ -53,8 +52,6 @@ export default function HospitalAdminDashboard() {
 
   return (
     <>
-    <Header title="Hospital Admin" />
-    <div className="container py-6">
        <div className="mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
           {hospital?.name} Dashboard
@@ -126,7 +123,6 @@ export default function HospitalAdminDashboard() {
         </CardContent>
       </Card>
 
-    </div>
     </>
   );
 }

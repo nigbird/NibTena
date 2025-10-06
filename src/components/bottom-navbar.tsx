@@ -16,7 +16,7 @@ export default function BottomNavbar() {
   const pathname = usePathname();
 
   // Hide navbar on admin routes
-  if (pathname.includes('/hospital-admin')) {
+  if (pathname.startsWith('/hospital-admin')) {
     return null;
   }
 

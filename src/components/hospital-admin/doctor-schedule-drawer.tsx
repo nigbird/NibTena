@@ -51,7 +51,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor }: Doct
             Define the weekly available days and working hours for this doctor.
           </SheetDescription>
         </SheetHeader>
-        <form id="schedule-form" onSubmit={handleSubmit} className="flex-1 flex flex-col">
+        <form id="schedule-form" onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Available Days */}
@@ -103,13 +103,13 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor }: Doct
               </div>
             </div>
           </ScrollArea>
-          <div className="flex justify-end space-x-2 pt-4 border-t -mx-6 px-6 mt-auto">
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button type="submit" form="schedule-form" disabled={isLoading} variant="accent">
-                  {isLoading ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
-              </Button>
-          </div>
         </form>
+         <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button type="submit" form="schedule-form" disabled={isLoading} variant="accent">
+                {isLoading ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
+            </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

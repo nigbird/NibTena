@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;

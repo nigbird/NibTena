@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, Calendar, Clock, User, Stethoscope } from 'lucide-react';
@@ -15,13 +15,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
 
-export default function ConfirmationPage({
-  params,
-}: {
-  params: { appointmentId: string };
-}) {
+export default function ConfirmationPage() {
+  const params = useParams();
+  const appointmentId = params.appointmentId as string;
   const [appointment, setAppointment] = useState<Appointment | undefined>();
   const [doctor, setDoctor] = useState<Doctor | undefined>();
   const searchParams = useSearchParams();
@@ -29,7 +26,8 @@ export default function ConfirmationPage({
 
    useEffect(() => {
     async function fetchData() {
-      const appt = await getAppointmentById(params.appointmentId);
+      if (!appointmentId) return;
+      const appt = await getAppointmentById(appointmentId);
       if (!appt) {
         notFound();
       }
@@ -42,7 +40,7 @@ export default function ConfirmationPage({
       setDoctor(doc);
     }
     fetchData();
-  }, [params.appointmentId]);
+  }, [appointmentId]);
 
   useEffect(() => {
     const success = searchParams.get('success');

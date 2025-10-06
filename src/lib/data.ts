@@ -47,6 +47,12 @@ export async function getAppointmentsByDoctorId(doctorId: number): Promise<Appoi
     return appointments.filter(a => a.doctorId === doctorId);
 }
 
+export async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const hospitalDoctors = await getDoctorsByHospitalId(hospitalId);
+  const doctorIds = hospitalDoctors.map(d => d.id);
+  return appointments.filter(a => doctorIds.includes(a.doctorId));
+}
+
 export async function getAppointmentById(id: string): Promise<Appointment | undefined> {
     return appointments.find(a => a.id === id);
 }

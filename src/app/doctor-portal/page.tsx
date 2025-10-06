@@ -19,7 +19,7 @@ import Link from 'next/link';
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
 
-export default function DoctorDashboardPage() {
+export default function DoctorPortalPage() {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
@@ -28,7 +28,7 @@ export default function DoctorDashboardPage() {
       const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
       const appointmentsData = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
       setDoctor(doctorData || null);
-      setAppointments(appointmentsData);
+      setAppointments(appointmentsData.filter(a => a.status === 'confirmed'));
     }
     fetchData();
   }, []);

@@ -1,16 +1,16 @@
-import DoctorSidebar from '@/components/doctor-sidebar';
-import DoctorHeader from '@/components/doctor-header';
+import DoctorPortalSidebar from '@/components/doctor-portal-sidebar';
+import DoctorPortalHeader from '@/components/doctor-portal-header';
 
-export default function DoctorDashboardLayout({
+export default function DoctorPortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-screen w-full">
-      <DoctorSidebar />
+      <DoctorPortalSidebar />
       <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
-        <DoctorHeader />
+        <DoctorPortalHeader />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           {children}
         </main>

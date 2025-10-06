@@ -49,7 +49,7 @@ export async function updateDoctorProfile(
   try {
     const updatedDoctor = await updateDoctor(doctorId, validatedFields.data);
     if (updatedDoctor) {
-      revalidatePath('/doctor-dashboard/profile');
+      revalidatePath('/doctor-portal/profile');
       revalidatePath(`/doctors/${doctorId}`); // Revalidate public profile
       return {
         success: true,

@@ -1,0 +1,125 @@
+'use client';
+
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { getAppointmentsByDoctorId } from '@/lib/data';
+import type { Appointment } from '@/lib/definitions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Search, ClipboardList } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import DoctorAppointmentList from '@/components/doctor-portal/appointment-list';
+import { updateAppointment } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
+
+// Mocking a logged-in doctor with ID 1
+const MOCK_DOCTOR_ID = 1;
+const appointmentStatuses = ['upcoming', 'completed', 'cancelled', 'rescheduled'] as const;
+type AppointmentStatusFilter = typeof appointmentStatuses[number];
+
+export default function DoctorAppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
+  const { toast } = useToast();
+
+  const fetchAppointments = useCallback(async () => {
+    const data = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
+    setAppointments(data);
+  }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
+
+  useEffect(() => {
+    let newFiltered = appointments.filter(a => {
+        const patientNameMatch = a.patientName.toLowerCase().includes(searchTerm.toLowerCase());
+        const dateMatch = a.appointmentDate.toLowerCase().includes(searchTerm.toLowerCase());
+        return searchTerm ? (patientNameMatch || dateMatch) : true;
+    });
+
+    switch (activeFilter) {
+      case 'upcoming':
+        newFiltered = newFiltered.filter(a => a.status === 'confirmed');
+        break;
+      case 'completed':
+        newFiltered = newFiltered.filter(a => a.status === 'completed');
+        break;
+      case 'cancelled':
+        newFiltered = newFiltered.filter(a => a.status === 'cancelled');
+        break;
+      case 'rescheduled':
+        newFiltered = newFiltered.filter(a => a.status === 'rescheduled');
+        break;
+      default:
+        break;
+    }
+    
+    setFilteredAppointments(newFiltered);
+  }, [searchTerm, appointments, activeFilter]);
+  
+  const handleActionSuccess = () => {
+    fetchAppointments();
+    toast({
+      title: 'Success',
+      description: 'Appointment has been updated.',
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight font-headline">My Appointments</h1>
+        <p className="text-lg text-muted-foreground">View and manage your patient appointments.</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Appointments</CardTitle>
+          <CardDescription>A list of all your scheduled appointments.</CardDescription>
+          
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+             <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by patient name or date..."
+                  className="w-full appearance-none bg-background pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex items-center gap-2">
+                {appointmentStatuses.map(status => (
+                    <Button
+                        key={status}
+                        variant={activeFilter === status ? 'accent' : 'outline'}
+                        onClick={() => setActiveFilter(status)}
+                        className="capitalize"
+                    >
+                        {status}
+                    </Button>
+                ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredAppointments.length > 0 ? (
+            <DoctorAppointmentList
+              appointments={filteredAppointments}
+              onActionSuccess={handleActionSuccess}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+              <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-xl font-semibold font-headline">No appointments found</h3>
+              <p className="mt-2 text-sm text-muted-foreground">There are no appointments that match your current filters.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

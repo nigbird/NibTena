@@ -63,7 +63,7 @@ export async function bookAppointment(
     });
 
     if (newAppointment) {
-      revalidatePath('/doctor-dashboard');
+      revalidatePath('/doctor-portal/appointments');
       revalidatePath('/hospital-admin/appointments');
        return {
         success: true,

@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
 
-export default function DoctorHeader() {
+export default function DoctorPortalHeader() {
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
@@ -51,28 +51,28 @@ export default function DoctorHeader() {
               </div>
                 <nav className="grid gap-2 text-lg font-medium p-2">
                     <Link
-                        href="/doctor-dashboard"
+                        href="/doctor-portal"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <LayoutGrid className="h-5 w-5" />
                         Dashboard
                     </Link>
                     <Link
-                        href="/doctor-dashboard/appointments"
+                        href="/doctor-portal/appointments"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <ClipboardList className="h-5 w-5" />
                         My Appointments
                     </Link>
                     <Link
-                        href="/doctor-dashboard/schedule"
+                        href="/doctor-portal/schedule"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <CalendarDays className="h-5 w-5" />
                         My Schedule
                     </Link>
                      <Link
-                        href="/doctor-dashboard/profile"
+                        href="/doctor-portal/profile"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <User className="h-5 w-5" />
@@ -95,7 +95,7 @@ export default function DoctorHeader() {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
                <DropdownMenuItem asChild>
-                    <Link href="/doctor-dashboard/profile">Profile</Link>
+                    <Link href="/doctor-portal/profile">Profile</Link>
                 </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />

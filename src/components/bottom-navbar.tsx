@@ -16,7 +16,7 @@ export default function BottomNavbar() {
   const pathname = usePathname();
 
   // Hide navbar on certain routes
-  if (pathname.startsWith('/hospital-admin') || pathname.startsWith('/doctor-dashboard') || pathname.startsWith('/login') || pathname.startsWith('/signup')) {
+  if (pathname.startsWith('/hospital-admin') || pathname.startsWith('/doctor-portal') || pathname.startsWith('/login') || pathname.startsWith('/signup')) {
     return null;
   }
 

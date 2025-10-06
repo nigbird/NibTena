@@ -16,74 +16,63 @@ let doctors: Doctor[] = [
   { id: 7, name: 'Dr. Sarah Jones', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-7', bio: 'Dr. Jones brings a fresh perspective to cardiology, with a focus on preventative care and lifestyle management.', consultationFee: 160, rating: 4.8, status: 'active', experience: 5 },
 ];
 
+function getISODate(daysOffset = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysOffset);
+  return date.toISOString().split('T')[0];
+}
+
 // In-memory store for appointments
 let appointments: Appointment[] = [
-    {
-        id: 'apt_1625488800000',
-        patientName: 'John Smith',
-        patientPhone: '555-0101',
-        patientAge: 45,
-        patientGender: 'male',
-        symptoms: 'Chest pain and shortness of breath.',
-        summary: 'Patient presents with chest pain and shortness of breath, possible cardiac event.',
-        doctorId: 1,
-        appointmentDate: '2024-08-15',
+    // Today's appointments for Queue
+    { id: 'q1', patientName: 'Alice Johnson', patientPhone: '555-0110', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', summary: 'Routine annual physical exam.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:00 AM', status: 'confirmed' },
+    { id: 'q2', patientName: 'Bob Williams', patientPhone: '555-0111', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure medication.', summary: 'BP check and medication review.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:30 AM', status: 'confirmed' },
+    { id: 'q3', patientName: 'Charlie Brown', patientPhone: '555-0112', patientAge: 35, patientGender: 'male', symptoms: 'Skin rash on arm.', summary: 'Patient presents with dermatitis on right arm.', doctorId: 2, appointmentDate: getISODate(0), appointmentSlot: '10:00 AM', status: 'confirmed' },
+    { id: 'q4', patientName: 'Diana Miller', patientPhone: '555-0113', patientAge: 41, patientGender: 'female', symptoms: 'Migraine consultation.', summary: 'Consultation for chronic migraines.', doctorId: 3, appointmentDate: getISODate(0), appointmentSlot: '10:30 AM', status: 'confirmed' },
+    { id: 'q5', patientName: 'Ethan Davis', patientPhone: '555-0114', patientAge: 6, patientGender: 'male', symptoms: 'Vaccination appointment.', summary: 'Scheduled vaccinations for 6-year-old.', doctorId: 4, appointmentDate: getISODate(0), appointmentSlot: '11:00 AM', status: 'confirmed' },
+
+    // Past appointments for reports
+    ...Array.from({ length: 15 }, (_, i) => ({
+        id: `p_c_${i}`,
+        patientName: `Completed Patient ${i + 1}`,
+        patientPhone: `555-02${i.toString().padStart(2, '0')}`,
+        patientAge: 20 + i * 2,
+        patientGender: i % 2 === 0 ? 'female' : 'male',
+        symptoms: `Symptom description ${i + 1}`,
+        summary: `Summary for patient ${i + 1}`,
+        doctorId: (i % 7) + 1,
+        appointmentDate: getISODate(- (i + 1)),
         appointmentSlot: '10:00 AM',
-        status: 'confirmed',
-    },
-    {
-        id: 'apt_1625492400000',
-        patientName: 'Jane Doe',
-        patientPhone: '555-0102',
-        patientAge: 32,
+        status: 'completed' as 'completed',
+    })),
+    ...Array.from({ length: 5 }, (_, i) => ({
+        id: `p_x_${i}`,
+        patientName: `Cancelled Patient ${i + 1}`,
+        patientPhone: `555-03${i.toString().padStart(2, '0')}`,
+        patientAge: 30 + i * 3,
         patientGender: 'female',
-        symptoms: 'Severe headache and dizziness.',
-        summary: 'Patient reports severe headache and dizziness, requires neurological assessment.',
-        doctorId: 3,
-        appointmentDate: '2024-08-15',
+        symptoms: `Reason for cancellation ${i + 1}`,
+        summary: `N/A`,
+        doctorId: (i % 7) + 1,
+        appointmentDate: getISODate(- (i + 2)),
         appointmentSlot: '11:00 AM',
-        status: 'confirmed',
-    },
-    {
-        id: 'apt_1625575200000',
-        patientName: 'Peter Jones',
-        patientPhone: '555-0103',
-        patientAge: 8,
-        patientGender: 'male',
-        symptoms: 'Fever and sore throat.',
-        summary: 'Child with fever and sore throat, likely strep or viral infection.',
-        doctorId: 4,
-        appointmentDate: '2024-08-16',
-        appointmentSlot: '09:30 AM',
-        status: 'completed',
-    },
-     {
-        id: 'apt_1625661600000',
-        patientName: 'Mary Johnson',
-        patientPhone: '555-0104',
-        patientAge: 68,
-        patientGender: 'female',
-        symptoms: 'Follow-up for knee replacement surgery.',
-        summary: 'Post-op follow-up for knee replacement.',
-        doctorId: 5,
-        appointmentDate: '2024-07-20',
+        status: 'cancelled' as 'cancelled',
+    })),
+     ...Array.from({ length: 10 }, (_, i) => ({
+        id: `p_c2_${i}`,
+        patientName: `Past Patient ${i + 1}`,
+        patientPhone: `555-04${i.toString().padStart(2, '0')}`,
+        patientAge: 25 + i * 2,
+        patientGender: i % 2 === 0 ? 'male' : 'female',
+        symptoms: `Past issue ${i + 1}`,
+        summary: `Resolved issue for patient ${i + 1}`,
+        doctorId: (i % 4) + 1, // Focus on first 4 doctors
+        appointmentDate: getISODate(- (i + 15)),
         appointmentSlot: '02:00 PM',
-        status: 'completed',
-    },
-     {
-        id: 'apt_1625748000000',
-        patientName: 'David Williams',
-        patientPhone: '555-0105',
-        patientAge: 25,
-        patientGender: 'male',
-        symptoms: 'Cancelled due to conflict.',
-        summary: 'N/A',
-        doctorId: 2,
-        appointmentDate: '2024-08-18',
-        appointmentSlot: '03:00 PM',
-        status: 'cancelled',
-    },
+        status: 'completed' as 'completed',
+    })),
 ];
+
 
 // API functions to interact with mock data
 export async function getHospitals(): Promise<Hospital[]> {

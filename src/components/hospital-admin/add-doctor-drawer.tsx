@@ -20,13 +20,12 @@ import { addDoctor, getSpecialties, type DoctorFormState } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import type { Doctor } from '@/lib/definitions';
 
 type AddDoctorDrawerProps = {
     children: React.ReactNode;
     hospitalId: number;
-    onDoctorAdded: (newDoctor: any) => void;
-    isOpen: boolean;
-    setIsOpen: (isOpen: boolean) => void;
+    onDoctorAdded: (newDoctor: Doctor) => void;
 };
 
 function SubmitButton() {
@@ -38,7 +37,8 @@ function SubmitButton() {
   );
 }
 
-export default function AddDoctorDrawer({ children, hospitalId, onDoctorAdded, isOpen, setIsOpen }: AddDoctorDrawerProps) {
+export default function AddDoctorDrawer({ children, hospitalId, onDoctorAdded }: AddDoctorDrawerProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const initialState: DoctorFormState = { message: null, errors: {} };
   const addDoctorWithHospitalId = addDoctor.bind(null, hospitalId);
   const [state, formAction] = useActionState<DoctorFormState, FormData>(addDoctorWithHospitalId, initialState);
@@ -50,16 +50,12 @@ export default function AddDoctorDrawer({ children, hospitalId, onDoctorAdded, i
   }, []);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.newDoctor) {
       toast({
         title: "Success",
         description: state.message,
       });
-      // This is a bit of a workaround to get the new doctor data back
-      // In a real app, the server action would return the created object
-      // For now, we'll just refetch or pass a placeholder.
-      const pseudoNewDoctor = { id: Math.random(), name: 'New Doctor' };
-      onDoctorAdded(pseudoNewDoctor);
+      onDoctorAdded(state.newDoctor);
       setIsOpen(false);
     } else if (state.message && !state.success) {
       toast({
@@ -68,7 +64,7 @@ export default function AddDoctorDrawer({ children, hospitalId, onDoctorAdded, i
         description: state.message,
       });
     }
-  }, [state, onDoctorAdded, toast, setIsOpen]);
+  }, [state, onDoctorAdded, toast]);
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>

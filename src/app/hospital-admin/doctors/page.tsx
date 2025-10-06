@@ -10,19 +10,18 @@ import DoctorList from '@/components/hospital-admin/doctor-list';
 import AddDoctorDrawer from '@/components/hospital-admin/add-doctor-drawer';
 
 // Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+const MOCK_Hospital_ID = 1;
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
-    getDoctorsByHospitalId(MOCK_HOSPITAL_ID).then(setDoctors);
+    getDoctorsByHospitalId(MOCK_Hospital_ID).then(setDoctors);
   }, []);
 
   const handleDoctorAdded = (newDoctor: Doctor) => {
-    setDoctors((prevDoctors) => [newDoctor, ...prevDoctors]);
-    setIsDrawerOpen(false);
+    // Refetch or just add to the list for optimistic update
+     getDoctorsByHospitalId(MOCK_Hospital_ID).then(setDoctors);
   };
 
   return (
@@ -33,12 +32,10 @@ export default function DoctorsPage() {
                 <p className="text-lg text-muted-foreground">Manage your hospital's doctors.</p>
             </div>
             <AddDoctorDrawer
-              hospitalId={MOCK_HOSPITAL_ID}
+              hospitalId={MOCK_Hospital_ID}
               onDoctorAdded={handleDoctorAdded}
-              isOpen={isDrawerOpen}
-              setIsOpen={setIsDrawerOpen}
             >
-              <Button onClick={() => setIsDrawerOpen(true)}>
+              <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Doctor
               </Button>

@@ -3,6 +3,8 @@
 import { z } from 'zod';
 import { addAppointment, addDoctor as addDoctorData, getSpecialties as getSpecialtiesData } from './data';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import type { Doctor } from './definitions';
 
 const AppointmentFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -66,11 +68,7 @@ export async function bookAppointment(
     if (newAppointment) {
       revalidatePath('/doctor-dashboard');
       revalidatePath('/hospital-admin');
-      return {
-        success: true,
-        message: 'Appointment booked successfully.',
-        appointmentId: newAppointment.id,
-      };
+      redirect(`/confirmation/success?appointmentId=${newAppointment.id}`);
     } else {
        return {
         success: false,
@@ -106,6 +104,7 @@ export type DoctorFormState = {
   };
   message?: string | null;
   success?: boolean;
+  newDoctor?: Doctor;
 };
 
 export async function addDoctor(hospitalId: number, prevState: DoctorFormState, formData: FormData) {
@@ -126,11 +125,12 @@ export async function addDoctor(hospitalId: number, prevState: DoctorFormState, 
   }
 
   try {
-    await addDoctorData({ ...validatedFields.data, hospitalId });
+    const newDoctor = await addDoctorData({ ...validatedFields.data, hospitalId });
     revalidatePath('/hospital-admin/doctors');
     return {
       success: true,
       message: 'Doctor added successfully.',
+      newDoctor,
     };
   } catch (error) {
     return {

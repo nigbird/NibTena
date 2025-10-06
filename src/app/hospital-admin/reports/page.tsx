@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -258,7 +259,7 @@ export default function ReportsPage() {
                             <CardHeader>
                                 <CardTitle className="font-headline flex items-center gap-2"><DollarSign className="h-5 w-5" /> Revenue Breakdown</CardTitle>
                                 <CardDescription>Share of total revenue per doctor.</CardDescription>
-                            </CardHeader>
+                            </Header>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={300}>
                                     <RechartsPieChart>
@@ -298,7 +299,7 @@ export default function ReportsPage() {
         <p className="text-lg text-muted-foreground">View insights into your hospital's performance.</p>
       </div>
 
-      <Card className="sticky top-[60px] z-10 shadow-sm">
+      <Card>
         <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
           <div className="flex-1 w-full md:w-auto">
             <DateRangePicker date={dateRange} onDateChange={setDateRange} />

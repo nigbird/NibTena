@@ -66,11 +66,12 @@ export async function bookAppointment(
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    redirect(`/confirmation/${newAppointment.id}`);
   } catch (error) {
     console.error('AI summarization or data saving failed:', error);
     return {
       message: 'An error occurred while processing your appointment. Please try again.',
     };
   }
+  // Redirect to a success page which can then show the toast.
+  redirect(`/confirmation/success`);
 }

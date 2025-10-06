@@ -71,6 +71,16 @@ export default function BookingPage() {
       })
     }
   }, [state, toast]);
+  
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success === 'true') {
+        toast({
+            title: "Booking Confirmed!",
+            description: "Your appointment has been successfully booked.",
+        });
+    }
+  }, [searchParams, toast]);
 
   return (
     <div className="container mx-auto max-w-2xl py-12">

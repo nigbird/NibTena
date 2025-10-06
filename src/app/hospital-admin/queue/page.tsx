@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
@@ -49,7 +50,8 @@ export default function QueueManagementPage() {
         .filter(app => app.appointmentDate === today && app.status === 'confirmed')
         .map(app => ({
           ...app,
-          // This state could be persisted in a real app, here it defaults to 'Waiting' on load
+          // This state is ephemeral and resets on reload.
+          // In a real app, this would be persisted.
           queueStatus: 'Waiting' as QueueStatus, 
         }))
         .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
@@ -85,7 +87,7 @@ export default function QueueManagementPage() {
   const filteredQueue = useMemo(() => {
     return queue.filter(item => {
       const doctorMatch = doctorFilter === 'all' || item.doctorId === Number(doctorFilter);
-      const statusMatch = statusFilter === 'all' || item.queueStatus === statusFilter;
+      const statusMatch = statusFilter === 'all' || item.queueStatus === statusMatch;
       return doctorMatch && statusMatch;
     });
   }, [queue, doctorFilter, statusFilter]);
@@ -93,6 +95,85 @@ export default function QueueManagementPage() {
   const getDoctorName = (doctorId: number) => {
     return doctors.find(d => d.id === doctorId)?.name || 'Unknown Doctor';
   }
+
+  const renderQueueContent = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+             <div key={i} className="flex items-center p-4 border rounded-lg">
+                <Skeleton className="h-12 w-12 rounded-full mr-4" />
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-24" />
+                  <div className="flex justify-end">
+                    <Skeleton className="h-9 w-32" />
+                  </div>
+                </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredQueue.length > 0) {
+       return (
+          <div className="space-y-4">
+            {filteredQueue.map((item) => {
+              const config = statusConfig[item.queueStatus];
+              const Icon = config.icon;
+              return (
+                <Card key={item.id} className="shadow-sm">
+                  <div className="flex items-center p-4">
+                    <div className={`mr-4 h-12 w-12 rounded-full flex items-center justify-center text-white ${config.color}`}>
+                        <Icon className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                        <div>
+                          <p className="font-semibold">{item.patientName}</p>
+                          <p className="text-sm text-muted-foreground">{getDoctorName(item.doctorId)}</p>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <Badge variant="outline">{item.appointmentSlot}</Badge>
+                        </div>
+                          <div className="text-sm">
+                          <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
+                        </div>
+                        <div className="flex justify-end">
+                          {config.nextAction ? (
+                              <Button
+                                  variant="accent"
+                                  size="sm"
+                                  onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
+                              >
+                                  <config.nextAction.icon className="mr-2 h-4 w-4" />
+                                  {config.nextAction.label}
+                              </Button>
+                          ) : (
+                              <Button variant="outline" size="sm" disabled>Completed</Button>
+                          )}
+                        </div>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        );
+    }
+    
+    return (
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+            <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-xl font-semibold font-headline">No Appointments Match Filters</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Either there are no confirmed appointments for today, or none match your filter criteria.</p>
+        </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -131,57 +212,7 @@ export default function QueueManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Loading queue...</p>
-          ) : filteredQueue.length > 0 ? (
-            <div className="space-y-4">
-              {filteredQueue.map((item) => {
-                const config = statusConfig[item.queueStatus];
-                const Icon = config.icon;
-                return (
-                  <Card key={item.id} className="shadow-sm">
-                    <div className="flex items-center p-4">
-                      <div className={`mr-4 h-12 w-12 rounded-full flex items-center justify-center text-white ${config.color}`}>
-                          <Icon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-                          <div>
-                            <p className="font-semibold">{item.patientName}</p>
-                            <p className="text-sm text-muted-foreground">{getDoctorName(item.doctorId)}</p>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            <Badge variant="outline">{item.appointmentSlot}</Badge>
-                          </div>
-                           <div className="text-sm">
-                            <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
-                          </div>
-                          <div className="flex justify-end">
-                            {config.nextAction ? (
-                                <Button
-                                    variant="accent"
-                                    size="sm"
-                                    onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
-                                >
-                                    <config.nextAction.icon className="mr-2 h-4 w-4" />
-                                    {config.nextAction.label}
-                                </Button>
-                            ) : (
-                                <Button variant="outline" size="sm" disabled>Completed</Button>
-                            )}
-                          </div>
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-              <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-xl font-semibold font-headline">No Appointments Today</h3>
-              <p className="mt-2 text-sm text-muted-foreground">The queue is empty. No confirmed appointments for today.</p>
-            </div>
-          )}
+          {renderQueueContent()}
         </CardContent>
       </Card>
     </div>

@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, BarChart, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter } from "lucide-react";
+import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter } from "lucide-react";
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
-import { addDays, format, isAfter, isBefore, parseISO } from 'date-fns';
+import { addDays, format, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658'];
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#FF8042', '#00C49F'];
 
 export default function ReportsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -40,8 +40,8 @@ export default function ReportsPage() {
 
   // Filters
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
+    from: startOfDay(addDays(new Date(), -29)),
+    to: startOfDay(new Date()),
   });
   const [doctorFilter, setDoctorFilter] = useState('all');
 
@@ -68,7 +68,7 @@ export default function ReportsPage() {
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter(appt => {
-      const apptDate = parseISO(appt.appointmentDate);
+      const apptDate = startOfDay(parseISO(appt.appointmentDate));
       const isDateInRange = dateRange?.from && dateRange?.to && !isBefore(apptDate, dateRange.from) && !isAfter(apptDate, dateRange.to);
       const isDoctorMatch = doctorFilter === 'all' || appt.doctorId === Number(doctorFilter);
       return isDateInRange && isDoctorMatch;
@@ -117,18 +117,19 @@ export default function ReportsPage() {
       name: doctor.name.replace('Dr. ', ''),
       appointments: filteredAppointments.filter(a => a.doctorId === doctor.id).length
     }));
-    return utilization.filter(u => u.appointments > 0);
+    return utilization.filter(u => u.appointments > 0).sort((a,b) => b.appointments - a.appointments);
   }, [filteredAppointments, doctors]);
 
   const revenueBreakdownData = useMemo(() => {
     const revenueByDoctor: { [key: string]: { name: string; value: number } } = {};
+    doctors.forEach(doc => {
+      revenueByDoctor[doc.id] = { name: doc.name, value: 0 };
+    });
+
     filteredAppointments.forEach(appt => {
       if (appt.status === 'completed') {
         const doctor = doctors.find(d => d.id === appt.doctorId);
-        if (doctor) {
-          if (!revenueByDoctor[doctor.id]) {
-            revenueByDoctor[doctor.id] = { name: doctor.name, value: 0 };
-          }
+        if (doctor && revenueByDoctor[doctor.id]) {
           revenueByDoctor[doctor.id].value += doctor.consultationFee;
         }
       }
@@ -169,37 +170,37 @@ export default function ReportsPage() {
         <>
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="shadow-sm bg-blue-50">
+                <Card className="shadow-sm bg-blue-50 dark:bg-blue-900/30">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
-                        <BriefcaseMedical className="h-5 w-5 text-blue-600" />
+                        <BriefcaseMedical className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalAppointments}</div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-sm bg-green-50">
+                <Card className="shadow-sm bg-green-50 dark:bg-green-900/30">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                        <BriefcaseMedical className="h-5 w-5 text-green-600" />
+                        <BriefcaseMedical className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{completedAppointments}</div>
                     </CardContent>
                 </Card>
-                 <Card className="shadow-sm bg-red-50">
+                 <Card className="shadow-sm bg-red-50 dark:bg-red-900/30">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-                        <XCircle className="h-5 w-5 text-red-600" />
+                        <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{cancelledAppointments}</div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-sm bg-yellow-50">
+                <Card className="shadow-sm bg-yellow-50 dark:bg-yellow-900/30">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                        <DollarSign className="h-5 w-5 text-yellow-700" />
+                        <DollarSign className="h-5 w-5 text-yellow-700 dark:text-yellow-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
@@ -216,25 +217,25 @@ export default function ReportsPage() {
             ) : (
                 <div className="space-y-6">
                     {/* Charts Section */}
+                    <Card className="shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="font-headline flex items-center gap-2"><LineChart className="h-5 w-5" /> Appointments Trend</CardTitle>
+                            <CardDescription>Number of appointments over the selected period.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <RechartsLineChart data={appointmentsTrendData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}/>
+                                    <Legend wrapperStyle={{ fontSize: '14px' }} />
+                                    <Line type="monotone" dataKey="count" name="Appointments" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                                </RechartsLineChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
                     <div className="grid gap-6 md:grid-cols-2">
-                        <Card className="shadow-lg">
-                            <CardHeader>
-                                <CardTitle className="font-headline flex items-center gap-2"><LineChart className="h-5 w-5" /> Appointments Trend</CardTitle>
-                                <CardDescription>Number of appointments over the selected period.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <RechartsLineChart data={appointmentsTrendData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" fontSize={12} />
-                                        <YAxis fontSize={12} />
-                                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}/>
-                                        <Legend wrapperStyle={{ fontSize: '14px' }} />
-                                        <Line type="monotone" dataKey="count" name="Appointments" stroke="hsl(var(--primary))" strokeWidth={2} />
-                                    </RechartsLineChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
                         <Card className="shadow-lg">
                             <CardHeader>
                                 <CardTitle className="font-headline flex items-center gap-2"><Users className="h-5 w-5" /> Doctor Utilization</CardTitle>
@@ -242,37 +243,48 @@ export default function ReportsPage() {
                             </CardHeader>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <RechartsBarChart data={doctorUtilizationData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                                    <RechartsBarChart data={doctorUtilizationData} layout="vertical" margin={{ left: 10, right: 30, top: 5, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" fontSize={12} />
-                                        <YAxis type="category" dataKey="name" fontSize={12} width={80} />
+                                        <XAxis type="number" fontSize={12} allowDecimals={false} />
+                                        <YAxis type="category" dataKey="name" fontSize={12} width={80} interval={0} />
                                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}/>
                                         <Bar dataKey="appointments" name="Total Appointments" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                                     </RechartsBarChart>
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
+
+                        <Card className="shadow-lg">
+                            <CardHeader>
+                                <CardTitle className="font-headline flex items-center gap-2"><DollarSign className="h-5 w-5" /> Revenue Breakdown</CardTitle>
+                                <CardDescription>Share of total revenue per doctor.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <RechartsPieChart>
+                                        <Pie data={revenueBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                            const RADIAN = Math.PI / 180;
+                                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                            return (
+                                                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+                                                {`${(percent * 100).toFixed(0)}%`}
+                                                </text>
+                                            );
+                                        }}>
+                                            {revenueBreakdownData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} formatter={(value: number) => `$${value.toLocaleString()}`} />
+                                        <Legend wrapperStyle={{ fontSize: '14px' }} />
+                                    </RechartsPieChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
                     </div>
 
-                    <Card className="shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="font-headline flex items-center gap-2"><DollarSign className="h-5 w-5" /> Revenue Breakdown</CardTitle>
-                            <CardDescription>Share of total revenue per doctor.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <RechartsPieChart>
-                                    <Pie data={revenueBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                                        {revenueBreakdownData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} formatter={(value: number) => `$${value.toLocaleString()}`} />
-                                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                                </RechartsPieChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
                 </div>
             )}
         </>

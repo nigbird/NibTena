@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
@@ -40,23 +39,34 @@ export default function QueueManagementPage() {
   const fetchTodaysAppointments = useCallback(async () => {
     setIsLoading(true);
     const today = format(new Date(), 'yyyy-MM-dd');
-    const [allAppointments, doctorsData] = await Promise.all([
-      getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
-      getDoctorsByHospitalId(MOCK_HOSPITAL_ID),
-    ]);
+    try {
+      const [allAppointments, doctorsData] = await Promise.all([
+        getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
+        getDoctorsByHospitalId(MOCK_HOSPITAL_ID),
+      ]);
 
-    const todaysAppointments = allAppointments
-      .filter(app => app.appointmentDate === today && app.status === 'confirmed')
-      .map(app => ({
-        ...app,
-        queueStatus: 'Waiting' as QueueStatus, // Default status for today's appointments
-      }))
-      .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
+      const todaysAppointments = allAppointments
+        .filter(app => app.appointmentDate === today && app.status === 'confirmed')
+        .map(app => ({
+          ...app,
+          // This state could be persisted in a real app, here it defaults to 'Waiting' on load
+          queueStatus: 'Waiting' as QueueStatus, 
+        }))
+        .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
-    setQueue(todaysAppointments);
-    setDoctors(doctorsData);
-    setIsLoading(false);
-  }, []);
+      setQueue(todaysAppointments);
+      setDoctors(doctorsData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load today's appointments.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     fetchTodaysAppointments();

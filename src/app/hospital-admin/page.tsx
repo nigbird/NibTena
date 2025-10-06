@@ -52,17 +52,17 @@ export default function HospitalAdminDashboard() {
 
   return (
     <>
-       <div className="mb-8">
+       <div className="mb-4">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          {hospital?.name} Dashboard
+          Dashboard
         </h1>
         <p className="mt-1 text-lg text-muted-foreground">
-          Welcome, Admin. Here's your hospital overview.
+          An overview of {hospital?.name}.
         </p>
       </div>
 
        {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>
@@ -99,7 +99,7 @@ export default function HospitalAdminDashboard() {
       <Card className="shadow-lg">
         <CardHeader>
             <CardTitle className="font-headline flex items-center gap-2">
-                <LineChart className="h-5 w-5 text-primary-foreground" />
+                <LineChart className="h-5 w-5" />
                 Appointments per Doctor
             </CardTitle>
             <CardDescription>A summary of total appointments for each doctor.</CardDescription>

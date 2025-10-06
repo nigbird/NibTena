@@ -8,7 +8,7 @@ import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -39,7 +39,7 @@ export default function QueueManagementPage() {
 
   const fetchTodaysAppointments = useCallback(async () => {
     setIsLoading(true);
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const [allAppointments, doctorsData] = await Promise.all([
         getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
@@ -47,7 +47,7 @@ export default function QueueManagementPage() {
       ]);
 
       const todaysAppointments = allAppointments
-        .filter(app => app.appointmentDate === today && app.status === 'confirmed')
+        .filter(app => format(parseISO(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
         .map(app => ({
           ...app,
           // This state is ephemeral and resets on reload.
@@ -87,7 +87,7 @@ export default function QueueManagementPage() {
   const filteredQueue = useMemo(() => {
     return queue.filter(item => {
       const doctorMatch = doctorFilter === 'all' || item.doctorId === Number(doctorFilter);
-      const statusMatch = statusFilter === 'all' || item.queueStatus === statusMatch;
+      const statusMatch = statusFilter === 'all' || item.queueStatus === statusFilter;
       return doctorMatch && statusMatch;
     });
   }, [queue, doctorFilter, statusFilter]);

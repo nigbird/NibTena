@@ -57,7 +57,6 @@ export async function bookAppointment(
       patientAge: age,
       patientGender: gender,
       symptoms,
-      summary: symptoms, // Directly using symptoms as summary
       doctorId,
       appointmentSlot,
       appointmentDate,

@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Bot } from 'lucide-react';
+import { Calendar, Clock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -76,13 +76,6 @@ export default function DoctorDashboardPage() {
                      <div className="space-y-2 pt-2">
                         <h4 className="font-semibold text-foreground">Patient's Stated Symptoms</h4>
                         <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-md border">{appointment.symptoms}</p>
-                    </div>
-                    <div className="space-y-2 pt-2">
-                        <h4 className="font-semibold text-foreground flex items-center gap-2">
-                            <Bot className="h-5 w-5 text-primary" />
-                            AI-Generated Summary
-                        </h4>
-                        <p className="text-sm font-mono p-3 bg-primary/10 rounded-md border border-primary/20 text-primary-foreground">{appointment.summary}</p>
                     </div>
                 </div>
               </CardContent>

@@ -112,8 +112,8 @@ export default function ConfirmationPage() {
               </div>
 
               <div className="mt-6 rounded-lg border bg-muted/50 p-4">
-                <h3 className="mb-2 font-semibold text-foreground">AI-Generated Summary for Doctor</h3>
-                <p className="text-sm font-mono whitespace-pre-wrap">{appointment.summary}</p>
+                <h3 className="mb-2 font-semibold text-foreground">Symptoms & Concerns</h3>
+                <p className="text-sm whitespace-pre-wrap">{appointment.symptoms}</p>
               </div>
 
                <p className="mt-6 text-center text-sm text-muted-foreground">

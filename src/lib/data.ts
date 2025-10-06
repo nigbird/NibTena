@@ -25,11 +25,11 @@ function getISODate(daysOffset = 0) {
 // In-memory store for appointments
 let appointments: Appointment[] = [
     // Today's appointments for Queue
-    { id: 'q1', patientName: 'Alice Johnson', patientPhone: '555-0110', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', summary: 'Routine annual physical exam.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:00 AM', status: 'confirmed' },
-    { id: 'q2', patientName: 'Bob Williams', patientPhone: '555-0111', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure medication.', summary: 'BP check and medication review.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:30 AM', status: 'confirmed' },
-    { id: 'q3', patientName: 'Charlie Brown', patientPhone: '555-0112', patientAge: 35, patientGender: 'male', symptoms: 'Skin rash on arm.', summary: 'Patient presents with dermatitis on right arm.', doctorId: 2, appointmentDate: getISODate(0), appointmentSlot: '10:00 AM', status: 'confirmed' },
-    { id: 'q4', patientName: 'Diana Miller', patientPhone: '555-0113', patientAge: 41, patientGender: 'female', symptoms: 'Migraine consultation.', summary: 'Consultation for chronic migraines.', doctorId: 3, appointmentDate: getISODate(0), appointmentSlot: '10:30 AM', status: 'confirmed' },
-    { id: 'q5', patientName: 'Ethan Davis', patientPhone: '555-0114', patientAge: 6, patientGender: 'male', symptoms: 'Vaccination appointment.', summary: 'Scheduled vaccinations for 6-year-old.', doctorId: 4, appointmentDate: getISODate(0), appointmentSlot: '11:00 AM', status: 'confirmed' },
+    { id: 'q1', patientName: 'Alice Johnson', patientPhone: '555-0110', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:00 AM', status: 'confirmed' },
+    { id: 'q2', patientName: 'Bob Williams', patientPhone: '555-0111', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure medication.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:30 AM', status: 'confirmed' },
+    { id: 'q3', patientName: 'Charlie Brown', patientPhone: '555-0112', patientAge: 35, patientGender: 'male', symptoms: 'Skin rash on arm.', doctorId: 2, appointmentDate: getISODate(0), appointmentSlot: '10:00 AM', status: 'confirmed' },
+    { id: 'q4', patientName: 'Diana Miller', patientPhone: '555-0113', patientAge: 41, patientGender: 'female', symptoms: 'Migraine consultation.', doctorId: 3, appointmentDate: getISODate(0), appointmentSlot: '10:30 AM', status: 'confirmed' },
+    { id: 'q5', patientName: 'Ethan Davis', patientPhone: '555-0114', patientAge: 6, patientGender: 'male', symptoms: 'Vaccination appointment.', doctorId: 4, appointmentDate: getISODate(0), appointmentSlot: '11:00 AM', status: 'confirmed' },
 
     // Past appointments for reports
     ...Array.from({ length: 15 }, (_, i) => ({
@@ -39,7 +39,6 @@ let appointments: Appointment[] = [
         patientAge: 20 + i * 2,
         patientGender: i % 2 === 0 ? 'female' : 'male',
         symptoms: `Symptom description ${i + 1}`,
-        summary: `Summary for patient ${i + 1}`,
         doctorId: (i % 7) + 1,
         appointmentDate: getISODate(- (i + 1)),
         appointmentSlot: '10:00 AM',
@@ -52,7 +51,6 @@ let appointments: Appointment[] = [
         patientAge: 30 + i * 3,
         patientGender: 'female',
         symptoms: `Reason for cancellation ${i + 1}`,
-        summary: `N/A`,
         doctorId: (i % 7) + 1,
         appointmentDate: getISODate(- (i + 2)),
         appointmentSlot: '11:00 AM',
@@ -65,7 +63,6 @@ let appointments: Appointment[] = [
         patientAge: 25 + i * 2,
         patientGender: i % 2 === 0 ? 'male' : 'female',
         symptoms: `Past issue ${i + 1}`,
-        summary: `Resolved issue for patient ${i + 1}`,
         doctorId: (i % 4) + 1, // Focus on first 4 doctors
         appointmentDate: getISODate(- (i + 15)),
         appointmentSlot: '02:00 PM',
@@ -140,12 +137,11 @@ export async function getAppointmentById(id: string): Promise<Appointment | unde
     return appointments.find(a => a.id === id);
 }
 
-export async function addAppointment(appointment: Omit<Appointment, 'id' | 'status' | 'summary'>): Promise<Appointment> {
+export async function addAppointment(appointment: Omit<Appointment, 'id' | 'status'>): Promise<Appointment> {
     const newAppointment: Appointment = {
         ...appointment,
         id: `apt_${Date.now()}`,
         status: 'confirmed',
-        summary: appointment.symptoms, // Default summary to symptoms
     };
     appointments.push(newAppointment);
     return newAppointment;

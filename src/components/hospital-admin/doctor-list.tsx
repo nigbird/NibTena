@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteDoctor, updateDoctorStatus } from '@/lib/actions';
+import { deleteDoctor, updateDoctorStatus } from '@/app/hospital-admin/doctors/actions';
 import { useToast } from '@/hooks/use-toast';
 
 type DoctorListProps = {

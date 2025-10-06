@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { bookAppointment, type State } from '@/lib/actions';
+import { bookAppointment, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
 function SubmitButton() {

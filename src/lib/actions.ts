@@ -1,9 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import { addAppointment } from './data';
+import { addAppointment, addDoctor as addDoctorData, getSpecialties as getSpecialtiesData } from './data';
+import { revalidatePath } from 'next/cache';
 
-const FormSchema = z.object({
+const AppointmentFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   phone: z.string(),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
@@ -31,7 +32,7 @@ export async function bookAppointment(
   prevState: State,
   formData: FormData
 ): Promise<State> {
-  const validatedFields = FormSchema.safeParse({
+  const validatedFields = AppointmentFormSchema.safeParse({
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
     age: formData.get('age'),
@@ -56,20 +57,22 @@ export async function bookAppointment(
       patientAge: age,
       patientGender: gender,
       symptoms,
-      summary: symptoms, // Use symptoms as summary
+      summary: symptoms,
       doctorId,
       appointmentSlot,
       appointmentDate,
     });
 
     if (newAppointment) {
+      revalidatePath('/doctor-dashboard');
+      revalidatePath('/hospital-admin');
       return {
         success: true,
         message: 'Appointment booked successfully.',
         appointmentId: newAppointment.id,
       };
     } else {
-      return {
+       return {
         success: false,
         message: 'Failed to create appointment.',
       };
@@ -82,4 +85,61 @@ export async function bookAppointment(
       success: false,
     };
   }
+}
+
+
+const DoctorFormSchema = z.object({
+  name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
+  specialty: z.string().min(2, { message: 'Specialty is required.' }),
+  experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
+  consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
+  bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
+});
+
+export type DoctorFormState = {
+  errors?: {
+    name?: string[];
+    specialty?: string[];
+    experience?: string[];
+    consultationFee?: string[];
+    bio?: string[];
+  };
+  message?: string | null;
+  success?: boolean;
+};
+
+export async function addDoctor(hospitalId: number, prevState: DoctorFormState, formData: FormData) {
+  const validatedFields = DoctorFormSchema.safeParse({
+    name: formData.get('name'),
+    specialty: formData.get('specialty'),
+    experience: formData.get('experience'),
+    consultationFee: formData.get('consultationFee'),
+    bio: formData.get('bio'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to add doctor. Please check the fields.',
+      success: false,
+    };
+  }
+
+  try {
+    await addDoctorData({ ...validatedFields.data, hospitalId });
+    revalidatePath('/hospital-admin/doctors');
+    return {
+      success: true,
+      message: 'Doctor added successfully.',
+    };
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to add doctor.',
+      success: false,
+    };
+  }
+}
+
+export async function getSpecialties() {
+    return await getSpecialtiesData();
 }

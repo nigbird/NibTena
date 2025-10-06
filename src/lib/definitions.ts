@@ -22,6 +22,9 @@ export type Doctor = {
   bio: string;
   consultationFee: number;
   rating: number;
+  experience?: number;
+  contact?: string;
+  status?: 'active' | 'inactive';
 };
 
 export type Appointment = {

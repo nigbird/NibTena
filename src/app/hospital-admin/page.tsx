@@ -25,7 +25,7 @@ export default function HospitalAdminDashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      const hospitalData = await getHospitalById(MOCK_Hospital_ID);
+      const hospitalData = await getHospitalById(MOCK_HOSPITAL_ID);
       setHospital(hospitalData || null);
 
       if (hospitalData) {

@@ -36,7 +36,7 @@ export default function DoctorsPage() {
     setIsDrawerOpen(true);
   };
 
-  const handleFormAction = useCallback(() => {
+  const handleFormActionSuccess = useCallback(() => {
     fetchDoctors(); // Re-fetch the doctors list
     setIsDrawerOpen(false); // Close the drawer
     setEditingDoctor(null); // Reset editing state
@@ -60,7 +60,7 @@ export default function DoctorsPage() {
         isOpen={isDrawerOpen}
         setIsOpen={setIsDrawerOpen}
         hospitalId={MOCK_HOSPITAL_ID}
-        onDoctorSaved={handleFormAction}
+        onDoctorSaved={handleFormActionSuccess}
         doctorToEdit={editingDoctor}
       />
 
@@ -74,8 +74,8 @@ export default function DoctorsPage() {
             <DoctorList 
               doctors={doctors} 
               onEdit={handleEditClick}
-              onDelete={handleFormAction}
-              onStatusChange={handleFormAction}
+              onDelete={handleFormActionSuccess}
+              onStatusChange={handleFormActionSuccess}
             />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">

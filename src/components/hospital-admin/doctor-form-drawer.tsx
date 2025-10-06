@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
-import { useRouter } from 'next/navigation';
 import { ScrollArea } from '../ui/scroll-area';
 
 type DoctorFormDrawerProps = {
@@ -38,43 +37,38 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
 
   const { toast } = useToast();
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [formKey, setFormKey] = useState(Date.now());
-  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
-  const submittedRef = useRef(false);
 
   useEffect(() => {
     getSpecialties().then(setSpecialties);
   }, []);
   
   useEffect(() => {
-    if (!isOpen) {
-      setFormKey(Date.now());
-      submittedRef.current = false; // Reset submission tracker when closing
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (state.success && submittedRef.current === false) {
+    if (state.success) {
       toast({
         title: "Success",
         description: state.message,
       });
-      submittedRef.current = true; // Mark as submitted
       onDoctorSaved();
-    } else if (state.message && !state.success && submittedRef.current === false) {
+    } else if (state.message) {
       toast({
         variant: "destructive",
         title: "Error",
         description: state.message,
       });
-      submittedRef.current = true; // Mark as submitted to prevent multiple error toasts
     }
   }, [state, onDoctorSaved, toast]);
 
+  useEffect(() => {
+    // Reset form fields when the drawer is opened for a different doctor or for adding a new one.
+    if (isOpen) {
+      formRef.current?.reset();
+    }
+  }, [isOpen, doctorToEdit]);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    submittedRef.current = false; // Reset for new submission
     const formData = new FormData(event.currentTarget);
     startTransition(() => {
         formAction(formData);
@@ -91,7 +85,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
-            <form key={formKey} onSubmit={handleSubmit} id="doctor-form" className="grid gap-4 py-4">
+            <form ref={formRef} onSubmit={handleSubmit} id="doctor-form" className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
                 Full Name

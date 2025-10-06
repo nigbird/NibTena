@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Hospital, Stethoscope, UserCircle, CalendarCheck } from 'lucide-react';
+import { Home, Stethoscope, UserCircle, CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/search', label: 'Doctors', icon: Stethoscope },
   { href: '/appointments', label: 'Bookings', icon: CalendarCheck },
+  { href: '/profile', label: 'Profile', icon: UserCircle },
 ];
 
 export default function BottomNavbar() {
@@ -23,9 +24,9 @@ export default function BottomNavbar() {
 
   return (
     <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t">
-      <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
+      <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
         {navLinks.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link
               key={label}

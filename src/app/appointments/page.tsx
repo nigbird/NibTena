@@ -16,13 +16,15 @@ import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Mocking a single patient's appointments by fetching all for now
-async function getMyAppointments(): Promise<Appointment[]> {
+// Mocking a single patient 'Alice Johnson'
+async function getMyAppointments(patientName: string): Promise<Appointment[]> {
   const allDocs = await getDoctors();
   const allAppointments = await Promise.all(
     allDocs.map(doc => getAppointmentsByDoctorId(doc.id))
   );
-  return allAppointments.flat().sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
+  return allAppointments.flat()
+    .filter(a => a.patientName === patientName)
+    .sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
 }
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
@@ -35,11 +37,14 @@ export default function MyAppointmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
+  
+  // In a real app, you'd get this from an auth context
+  const loggedInPatientName = 'Alice Johnson';
 
   const fetchData = async () => {
     setIsLoading(true);
     const [appointmentData, doctorData] = await Promise.all([
-      getMyAppointments(),
+      getMyAppointments(loggedInPatientName),
       getDoctors(),
     ]);
     setAppointments(appointmentData);

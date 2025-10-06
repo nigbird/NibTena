@@ -19,6 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
 import { useRouter } from 'next/navigation';
+import { ScrollArea } from '../ui/scroll-area';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -61,7 +62,6 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
       });
       submittedRef.current = true; // Mark as submitted
       onDoctorSaved();
-      router.refresh();
     } else if (state.message && !state.success && submittedRef.current === false) {
       toast({
         variant: "destructive",
@@ -70,7 +70,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
       });
       submittedRef.current = true; // Mark as submitted to prevent multiple error toasts
     }
-  }, [state, onDoctorSaved, toast, router]);
+  }, [state, onDoctorSaved, toast]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -83,85 +83,87 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent className="sm:max-w-lg">
+      <SheetContent className="sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Doctor' : 'Add a New Doctor'}</SheetTitle>
           <SheetDescription>
             {isEditing ? "Update the doctor's details below." : "Enter the details for the new doctor to add them to your hospital."}
           </SheetDescription>
         </SheetHeader>
-        <form key={formKey} onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Full Name
-            </Label>
-            <div className="col-span-3">
-              <Input id="name" name="name" defaultValue={doctorToEdit?.name} className="w-full" required />
-              {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>}
+        <ScrollArea className="flex-1 -mx-6 px-6">
+            <form key={formKey} onSubmit={handleSubmit} id="doctor-form" className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                Full Name
+                </Label>
+                <div className="col-span-3">
+                <Input id="name" name="name" defaultValue={doctorToEdit?.name} className="w-full" required />
+                {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>}
+                </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="specialty" className="text-right">
-              Specialty
-            </Label>
-            <div className="col-span-3">
-               <Select name="specialty" defaultValue={doctorToEdit?.specialty} required>
-                    <SelectTrigger id="specialty">
-                        <SelectValue placeholder="Select specialty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {specialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-              {state.errors?.specialty && <p className="text-sm font-medium text-destructive">{state.errors.specialty[0]}</p>}
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="specialty" className="text-right">
+                Specialty
+                </Label>
+                <div className="col-span-3">
+                <Select name="specialty" defaultValue={doctorToEdit?.specialty} required>
+                        <SelectTrigger id="specialty">
+                            <SelectValue placeholder="Select specialty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {specialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                {state.errors?.specialty && <p className="text-sm font-medium text-destructive">{state.errors.specialty[0]}</p>}
+                </div>
             </div>
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="photo" className="text-right">
-              Profile Photo
-            </Label>
-            <div className="col-span-3">
-              <Input id="photo" name="photo" type="file" className="w-full" />
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="photo" className="text-right">
+                Profile Photo
+                </Label>
+                <div className="col-span-3">
+                <Input id="photo" name="photo" type="file" className="w-full" />
+                </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="experience" className="text-right">
-              Experience
-            </Label>
-            <div className="col-span-3">
-              <Input id="experience" name="experience" type="number" defaultValue={doctorToEdit?.experience} placeholder="Years" className="w-full" required />
-               {state.errors?.experience && <p className="text-sm font-medium text-destructive">{state.errors.experience[0]}</p>}
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="experience" className="text-right">
+                Experience
+                </Label>
+                <div className="col-span-3">
+                <Input id="experience" name="experience" type="number" defaultValue={doctorToEdit?.experience} placeholder="Years" className="w-full" required />
+                {state.errors?.experience && <p className="text-sm font-medium text-destructive">{state.errors.experience[0]}</p>}
+                </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="consultationFee" className="text-right">
-              Fee ($)
-            </Label>
-            <div className="col-span-3">
-              <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctorToEdit?.consultationFee} placeholder="150" className="w-full" required/>
-               {state.errors?.consultationFee && <p className="text-sm font-medium text-destructive">{state.errors.consultationFee[0]}</p>}
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="consultationFee" className="text-right">
+                Fee ($)
+                </Label>
+                <div className="col-span-3">
+                <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctorToEdit?.consultationFee} placeholder="150" className="w-full" required/>
+                {state.errors?.consultationFee && <p className="text-sm font-medium text-destructive">{state.errors.consultationFee[0]}</p>}
+                </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="bio" className="text-right">
-              Bio
-            </Label>
-            <div className="col-span-3">
-              <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" required />
-               {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bio" className="text-right">
+                Bio
+                </Label>
+                <div className="col-span-3">
+                <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" required />
+                {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
+                </div>
             </div>
-          </div>
-          <div className="flex justify-end space-x-2 pt-4">
-             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending} variant="accent">
+            </form>
+        </ScrollArea>
+        <div className="flex justify-end space-x-2 pt-4 border-t -mx-6 px-6">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button type="submit" form="doctor-form" disabled={isPending} variant="accent">
                 {isPending ? (
                     <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
                 ) : (
                     isEditing ? 'Save Changes' : 'Add Doctor'
                 )}
             </Button>
-          </div>
-        </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

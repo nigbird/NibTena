@@ -3,11 +3,12 @@
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { summarizeAppointmentDetails } from '@/ai/flows/summarize-appointment-details';
-import { addAppointment } from './data';
+import { addAppointment, getAppointmentById } from './data';
+import type { Appointment } from './definitions';
 
 const FormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string({ required_error: 'Please enter a phone number.' }),
+  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   symptoms: z.string().min(10, { message: 'Please describe your symptoms in at least 10 characters.' }),
@@ -47,11 +48,12 @@ export async function bookAppointment(
   }
 
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
+  let newAppointment: Appointment | undefined;
 
   try {
     const { summary } = await summarizeAppointmentDetails({ symptoms });
 
-    const newAppointment = await addAppointment({
+    newAppointment = await addAppointment({
       patientName: fullName,
       patientPhone: phone,
       patientAge: age,
@@ -72,6 +74,12 @@ export async function bookAppointment(
       message: 'An error occurred while processing your appointment. Please try again.',
     };
   }
-  // Redirect to a success page which can then show the toast.
-  redirect(`/confirmation/success`);
+
+  if (newAppointment) {
+    redirect(`/confirmation/${newAppointment.id}?success=true`);
+  } else {
+     return {
+      message: 'An error occurred while processing your appointment. Please try again.',
+    };
+  }
 }

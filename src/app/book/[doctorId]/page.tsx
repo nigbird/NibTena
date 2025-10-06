@@ -63,12 +63,18 @@ export default function BookingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message && state.errors) {
+    if (state?.message && state.errors) {
       toast({
         variant: "destructive",
         title: "Booking Failed",
         description: state.message,
       })
+    } else if (state?.message) {
+         toast({
+            variant: "destructive",
+            title: "Booking Failed",
+            description: state.message,
+        });
     }
   }, [state, toast]);
   

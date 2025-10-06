@@ -1,32 +1,31 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export default function BookingSuccessPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
+        const appointmentId = searchParams.get('appointmentId');
+        
         toast({
             title: "Booking Confirmed!",
             description: "Your appointment has been successfully booked.",
         });
 
-        // Find the latest appointment to redirect to its confirmation page
-        // This is a simplification. In a real app, you'd get the ID from the server action.
-        const redirectUrl = '/'; // Fallback to home
+        const redirectUrl = appointmentId ? `/confirmation/${appointmentId}` : '/';
         
-        // In a real app you might fetch the last appointment ID
-        // For now, we just show the toast and send them home after a delay.
         const timer = setTimeout(() => {
             router.replace(redirectUrl);
-        }, 500); // Give user a moment to see the toast
+        }, 500);
 
         return () => clearTimeout(timer);
-    }, [router, toast]);
+    }, [router, toast, searchParams]);
 
     return (
         <div className="flex h-screen flex-col items-center justify-center space-y-4">

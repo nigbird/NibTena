@@ -65,11 +65,19 @@ export default function BookingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state?.success === false && state.message) {
-       toast({
-          variant: "destructive",
-          title: "Booking Failed",
-          description: state.message,
+    if (state?.success === true && state.message) {
+      toast({
+        title: 'Booking Confirmed!',
+        description: state.message,
+      });
+      if (state.appointmentId) {
+        router.push(`/confirmation/${state.appointmentId}`);
+      }
+    } else if (state?.success === false && state.message) {
+      toast({
+        variant: 'destructive',
+        title: 'Booking Failed',
+        description: state.message,
       });
     }
   }, [state, toast, router]);
@@ -130,12 +138,11 @@ export default function BookingPage() {
               <Textarea
                 id="symptoms"
                 name="symptoms"
-                placeholder="Briefly describe your symptoms. Our AI will summarize this for the doctor."
+                placeholder="Briefly describe your symptoms."
                 className="min-h-[120px]"
                 required
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
-              <p className="text-xs text-muted-foreground">This summary helps the doctor prepare for your consultation.</p>
             </div>
             <SubmitButton />
           </form>

@@ -1,10 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { redirect } from 'next/navigation';
-import { summarizeAppointmentDetails } from '@/ai/flows/summarize-appointment-details';
 import { addAppointment } from './data';
-import type { Appointment } from './definitions';
 
 const FormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -53,35 +50,33 @@ export async function bookAppointment(
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
   
   try {
-    const { summary } = await summarizeAppointmentDetails({ symptoms });
-
     const newAppointment = await addAppointment({
       patientName: fullName,
       patientPhone: phone,
       patientAge: age,
       patientGender: gender,
       symptoms,
-      summary,
+      summary: symptoms, // Use symptoms as summary
       doctorId,
       appointmentSlot,
       appointmentDate,
     });
 
     if (newAppointment) {
-        // Simulate payment processing
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        redirect(`/confirmation/${newAppointment.id}?success=true`);
-
+      return {
+        success: true,
+        message: 'Appointment booked successfully.',
+        appointmentId: newAppointment.id,
+      };
     } else {
-        return {
-            message: 'Failed to create an appointment. Please try again.',
-            success: false,
-        };
+      return {
+        success: false,
+        message: 'Failed to create appointment.',
+      };
     }
     
   } catch (error) {
-    console.error('AI summarization or data saving failed:', error);
+    console.error('Data saving failed:', error);
     return {
       message: 'An error occurred while processing your appointment. Please try again.',
       success: false,

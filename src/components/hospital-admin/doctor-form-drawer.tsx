@@ -8,9 +8,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-  SheetClose
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,22 +44,20 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const isEditing = !!doctorToEdit;
   const initialState: DoctorFormState = { message: null, errors: {} };
   
-  // The action needs to be bound with the hospitalId and potentially the doctorId if editing
   const action = isEditing ? addDoctor.bind(null, hospitalId, doctorToEdit.id) : addDoctor.bind(null, hospitalId, null);
   const [state, formAction] = useActionState<DoctorFormState, FormData>(action, initialState);
 
   const { toast } = useToast();
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [formKey, setFormKey] = useState(Date.now()); // Used to reset the form
+  const [formKey, setFormKey] = useState(Date.now());
 
   useEffect(() => {
     getSpecialties().then(setSpecialties);
   }, []);
   
   useEffect(() => {
-    // Reset form when drawer is closed or when switching between add/edit
     if (!isOpen) {
-      setFormKey(Date.now()); // This will reset the form state by changing the key
+      setFormKey(Date.now());
     }
   }, [isOpen]);
 
@@ -144,12 +139,10 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
             </div>
           </div>
-          <SheetFooter>
-             <SheetClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-            </SheetClose>
+          <div className="flex justify-end space-x-2 pt-4">
+             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
             <SubmitButton isEditing={isEditing} />
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

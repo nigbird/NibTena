@@ -43,16 +43,31 @@ export async function getDoctorById(id: number): Promise<Doctor | undefined> {
   return doctors.find(d => d.id === id);
 }
 
-export async function addDoctor(doctor: Omit<Doctor, 'id' | 'rating' | 'imageId'> & { hospitalId: number }): Promise<Doctor> {
+export async function addDoctor(doctor: Omit<Doctor, 'id' | 'rating' | 'imageId' | 'status'> & { hospitalId: number }): Promise<Doctor> {
     const newDoctor: Doctor = {
         ...doctor,
-        id: doctors.length + 1,
+        id: doctors.length > 0 ? Math.max(...doctors.map(d => d.id)) + 1 : 1,
         rating: Math.floor(Math.random() * (50 - 45) + 45) / 10, // random rating between 4.5 and 5
-        imageId: `doctor-${(doctors.length % 7) + 1}`, // cycle through placeholder images
+        imageId: `doctor-${((doctors.length + 1) % 7) + 1}`, // cycle through placeholder images
         status: 'active',
     };
     doctors.push(newDoctor);
     return newDoctor;
+}
+
+export async function updateDoctor(id: number, updatedData: Partial<Omit<Doctor, 'id'>>): Promise<Doctor | undefined> {
+    const doctorIndex = doctors.findIndex(d => d.id === id);
+    if (doctorIndex === -1) {
+        return undefined;
+    }
+    doctors[doctorIndex] = { ...doctors[doctorIndex], ...updatedData };
+    return doctors[doctorIndex];
+}
+
+export async function deleteDoctor(id: number): Promise<{ success: boolean }> {
+    const initialLength = doctors.length;
+    doctors = doctors.filter(d => d.id !== id);
+    return { success: doctors.length < initialLength };
 }
 
 
@@ -81,7 +96,18 @@ export async function addAppointment(appointment: Omit<Appointment, 'id' | 'stat
 }
 
 export async function getSpecialties(): Promise<string[]> {
-    const specialties = new Set(doctors.map(d => d.specialty));
+    const allSpecialties = [
+      'Cardiology', 
+      'Dermatology', 
+      'Neurology', 
+      'Pediatrics', 
+      'Orthopedics', 
+      'Dentistry',
+      'General Practice',
+      'Urology',
+      'Gastroenterology'
+    ];
+    const specialties = new Set([...allSpecialties, ...doctors.map(d => d.specialty)]);
     return Array.from(specialties);
 }
 

@@ -1,7 +1,13 @@
 'use server';
 
 import { z } from 'zod';
-import { addAppointment, addDoctor as addDoctorData, getSpecialties as getSpecialtiesData } from './data';
+import { 
+  addAppointment as addAppointmentData, 
+  addDoctor as addDoctorData, 
+  updateDoctor as updateDoctorData,
+  deleteDoctor as deleteDoctorData,
+  getSpecialties as getSpecialtiesData
+} from './data';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { Doctor } from './definitions';
@@ -53,13 +59,13 @@ export async function bookAppointment(
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
   
   try {
-    const newAppointment = await addAppointment({
+    const newAppointment = await addAppointmentData({
       patientName: fullName,
       patientPhone: phone,
       patientAge: age,
       patientGender: gender,
       symptoms,
-      summary: symptoms,
+      summary: symptoms, // Directly using symptoms as summary
       doctorId,
       appointmentSlot,
       appointmentDate,
@@ -67,8 +73,13 @@ export async function bookAppointment(
 
     if (newAppointment) {
       revalidatePath('/doctor-dashboard');
-      revalidatePath('/hospital-admin');
-      redirect(`/confirmation/success?appointmentId=${newAppointment.id}`);
+      revalidatePath('/hospital-admin/appointments');
+      // No longer redirecting from here, but returning success state
+       return {
+        success: true,
+        message: 'Appointment booked successfully!',
+        appointmentId: newAppointment.id
+      };
     } else {
        return {
         success: false,
@@ -107,7 +118,12 @@ export type DoctorFormState = {
   newDoctor?: Doctor;
 };
 
-export async function addDoctor(hospitalId: number, prevState: DoctorFormState, formData: FormData) {
+export async function addDoctor(
+  hospitalId: number, 
+  doctorId: number | null, // null for add, number for edit
+  prevState: DoctorFormState, 
+  formData: FormData
+) {
   const validatedFields = DoctorFormSchema.safeParse({
     name: formData.get('name'),
     specialty: formData.get('specialty'),
@@ -119,26 +135,59 @@ export async function addDoctor(hospitalId: number, prevState: DoctorFormState, 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to add doctor. Please check the fields.',
+      message: 'Failed to save doctor. Please check the fields.',
       success: false,
     };
   }
 
   try {
-    const newDoctor = await addDoctorData({ ...validatedFields.data, hospitalId });
-    revalidatePath('/hospital-admin/doctors');
-    return {
-      success: true,
-      message: 'Doctor added successfully.',
-      newDoctor,
-    };
+    if (doctorId) {
+      // Editing existing doctor
+      const updatedDoctor = await updateDoctorData(doctorId, validatedFields.data);
+      revalidatePath('/hospital-admin/doctors');
+      return {
+        success: true,
+        message: 'Doctor updated successfully.',
+        newDoctor: updatedDoctor
+      };
+    } else {
+      // Adding new doctor
+      const newDoctor = await addDoctorData({ ...validatedFields.data, hospitalId });
+      revalidatePath('/hospital-admin/doctors');
+      return {
+        success: true,
+        message: 'Doctor added successfully.',
+        newDoctor,
+      };
+    }
   } catch (error) {
     return {
-      message: 'Database Error: Failed to add doctor.',
+      message: 'Database Error: Failed to save doctor.',
       success: false,
     };
   }
 }
+
+export async function updateDoctorStatus(doctorId: number, status: 'active' | 'inactive') {
+  try {
+    await updateDoctorData(doctorId, { status });
+    revalidatePath('/hospital-admin/doctors');
+    return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
+  } catch (error) {
+    return { success: false, message: 'Database Error: Failed to update doctor status.' };
+  }
+}
+
+export async function deleteDoctor(doctorId: number) {
+    try {
+        await deleteDoctorData(doctorId);
+        revalidatePath('/hospital-admin/doctors');
+        return { success: true, message: 'Doctor deleted successfully.' };
+    } catch (error) {
+        return { success: false, message: 'Database Error: Failed to delete doctor.' };
+    }
+}
+
 
 export async function getSpecialties() {
     return await getSpecialtiesData();

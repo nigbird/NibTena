@@ -17,7 +17,73 @@ let doctors: Doctor[] = [
 ];
 
 // In-memory store for appointments
-let appointments: Appointment[] = [];
+let appointments: Appointment[] = [
+    {
+        id: 'apt_1625488800000',
+        patientName: 'John Smith',
+        patientPhone: '555-0101',
+        patientAge: 45,
+        patientGender: 'male',
+        symptoms: 'Chest pain and shortness of breath.',
+        summary: 'Patient presents with chest pain and shortness of breath, possible cardiac event.',
+        doctorId: 1,
+        appointmentDate: '2024-08-15',
+        appointmentSlot: '10:00 AM',
+        status: 'confirmed',
+    },
+    {
+        id: 'apt_1625492400000',
+        patientName: 'Jane Doe',
+        patientPhone: '555-0102',
+        patientAge: 32,
+        patientGender: 'female',
+        symptoms: 'Severe headache and dizziness.',
+        summary: 'Patient reports severe headache and dizziness, requires neurological assessment.',
+        doctorId: 3,
+        appointmentDate: '2024-08-15',
+        appointmentSlot: '11:00 AM',
+        status: 'confirmed',
+    },
+    {
+        id: 'apt_1625575200000',
+        patientName: 'Peter Jones',
+        patientPhone: '555-0103',
+        patientAge: 8,
+        patientGender: 'male',
+        symptoms: 'Fever and sore throat.',
+        summary: 'Child with fever and sore throat, likely strep or viral infection.',
+        doctorId: 4,
+        appointmentDate: '2024-08-16',
+        appointmentSlot: '09:30 AM',
+        status: 'completed',
+    },
+     {
+        id: 'apt_1625661600000',
+        patientName: 'Mary Johnson',
+        patientPhone: '555-0104',
+        patientAge: 68,
+        patientGender: 'female',
+        symptoms: 'Follow-up for knee replacement surgery.',
+        summary: 'Post-op follow-up for knee replacement.',
+        doctorId: 5,
+        appointmentDate: '2024-07-20',
+        appointmentSlot: '02:00 PM',
+        status: 'completed',
+    },
+     {
+        id: 'apt_1625748000000',
+        patientName: 'David Williams',
+        patientPhone: '555-0105',
+        patientAge: 25,
+        patientGender: 'male',
+        symptoms: 'Cancelled due to conflict.',
+        summary: 'N/A',
+        doctorId: 2,
+        appointmentDate: '2024-08-18',
+        appointmentSlot: '03:00 PM',
+        status: 'cancelled',
+    },
+];
 
 // API functions to interact with mock data
 export async function getHospitals(): Promise<Hospital[]> {
@@ -85,14 +151,31 @@ export async function getAppointmentById(id: string): Promise<Appointment | unde
     return appointments.find(a => a.id === id);
 }
 
-export async function addAppointment(appointment: Omit<Appointment, 'id' | 'status'>): Promise<Appointment> {
+export async function addAppointment(appointment: Omit<Appointment, 'id' | 'status' | 'summary'>): Promise<Appointment> {
     const newAppointment: Appointment = {
         ...appointment,
         id: `apt_${Date.now()}`,
         status: 'confirmed',
+        summary: appointment.symptoms, // Default summary to symptoms
     };
     appointments.push(newAppointment);
     return newAppointment;
+}
+
+
+export async function updateAppointment(id: string, updatedData: Partial<Omit<Appointment, 'id'>>): Promise<Appointment | undefined> {
+    const appointmentIndex = appointments.findIndex(a => a.id === id);
+    if (appointmentIndex === -1) {
+        return undefined;
+    }
+    appointments[appointmentIndex] = { ...appointments[appointmentIndex], ...updatedData };
+    return appointments[appointmentIndex];
+}
+
+export async function deleteAppointment(id: string): Promise<{ success: boolean }> {
+    const initialLength = appointments.length;
+    appointments = appointments.filter(a => a.id !== id);
+    return { success: appointments.length < initialLength };
 }
 
 export async function getSpecialties(): Promise<string[]> {

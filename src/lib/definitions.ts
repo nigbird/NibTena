@@ -31,7 +31,7 @@ export type Appointment = {
   id: string;
   patientName: string;
   patientPhone: string;
-  patientGender: string;
+  patientGender: 'male' | 'female' | 'other';
   patientAge: number;
   symptoms: string;
   summary: string;

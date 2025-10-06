@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,7 +13,8 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, Bot } from 'lucide-react';
-import Header from '@/components/header';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
@@ -32,16 +34,21 @@ export default function DoctorDashboardPage() {
   }, []);
 
   return (
-    <>
-    <Header title="Doctor Dashboard" />
-    <div className="container py-6">
-      <div className="mb-8">
-        <h1 className="font-headline text-3xl font-bold tracking-tight">
-          Welcome, {doctor?.name}
-        </h1>
-        <p className="mt-1 text-lg text-muted-foreground">
-          Here are your upcoming appointments.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">
+            Welcome, {doctor?.name}
+          </h1>
+          <p className="mt-1 text-lg text-muted-foreground">
+            Here are your upcoming appointments.
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/doctor-dashboard/profile">
+            Edit Profile
+          </Link>
+        </Button>
       </div>
 
       {appointments.length > 0 ? (
@@ -90,6 +97,5 @@ export default function DoctorDashboardPage() {
         </div>
       )}
     </div>
-    </>
   );
 }

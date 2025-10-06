@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -15,8 +16,8 @@ const navLinks = [
 export default function BottomNavbar() {
   const pathname = usePathname();
 
-  // Hide navbar on admin routes
-  if (pathname.startsWith('/hospital-admin')) {
+  // Hide navbar on certain routes
+  if (pathname.startsWith('/hospital-admin') || pathname.startsWith('/doctor-dashboard')) {
     return null;
   }
 

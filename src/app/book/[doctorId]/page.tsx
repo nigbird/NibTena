@@ -6,6 +6,7 @@ import { useSearchParams, useParams } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 
 import { Button } from '@/components/ui/button';
@@ -37,10 +38,10 @@ function SubmitButton() {
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Processing Payment...
+          Processing...
         </>
       ) : (
-        'Confirm & Pay'
+        'Confirm & Book'
       )}
     </Button>
   );
@@ -50,6 +51,7 @@ export default function BookingPage() {
   const params = useParams();
   const doctorId = Number(params.doctorId);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const slot = searchParams.get('slot') || 'Not specified';
   const dateParam = searchParams.get('date');
   const date = dateParam 
@@ -57,36 +59,20 @@ export default function BookingPage() {
     : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
 
-  const initialState = { message: null, errors: {} };
-  const bookAppointmentWithId = bookAppointment.bind(null, doctorId, slot, date);
-  const [state, dispatch] = useActionState<State, FormData>(bookAppointmentWithId, initialState);
+  const initialState: State = { message: null, errors: {} };
+  const bookAppointmentWithParams = bookAppointment.bind(null, doctorId, slot, date);
+  const [state, dispatch] = useActionState<State, FormData>(bookAppointmentWithParams, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state?.message && state.errors) {
-      toast({
-        variant: "destructive",
-        title: "Booking Failed",
-        description: state.message,
-      })
-    } else if (state?.message) {
-         toast({
-            variant: "destructive",
-            title: "Booking Failed",
-            description: state.message,
-        });
+    if (state?.success === false && state.message) {
+       toast({
+          variant: "destructive",
+          title: "Booking Failed",
+          description: state.message,
+      });
     }
-  }, [state, toast]);
-  
-  useEffect(() => {
-    const success = searchParams.get('success');
-    if (success === 'true') {
-        toast({
-            title: "Booking Confirmed!",
-            description: "Your appointment has been successfully booked.",
-        });
-    }
-  }, [searchParams, toast]);
+  }, [state, toast, router]);
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
@@ -152,7 +138,6 @@ export default function BookingPage() {
               <p className="text-xs text-muted-foreground">This summary helps the doctor prepare for your consultation.</p>
             </div>
             <SubmitButton />
-             {state.message && !state.errors && <p className="text-sm font-medium text-destructive">{state.message}</p>}
           </form>
         </CardContent>
       </Card>

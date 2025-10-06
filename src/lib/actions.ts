@@ -3,12 +3,12 @@
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { summarizeAppointmentDetails } from '@/ai/flows/summarize-appointment-details';
-import { addAppointment, getAppointmentById } from './data';
+import { addAppointment } from './data';
 import type { Appointment } from './definitions';
 
 const FormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
+  phone: z.string(),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   symptoms: z.string().min(10, { message: 'Please describe your symptoms in at least 10 characters.' }),
@@ -23,6 +23,8 @@ export type State = {
     symptoms?: string[];
   };
   message?: string | null;
+  success?: boolean;
+  appointmentId?: string;
 };
 
 export async function bookAppointment(
@@ -31,7 +33,7 @@ export async function bookAppointment(
   appointmentDate: string,
   prevState: State,
   formData: FormData
-) {
+): Promise<State> {
   const validatedFields = FormSchema.safeParse({
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
@@ -44,16 +46,16 @@ export async function bookAppointment(
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Failed to book appointment. Please check the fields.',
+      success: false,
     };
   }
 
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
-  let newAppointment: Appointment | undefined;
-
+  
   try {
     const { summary } = await summarizeAppointmentDetails({ symptoms });
 
-    newAppointment = await addAppointment({
+    const newAppointment = await addAppointment({
       patientName: fullName,
       patientPhone: phone,
       patientAge: age,
@@ -64,22 +66,25 @@ export async function bookAppointment(
       appointmentSlot,
       appointmentDate,
     });
-    
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (newAppointment) {
+        // Simulate payment processing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        redirect(`/confirmation/${newAppointment.id}?success=true`);
+
+    } else {
+        return {
+            message: 'Failed to create an appointment. Please try again.',
+            success: false,
+        };
+    }
     
   } catch (error) {
     console.error('AI summarization or data saving failed:', error);
     return {
       message: 'An error occurred while processing your appointment. Please try again.',
-    };
-  }
-
-  if (newAppointment) {
-    redirect(`/confirmation/${newAppointment.id}?success=true`);
-  } else {
-     return {
-      message: 'An error occurred while processing your appointment. Please try again.',
+      success: false,
     };
   }
 }

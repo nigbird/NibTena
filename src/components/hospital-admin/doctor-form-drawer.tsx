@@ -54,7 +54,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   }, [isOpen]);
 
   useEffect(() => {
-    if (state.success && !submittedRef.current) {
+    if (state.success && submittedRef.current === false) {
       toast({
         title: "Success",
         description: state.message,
@@ -62,7 +62,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
       submittedRef.current = true; // Mark as submitted
       onDoctorSaved();
       router.refresh();
-    } else if (state.message && !state.success && !submittedRef.current) {
+    } else if (state.message && !state.success && submittedRef.current === false) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -114,6 +114,14 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                     </SelectContent>
                 </Select>
               {state.errors?.specialty && <p className="text-sm font-medium text-destructive">{state.errors.specialty[0]}</p>}
+            </div>
+          </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="photo" className="text-right">
+              Profile Photo
+            </Label>
+            <div className="col-span-3">
+              <Input id="photo" name="photo" type="file" className="w-full" />
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users } from "lucide-react";
@@ -10,21 +10,21 @@ import DoctorList from '@/components/hospital-admin/doctor-list';
 import DoctorFormDrawer from '@/components/hospital-admin/doctor-form-drawer';
 
 // Mocking a logged-in admin for Hospital ID 1
-const MOCK_Hospital_ID = 1;
+const MOCK_HOSPITAL_ID = 1;
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
 
-  const fetchDoctors = async () => {
-    const doctorsData = await getDoctorsByHospitalId(MOCK_Hospital_ID);
+  const fetchDoctors = useCallback(async () => {
+    const doctorsData = await getDoctorsByHospitalId(MOCK_HOSPITAL_ID);
     setDoctors(doctorsData);
-  };
+  }, []);
 
   useEffect(() => {
     fetchDoctors();
-  }, []);
+  }, [fetchDoctors]);
 
   const handleAddClick = () => {
     setEditingDoctor(null);
@@ -36,15 +36,12 @@ export default function DoctorsPage() {
     setIsDrawerOpen(true);
   };
 
-  const handleDoctorSaved = () => {
-    fetchDoctors();
-    setIsDrawerOpen(false);
-    setEditingDoctor(null);
-  };
+  const handleFormAction = useCallback(() => {
+    fetchDoctors(); // Re-fetch the doctors list
+    setIsDrawerOpen(false); // Close the drawer
+    setEditingDoctor(null); // Reset editing state
+  }, [fetchDoctors]);
 
-  const handleAction = () => {
-    fetchDoctors();
-  }
 
   return (
     <div className="space-y-6">
@@ -62,8 +59,8 @@ export default function DoctorsPage() {
       <DoctorFormDrawer
         isOpen={isDrawerOpen}
         setIsOpen={setIsDrawerOpen}
-        hospitalId={MOCK_Hospital_ID}
-        onDoctorSaved={handleDoctorSaved}
+        hospitalId={MOCK_HOSPITAL_ID}
+        onDoctorSaved={handleFormAction}
         doctorToEdit={editingDoctor}
       />
 
@@ -77,8 +74,8 @@ export default function DoctorsPage() {
             <DoctorList 
               doctors={doctors} 
               onEdit={handleEditClick}
-              onDelete={handleAction}
-              onStatusChange={handleAction}
+              onDelete={handleFormAction}
+              onStatusChange={handleFormAction}
             />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">

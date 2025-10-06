@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState, useTransition } from 'react';
+import { useActionState, useEffect, useState, useTransition, useRef } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -28,20 +28,6 @@ type DoctorFormDrawerProps = {
   doctorToEdit?: Doctor | null;
 };
 
-function SubmitButton({ isEditing }: { isEditing: boolean }) {
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <Button type="submit" disabled={isPending} variant="accent">
-      {isPending ? (
-        <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
-      ) : (
-        isEditing ? 'Save Changes' : 'Add Doctor'
-      )}
-    </Button>
-  );
-}
-
 export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoctorSaved, doctorToEdit }: DoctorFormDrawerProps) {
   const isEditing = !!doctorToEdit;
   const initialState: DoctorFormState = { message: null, errors: {} };
@@ -54,7 +40,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const [formKey, setFormKey] = useState(Date.now());
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     getSpecialties().then(setSpecialties);
@@ -63,28 +49,32 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   useEffect(() => {
     if (!isOpen) {
       setFormKey(Date.now());
+      submittedRef.current = false; // Reset submission tracker when closing
     }
   }, [isOpen]);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && !submittedRef.current) {
       toast({
         title: "Success",
         description: state.message,
       });
+      submittedRef.current = true; // Mark as submitted
       onDoctorSaved();
       router.refresh();
-    } else if (state.message && !state.success) {
+    } else if (state.message && !state.success && !submittedRef.current) {
       toast({
         variant: "destructive",
         title: "Error",
         description: state.message,
       });
+      submittedRef.current = true; // Mark as submitted to prevent multiple error toasts
     }
   }, [state, onDoctorSaved, toast, router]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    submittedRef.current = false; // Reset for new submission
     const formData = new FormData(event.currentTarget);
     startTransition(() => {
         formAction(formData);
@@ -106,7 +96,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
               Full Name
             </Label>
             <div className="col-span-3">
-              <Input id="name" name="name" defaultValue={doctorToEdit?.name} className="w-full" />
+              <Input id="name" name="name" defaultValue={doctorToEdit?.name} className="w-full" required />
               {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>}
             </div>
           </div>
@@ -131,7 +121,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
               Experience
             </Label>
             <div className="col-span-3">
-              <Input id="experience" name="experience" type="number" defaultValue={doctorToEdit?.experience} placeholder="Years" className="w-full" />
+              <Input id="experience" name="experience" type="number" defaultValue={doctorToEdit?.experience} placeholder="Years" className="w-full" required />
                {state.errors?.experience && <p className="text-sm font-medium text-destructive">{state.errors.experience[0]}</p>}
             </div>
           </div>
@@ -140,7 +130,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
               Fee ($)
             </Label>
             <div className="col-span-3">
-              <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctorToEdit?.consultationFee} placeholder="150" className="w-full" />
+              <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctorToEdit?.consultationFee} placeholder="150" className="w-full" required/>
                {state.errors?.consultationFee && <p className="text-sm font-medium text-destructive">{state.errors.consultationFee[0]}</p>}
             </div>
           </div>
@@ -149,7 +139,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
               Bio
             </Label>
             <div className="col-span-3">
-              <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" />
+              <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" required />
                {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
             </div>
           </div>

@@ -1,26 +1,125 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CalendarDays, Clock, Settings, User } from "lucide-react";
+import type { Doctor } from '@/lib/definitions';
+import { getDoctorsByHospitalId } from '@/lib/data';
+import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { placeholderImages } from '@/lib/placeholder-images';
+
+// Mocking a logged-in admin for Hospital ID 1
+const MOCK_HOSPITAL_ID = 1;
 
 export default function ScheduleSettingsPage() {
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+
+  const fetchDoctors = useCallback(async () => {
+    const doctorsData = await getDoctorsByHospitalId(MOCK_HOSPITAL_ID);
+    setDoctors(doctorsData);
+  }, []);
+
+  useEffect(() => {
+    fetchDoctors();
+  }, [fetchDoctors]);
+
+  const handleEditScheduleClick = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setIsDrawerOpen(true);
+  };
+  
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+    setSelectedDoctor(null);
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
-        <p className="text-lg text-muted-foreground">Configure hospital-wide availability and booking rules.</p>
+        <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
       </div>
+
+      {selectedDoctor && (
+        <DoctorScheduleDrawer
+          isOpen={isDrawerOpen}
+          setIsOpen={handleDrawerClose}
+          doctor={selectedDoctor}
+        />
+      )}
+
+      {/* Doctor Schedules Card */}
       <Card>
         <CardHeader>
-            <CardTitle>Schedule Configuration</CardTitle>
-            <CardDescription>Define working hours and booking policies.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5" />
+            Doctor Schedules
+          </CardTitle>
+          <CardDescription>Manage the weekly availability for each doctor.</CardDescription>
         </CardHeader>
-        <CardContent>
-             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-xl font-semibold font-headline">Coming Soon</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Advanced schedule management is under development.</p>
-            </div>
+        <CardContent className="space-y-4">
+          {doctors.map(doctor => {
+            const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
+            return (
+              <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                      {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                      <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{doctor.name}</p>
+                    <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                  </div>
+                </div>
+                <Button variant="outline" onClick={() => handleEditScheduleClick(doctor)}>Edit Schedule</Button>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
+
+      {/* Hospital-Wide Booking Rules Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Hospital-Wide Booking Rules
+          </CardTitle>
+          <CardDescription>Set global policies for appointment booking.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="booking-window">Booking Window Limit (Days)</Label>
+            <Input id="booking-window" type="number" placeholder="e.g., 30" defaultValue="30" className="max-w-xs" />
+            <p className="text-sm text-muted-foreground">How many days in advance patients can book.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Hospital Working Hours</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <Input type="time" defaultValue="08:00" className="max-w-xs" />
+              </div>
+              <span className="text-muted-foreground">-</span>
+              <div className="flex items-center gap-2">
+                 <Clock className="h-4 w-4 text-muted-foreground" />
+                <Input type="time" defaultValue="18:00" className="max-w-xs" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">The general opening and closing times for the hospital.</p>
+          </div>
+        </CardContent>
+        <div className="border-t px-6 py-4">
+           <Button variant="accent">Save Changes</Button>
+        </div>
+      </Card>
     </div>
-  )
+  );
 }

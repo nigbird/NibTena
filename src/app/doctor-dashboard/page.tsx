@@ -44,11 +44,6 @@ export default function DoctorDashboardPage() {
             Here are your upcoming appointments.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/doctor-dashboard/profile">
-            Edit Profile
-          </Link>
-        </Button>
       </div>
 
       {appointments.length > 0 ? (

@@ -1,5 +1,5 @@
-
-import Header from '@/components/header';
+import DoctorSidebar from '@/components/doctor-sidebar';
+import DoctorHeader from '@/components/doctor-header';
 
 export default function DoctorDashboardLayout({
   children,
@@ -7,11 +7,14 @@ export default function DoctorDashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header title="Doctor Dashboard" />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {children}
-      </main>
+    <div className="flex min-h-screen w-full">
+      <DoctorSidebar />
+      <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
+        <DoctorHeader />
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

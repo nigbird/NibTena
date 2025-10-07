@@ -1,10 +1,10 @@
 
 import type { Hospital, Doctor, Appointment } from './definitions';
 
-const hospitals: Hospital[] = [
-  { id: 1, name: 'Tikur Anbessa Specialized Hospital', city: 'Addis Ababa', imageId: 'hospital-1' },
-  { id: 2, name: 'St. Paul’s Millennium Medical College', city: 'Addis Ababa', imageId: 'hospital-2' },
-  { id: 3, name: 'Hawassa Referral Hospital', city: 'Hawassa', imageId: 'hospital-3' },
+let hospitals: Hospital[] = [
+  { id: 1, name: 'Tikur Anbessa Specialized Hospital', city: 'Addis Ababa', imageId: 'hospital-1', description: 'Ethiopia\'s largest and oldest public hospital, providing a wide range of specialized medical services and serving as a major teaching institution.', contactEmail: 'info@tah.gov.et', contactPhone: '+251 11 551 1211', accountNumber: '1000012345678', status: 'active' },
+  { id: 2, name: 'St. Paul’s Millennium Medical College', city: 'Addis Ababa', imageId: 'hospital-2', description: 'A prominent medical school and hospital known for its comprehensive healthcare services and contributions to medical education and research.', contactEmail: 'contact@spmmc.edu.et', contactPhone: '+251 11 275 0125', accountNumber: '1000023456789', status: 'active' },
+  { id: 3, name: 'Hawassa Referral Hospital', city: 'Hawassa', imageId: 'hospital-3', description: 'A key regional hospital in Hawassa providing advanced medical care and referral services for the surrounding areas.', contactEmail: 'support@hrh.gov.et', contactPhone: '+251 46 220 5454', accountNumber: '1000034567890', status: 'inactive' },
 ];
 
 let doctors: Doctor[] = [
@@ -80,6 +80,34 @@ export async function getHospitals(): Promise<Hospital[]> {
 export async function getHospitalById(id: number): Promise<Hospital | undefined> {
   return hospitals.find(h => h.id === id);
 }
+
+export async function addHospital(hospital: Omit<Hospital, 'id' | 'imageId'>): Promise<Hospital> {
+    const newHospital: Hospital = {
+        ...hospital,
+        id: hospitals.length > 0 ? Math.max(...hospitals.map(h => h.id)) + 1 : 1,
+        imageId: `hospital-${((hospitals.length + 1) % 3) + 1}`, // Cycle through placeholder images
+    };
+    hospitals.push(newHospital);
+    return newHospital;
+}
+
+export async function updateHospital(id: number, updatedData: Partial<Omit<Hospital, 'id'>>): Promise<Hospital | undefined> {
+    const hospitalIndex = hospitals.findIndex(h => h.id === id);
+    if (hospitalIndex === -1) {
+        return undefined;
+    }
+    hospitals[hospitalIndex] = { ...hospitals[hospitalIndex], ...updatedData };
+    return hospitals[hospitalIndex];
+}
+
+export async function deleteHospital(id: number): Promise<{ success: boolean }> {
+    const initialLength = hospitals.length;
+    hospitals = hospitals.filter(h => h.id !== id);
+    // Also remove doctors associated with this hospital
+    doctors = doctors.filter(d => d.hospitalId !== id);
+    return { success: hospitals.length < initialLength };
+}
+
 
 export async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
   return doctors.filter(d => d.hospitalId === hospitalId);

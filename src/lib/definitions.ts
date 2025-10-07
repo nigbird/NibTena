@@ -11,6 +11,11 @@ export type Hospital = {
   name: string;
   city: string;
   imageId: string;
+  description: string;
+  contactEmail: string;
+  contactPhone: string;
+  accountNumber: string;
+  status: 'active' | 'inactive';
 };
 
 export type Doctor = {

@@ -1,4 +1,6 @@
 
+'use client';
+
 import {
     Card,
     CardContent,
@@ -10,6 +12,7 @@ import {
   import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
   import { User } from 'lucide-react'
   import { Button } from '@/components/ui/button'
+  import Link from 'next/link';
   
   // Mock user data, in a real app this would come from your auth provider
   const user = {
@@ -35,7 +38,9 @@ import {
               <CardDescription>{user.email}</CardDescription>
             </CardHeader>
             <CardContent className="mt-4 flex flex-col gap-2">
-                <Button variant="outline">Edit Profile</Button>
+                <Button variant="outline" asChild>
+                  <Link href="/user/profile/setup">Edit Profile</Link>
+                </Button>
                 <Button variant="outline">Change Password</Button>
                 <Button variant="destructive">Logout</Button>
             </CardContent>

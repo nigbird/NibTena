@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import {
@@ -16,7 +16,8 @@ import { Search, CalendarPlus, FileX } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { ToastAction } from '@/components/ui/toast';
 
 // Mocking a single patient 'Hana Worku' to match user layout
 async function getMyAppointments(patientName: string): Promise<Appointment[]> {
@@ -40,20 +41,43 @@ export default function MyAppointmentsPage() {
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // In a real app, you'd get this from an auth context
   const loggedInPatientName = 'Hana Worku';
 
   useEffect(() => {
-    if (searchParams.get('success') === 'true') {
+    const isSuccess = searchParams.get('success') === 'true';
+    if (isSuccess) {
       toast({
-        title: 'Booking Confirmed!',
+        title: '🎉 Booking Confirmed!',
         description: 'Your appointment has been successfully booked.',
       });
+
+      // Check if profile is complete (mocked with localStorage)
+      const profileComplete = localStorage.getItem('profileComplete') === 'true';
+      if (!profileComplete) {
+         setTimeout(() => {
+            toast({
+                title: 'Complete Your Profile',
+                description: 'Let’s make your next booking faster.',
+                duration: 10000,
+                action: (
+                  <div className="flex flex-col gap-2">
+                    <ToastAction altText="Complete now" onClick={() => router.push('/user/profile/setup')}>
+                        Yes, complete now
+                    </ToastAction>
+                     <ToastAction altText="Maybe later" onClick={() => {}}>Maybe later</ToastAction>
+                  </div>
+                ),
+            });
+        }, 1500);
+      }
+      
       // Clean up the URL
       window.history.replaceState(null, '', '/user/appointments');
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, router]);
 
   const fetchData = async () => {
     setIsLoading(true);

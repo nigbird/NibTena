@@ -27,18 +27,20 @@ export default function BottomNavbar() {
     <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t">
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {navLinks.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href !== '/user' && pathname.startsWith(href));
+          const isActive = (href === '/user' && pathname === '/user') || (href !== '/user' && pathname.startsWith(href));
           return (
             <Link
               key={label}
               href={href}
               className={cn(
-                'inline-flex flex-col items-center justify-center px-5 hover:bg-muted/50 group',
+                'inline-flex flex-col items-center justify-center px-5 hover:bg-muted/50 group transition-colors duration-200',
                 isActive ? 'text-accent-foreground' : 'text-muted-foreground'
               )}
             >
-              <Icon className="w-6 h-6 mb-1" />
-              <span className="text-xs text-center">{label}</span>
+              <div className={cn("flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", isActive ? 'bg-accent/10' : '')}>
+                 <Icon className={cn("w-6 h-6 mb-1 transition-transform duration-300", isActive && 'scale-110')} />
+              </div>
+              <span className={cn("text-xs text-center transition-transform", isActive && 'font-semibold')}>{label}</span>
             </Link>
           );
         })}

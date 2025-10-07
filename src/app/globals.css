@@ -23,7 +23,7 @@
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 28 31% 41%; /* #8B6B4A - Using secondary as accent */
-    --accent-foreground: 45 67% 97%; /* Text on accent */
+    --accent-foreground: 28 31% 41%; /* #8B6B4A - Changed to match accent color */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -55,7 +55,7 @@
     --muted-foreground: 215 20.2% 65.1%;
 
     --accent: 28 31% 51%;
-    --accent-foreground: 40 50% 97%;
+    --accent-foreground: 28 31% 51%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;

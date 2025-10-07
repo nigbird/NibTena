@@ -29,6 +29,14 @@ function OtpForm() {
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     useEffect(() => {
+        toast({
+            title: 'Test OTP',
+            description: 'Your test code is: 123456',
+            duration: 10000,
+        })
+    }, [toast]);
+
+    useEffect(() => {
       if (countdown > 0) {
         const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
         return () => clearTimeout(timer);

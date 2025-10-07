@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getDoctorById, getHospitalById } from '@/lib/data';
@@ -169,7 +170,7 @@ export default function DoctorProfilePage() {
                     disabled={!selectedSlot}
                 >
                     <Link
-                        href={`/book/${doctor.id}?slot=${encodeURIComponent(selectedSlot || '')}&date=${encodeURIComponent(format(selectedDate, 'yyyy-MM-dd'))}`}
+                        href={`/user/book/${doctor.id}?slot=${encodeURIComponent(selectedSlot || '')}&date=${encodeURIComponent(format(selectedDate, 'yyyy-MM-dd'))}`}
                     >
                        Book Now
                     </Link>

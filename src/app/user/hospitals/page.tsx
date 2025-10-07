@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Hospital as HospitalIcon } from 'lucide-react';
@@ -51,7 +52,7 @@ export default async function HospitalsPage() {
                 </CardContent>
                 <CardFooter>
                 <Button asChild className="w-full" variant="accent">
-                    <Link href={`/hospitals/${hospital.id}`}>
+                    <Link href={`/user/hospitals/${hospital.id}`}>
                     View Details <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>

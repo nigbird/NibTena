@@ -124,7 +124,7 @@ export default function ConfirmationPage() {
         </Card>
         <div className="mt-6 text-center">
             <Button asChild>
-                <Link href="/">Back to Home</Link>
+                <Link href="/user">Back to Home</Link>
             </Button>
         </div>
       </div>

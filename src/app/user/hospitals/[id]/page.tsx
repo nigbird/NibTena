@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
@@ -189,7 +190,7 @@ export default function HospitalDetailsPage() {
                     variant="accent"
                     className="rounded-full"
                 >
-                    <Link href={`/doctors/${doctor.id}`}>
+                    <Link href={`/user/doctors/${doctor.id}`}>
                         Book
                     </Link>
                 </Button>

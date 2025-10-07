@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -125,7 +126,7 @@ export default function MyAppointmentsPage() {
           You don’t have any {activeFilter} appointments.
         </p>
          <Button asChild className="mt-6" variant="accent">
-            <Link href="/search">Book an Appointment</Link>
+            <Link href="/user/doctors">Book an Appointment</Link>
         </Button>
       </div>
     );

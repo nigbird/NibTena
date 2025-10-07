@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
@@ -71,7 +72,7 @@ export default function BookingPage() {
         description: state.message,
       });
       if (state.appointmentId) {
-        router.push(`/confirmation/${state.appointmentId}`);
+        router.push(`/user/confirmation/${state.appointmentId}`);
       }
     } else if (state?.success === false && state.message) {
       toast({
@@ -86,7 +87,7 @@ export default function BookingPage() {
     <div className="container mx-auto max-w-2xl py-12">
         <div className="mb-4">
             <Button variant="ghost" asChild>
-                <Link href={`/doctors/${doctorId}`}>
+                <Link href={`/user/doctors/${doctorId}`}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Profile
                 </Link>

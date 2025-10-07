@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -52,7 +53,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             <p className="text-sm text-muted-foreground mt-1">{hospital.name}</p>
             )}
             <Button asChild size="sm" variant="accent" className="rounded-full mt-3">
-                <Link href={`/doctors/${doctor.id}`}>View Profile</Link>
+                <Link href={`/user/doctors/${doctor.id}`}>View Profile</Link>
             </Button>
         </div>
     </Card>

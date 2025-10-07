@@ -1,29 +1,47 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Hospital, Stethoscope, CalendarCheck, User, Search } from 'lucide-react';
+import Image from 'next/image';
+import { Hospital, Stethoscope, CalendarCheck, User as UserIcon, Search, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getHospitals, getDoctors } from '@/lib/data';
+import type { Hospital as HospitalType, Doctor } from '@/lib/definitions';
+import { placeholderImages } from '@/lib/placeholder-images';
+import { Card, CardContent } from '@/components/ui/card';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 const quickActions = [
   { href: '/user/hospitals', label: 'Hospitals', icon: Hospital },
   { href: '/user/doctors', label: 'Doctors', icon: Stethoscope },
   { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck },
-  { href: '/user/profile', label: 'Profile', icon: User },
+  { href: '/user/profile', label: 'Profile', icon: UserIcon },
 ];
 
 
 export default function Home() {
+  const [hospitals, setHospitals] = useState<HospitalType[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    getHospitals().then(setHospitals);
+    getDoctors().then(data => setDoctors(data.slice(0, 5))); // Get top 5 for featured
+  }, []);
+
   return (
     <div className="flex flex-col">
       <div className="p-6 space-y-8 bg-muted/20">
         
         {/* Greeting and Search Section */}
-        <section className="text-center space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                How are you feeling right now today?
+        <section className="space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground text-center">
+                How are you feeling today?
             </h1>
+             <p className="text-center text-muted-foreground">Find the best doctors and hospitals near you.</p>
             <div className="relative max-w-lg mx-auto">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -42,13 +60,79 @@ export default function Home() {
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-md transition-transform group-hover:-translate-y-1">
                             <Icon className="h-7 w-7 text-muted-foreground" />
                         </div>
-                        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                        <p className="text-xs font-medium text-muted-foreground text-center">{label}</p>
                     </Link>
                 ))}
             </div>
         </section>
 
       </div>
+        {/* Hospital Highlights Section */}
+        <section className="py-8 space-y-4">
+            <h2 className="font-headline text-xl font-bold px-6">🏥 Top Hospitals</h2>
+            <Carousel opts={{ align: 'start', loop: true }} className="w-full">
+                <CarouselContent className="-ml-4">
+                    {hospitals.map(hospital => {
+                        const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
+                        return (
+                            <CarouselItem key={hospital.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
+                                <Card className="overflow-hidden shadow-lg">
+                                    {hospitalImage && (
+                                        <div className="aspect-video relative overflow-hidden">
+                                            <Image
+                                                src={hospitalImage.imageUrl}
+                                                alt={hospital.name}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    <CardContent className="p-4">
+                                        <h3 className="font-bold font-headline">{hospital.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{hospital.city} | Multi-Specialty Care</p>
+                                        <Button asChild variant="link" className="p-0 h-auto mt-2">
+                                            <Link href={`/user/hospitals/${hospital.id}`}>
+                                                View Details <ArrowRight className="ml-1 h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </CarouselItem>
+                        );
+                    })}
+                </CarouselContent>
+            </Carousel>
+        </section>
+
+        {/* Featured Doctors Section */}
+        <section className="py-8 space-y-4 bg-muted/20">
+            <h2 className="font-headline text-xl font-bold px-6">👨‍⚕️ Featured Doctors</h2>
+            <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
+                <CarouselContent className="-ml-4">
+                    {doctors.map(doctor => {
+                        const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
+                        return (
+                             <CarouselItem key={doctor.id} className="pl-6 basis-2/5 sm:basis-1/3 md:basis-1/4">
+                                <Card className="overflow-hidden text-center">
+                                    <div className="aspect-square relative">
+                                        {doctorImage && (
+                                            <Image src={doctorImage.imageUrl} alt={doctor.name} fill className="object-cover" />
+                                        )}
+                                    </div>
+                                    <div className="p-3">
+                                        <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
+                                        <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
+                                        <Button asChild size="sm" className="mt-2 w-full" variant="accent">
+                                            <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
+                                        </Button>
+                                    </div>
+                                </Card>
+                            </CarouselItem>
+                        );
+                    })}
+                </CarouselContent>
+            </Carousel>
+        </section>
     </div>
   );
 }

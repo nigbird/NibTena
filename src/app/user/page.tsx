@@ -1,9 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Hospital, Stethoscope, CalendarCheck, User as UserIcon, Search, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +27,20 @@ const quickActions = [
 export default function Home() {
   const [hospitals, setHospitals] = useState<HospitalType[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     getHospitals().then(setHospitals);
     getDoctors().then(data => setDoctors(data.slice(0, 5))); // Get top 5 for featured
   }, []);
+  
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <div className="flex flex-col">
@@ -43,14 +52,16 @@ export default function Home() {
                 How are you feeling today?
             </h1>
              <p className="text-center text-muted-foreground">Find the best doctors and hospitals near you.</p>
-            <div className="relative max-w-lg mx-auto">
+            <form onSubmit={handleSearch} className="relative max-w-lg mx-auto">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                     type="search"
                     placeholder="Search doctors, hospitals, or specialties…"
                     className="w-full h-14 rounded-full bg-background pl-12 pr-4 text-base shadow-md"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                 />
-            </div>
+            </form>
         </section>
 
         {/* Quick Actions Section */}

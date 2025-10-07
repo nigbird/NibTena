@@ -13,9 +13,9 @@ import {
   
   // Mock user data, in a real app this would come from your auth provider
   const user = {
-    name: 'Alice Johnson',
-    email: 'alice.j@example.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx1c2VyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzU5Mzk0MjEwfDA&ixlib=rb-4.1.0&q=80&w=1080'
+    name: 'Hana Worku',
+    email: 'hana.w@example.com',
+    avatarUrl: 'https://picsum.photos/seed/user1/200/200'
   }
   
   export default function ProfilePage() {

@@ -10,8 +10,8 @@ import { usePathname } from 'next/navigation';
 
 // Mock user data for display
 const user = {
-    name: 'Alice Johnson',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTk0ODMzNTV8MA&ixlib=rb-4.1.0&q=80&w=1080'
+    name: 'Hana Worku',
+    avatarUrl: 'https://picsum.photos/seed/user1/200/200'
 };
 
 export default function UserLayout({

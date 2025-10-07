@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { addAppointment as addAppointmentData } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const AppointmentFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -23,10 +24,9 @@ export type State = {
   };
   message?: string | null;
   success?: boolean;
-  appointmentId?: string;
 };
 
-export async function bookAppointment(
+export async function startBookingProcess(
   doctorId: number,
   appointmentSlot: string,
   appointmentDate: string,
@@ -49,40 +49,50 @@ export async function bookAppointment(
     };
   }
 
-  const { fullName, phone, age, gender, symptoms } = validatedFields.data;
+  const bookingDetails = {
+    ...validatedFields.data,
+    doctorId,
+    appointmentSlot,
+    appointmentDate,
+  };
+  
+  const params = new URLSearchParams({
+      bookingData: JSON.stringify(bookingDetails)
+  });
+
+  // In a real app, you would check if the user's phone is already verified.
+  // For now, we will always redirect to the verification flow.
+  redirect(`/user/verify/phone?${params.toString()}`);
+}
+
+
+export async function completeBooking(bookingData: any) {
+  // In a real app, you'd re-validate the data.
+  // For this mock, we assume the data is valid.
   
   try {
     const newAppointment = await addAppointmentData({
-      patientName: fullName,
-      patientPhone: phone,
-      patientAge: age,
-      patientGender: gender,
-      symptoms,
-      doctorId,
-      appointmentSlot,
-      appointmentDate,
+      patientName: bookingData.fullName,
+      patientPhone: bookingData.phone,
+      patientAge: bookingData.age,
+      patientGender: bookingData.gender,
+      symptoms: bookingData.symptoms,
+      doctorId: bookingData.doctorId,
+      appointmentSlot: bookingData.appointmentSlot,
+      appointmentDate: bookingData.appointmentDate,
     });
 
     if (newAppointment) {
       revalidatePath('/doctor-portal/appointments');
       revalidatePath('/hospital-admin/appointments');
-       return {
-        success: true,
-        message: 'Appointment booked successfully!',
-        appointmentId: newAppointment.id
-      };
-    } else {
-       return {
-        success: false,
-        message: 'Failed to create appointment.',
-      };
     }
-    
   } catch (error) {
     console.error('Data saving failed:', error);
-    return {
-      message: 'An error occurred while processing your appointment. Please try again.',
-      success: false,
-    };
+    // In a real app, handle this error more gracefully
+    return { success: false, message: 'An error occurred while processing your appointment.' };
   }
+  
+  // Instead of returning state, we redirect on success.
+  redirect(`/user/appointments?success=true`);
 }
+

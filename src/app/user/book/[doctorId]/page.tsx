@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { bookAppointment, type State } from './actions';
+import { startBookingProcess, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
 function SubmitButton() {
@@ -57,20 +57,23 @@ export default function BookingPage() {
   const slot = searchParams.get('slot') || 'Not specified';
   const dateParam = searchParams.get('date');
   const date = dateParam 
+    ? format(new Date(dateParam), 'yyyy-MM-dd')
+    : new Date().toISOString().split('T')[0];
+  
+  const displayDate = dateParam
     ? format(new Date(dateParam), 'EEEE, MMMM d, yyyy')
     : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
 
   const initialState: State = { message: null, errors: {} };
-  const bookAppointmentWithParams = bookAppointment.bind(null, doctorId, slot, date);
-  const [state, dispatch] = useActionState<State, FormData>(bookAppointmentWithParams, initialState);
+  const startBookingWithParams = startBookingProcess.bind(null, doctorId, slot, date);
+  const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state?.success === true && state.appointmentId) {
-      // Redirect to the appointments page with a success flag
-      router.push(`/user/appointments?success=true`);
-    } else if (state?.success === false && state.message) {
+    // This form now redirects, so client-side success/error handling for navigation
+    // is no longer needed here. We just show validation errors.
+    if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',
         title: 'Booking Failed',
@@ -93,7 +96,7 @@ export default function BookingPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Book Your Appointment</CardTitle>
           <CardDescription>
-            You are booking for <span className="font-semibold text-accent-foreground">{slot}</span> on <span className="font-semibold text-accent-foreground">{date}</span>.
+            You are booking for <span className="font-semibold text-accent-foreground">{slot}</span> on <span className="font-semibold text-accent-foreground">{displayDate}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>

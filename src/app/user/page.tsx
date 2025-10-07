@@ -136,7 +136,7 @@ export default function Home() {
                                     <div className="p-3 pt-0">
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
-                                        <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105" variant="accent">
+                                        <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="brand">
                                             <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
                                         </Button>
                                     </div>

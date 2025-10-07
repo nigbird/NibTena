@@ -14,7 +14,7 @@ const AppointmentFormSchema = z.object({
   patientName: z.string().min(2, { message: 'Patient name must be at least 2 characters.' }),
   patientPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   patientAge: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
-  patientGender: z.enum(['male', 'female', 'other'], { required_error: 'Please select a gender.' }),
+  patientGender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   doctorId: z.coerce.number({required_error: 'Please select a doctor.'}),
   appointmentDate: z.coerce.date({ required_error: 'Please select a date.' }),
   appointmentSlot: z.string({ required_error: 'Please select a time slot.' }),

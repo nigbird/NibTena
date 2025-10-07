@@ -120,7 +120,6 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
                         <SelectContent>
                             <SelectItem value="male">Male</SelectItem>
                             <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                     </Select>
                      {state.errors?.patientGender && <p className="text-sm font-medium text-destructive">{state.errors.patientGender[0]}</p>}

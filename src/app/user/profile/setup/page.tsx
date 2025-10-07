@@ -20,7 +20,7 @@ import { User, Loader2 } from 'lucide-react';
 // Mock user data for pre-filling
 const mockUser = {
   name: 'Hana Worku',
-  phone: '+251 912 345 678', // Example phone
+  phone: '912345678', // Example phone without country code
 };
 
 export default function ProfileSetupPage() {
@@ -61,15 +61,27 @@ export default function ProfileSetupPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" defaultValue={mockUser.name} required />
+              <Input id="name" name="name" defaultValue={mockUser.name} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" name="phone" value={mockUser.phone} readOnly disabled />
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="flex items-center">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+                    +251
+                    </span>
+                    <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="912 345 678"
+                    defaultValue={mockUser.phone}
+                    className="rounded-l-none"
+                    />
+                </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="age">Age</Label>
-              <Input id="age" name="age" type="number" placeholder="Enter your age" required />
+              <Input id="age" name="age" type="number" placeholder="Enter your age" />
             </div>
             <div className="space-y-2">
               <Label>Gender</Label>
@@ -81,10 +93,6 @@ export default function ProfileSetupPage() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="female" id="female" />
                   <Label htmlFor="female">Female</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other">Other</Label>
                 </div>
               </RadioGroup>
             </div>

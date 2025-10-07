@@ -1,19 +1,20 @@
+
 import type { Hospital, Doctor, Appointment } from './definitions';
 
 const hospitals: Hospital[] = [
-  { id: 1, name: 'City General Hospital', city: 'Metropolis', imageId: 'hospital-1' },
-  { id: 2, name: 'County Medical Center', city: 'Star City', imageId: 'hospital-2' },
-  { id: 3, name: 'Sunrise Health Clinic', city: 'Gotham', imageId: 'hospital-3' },
+  { id: 1, name: 'Tikur Anbessa Specialized Hospital', city: 'Addis Ababa', imageId: 'hospital-1' },
+  { id: 2, name: 'St. Paul’s Millennium Medical College', city: 'Addis Ababa', imageId: 'hospital-2' },
+  { id: 3, name: 'Hawassa Referral Hospital', city: 'Hawassa', imageId: 'hospital-3' },
 ];
 
 let doctors: Doctor[] = [
-  { id: 1, name: 'Dr. Emily Carter', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-1', bio: 'Dr. Carter is a board-certified cardiologist with over 15 years of experience in treating heart conditions.', consultationFee: 150, rating: 4.9, status: 'active', experience: 15 },
-  { id: 2, name: 'Dr. Benjamin Lee', specialty: 'Dermatology', hospitalId: 1, imageId: 'doctor-2', bio: 'Dr. Lee specializes in cosmetic and medical dermatology, helping patients achieve healthy skin.', consultationFee: 120, rating: 4.8, status: 'active', experience: 10 },
-  { id: 3, name: 'Dr. Sophia Rodriguez', specialty: 'Neurology', hospitalId: 2, imageId: 'doctor-3', bio: 'A leading neurologist, Dr. Rodriguez focuses on degenerative brain diseases and stroke recovery.', consultationFee: 200, rating: 4.9, status: 'active', experience: 12 },
-  { id: 4, name: 'Dr. Michael Chen', specialty: 'Pediatrics', hospitalId: 2, imageId: 'doctor-4', bio: 'Dr. Chen provides compassionate care for children from infancy through adolescence.', consultationFee: 100, rating: 4.7, status: 'active', experience: 8 },
-  { id: 5, name: 'Dr. Olivia Garcia', specialty: 'Orthopedics', hospitalId: 3, imageId: 'doctor-5', bio: 'Specializing in sports medicine, Dr. Garcia helps athletes recover from injuries and improve performance.', consultationFee: 180, rating: 4.8, status: 'active', experience: 9 },
-  { id: 6, name: 'Dr. David Kim', specialty: 'Dentistry', hospitalId: 3, imageId: 'doctor-6', bio: 'Dr. Kim offers a wide range of dental services, from routine check-ups to complex restorative procedures.', consultationFee: 90, rating: 4.9, status: 'active', experience: 7 },
-  { id: 7, name: 'Dr. Sarah Jones', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-7', bio: 'Dr. Jones brings a fresh perspective to cardiology, with a focus on preventative care and lifestyle management.', consultationFee: 160, rating: 4.8, status: 'active', experience: 5 },
+  { id: 1, name: 'Dr. Mulugeta Tesfaye', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-1', bio: 'Dr. Mulugeta is a senior cardiologist with over 15 years of experience treating heart and vascular conditions.', consultationFee: 150, rating: 4.9, status: 'active', experience: 15 },
+  { id: 2, name: 'Dr. Selamawit Bekele', specialty: 'Dermatology', hospitalId: 1, imageId: 'doctor-2', bio: 'Dr. Selamawit specializes in both cosmetic and clinical dermatology, focusing on holistic skin care.', consultationFee: 120, rating: 4.8, status: 'active', experience: 10 },
+  { id: 3, name: 'Dr. Tewodros Mekonnen', specialty: 'Neurology', hospitalId: 2, imageId: 'doctor-3', bio: 'Dr. Tewodros is a neurologist focusing on brain and spinal disorders, epilepsy, and stroke recovery.', consultationFee: 200, rating: 4.9, status: 'active', experience: 12 },
+  { id: 4, name: 'Dr. Meron Alemu', specialty: 'Pediatrics', hospitalId: 2, imageId: 'doctor-4', bio: 'Dr. Meron provides compassionate pediatric care for children from infancy through adolescence.', consultationFee: 100, rating: 4.7, status: 'active', experience: 8 },
+  { id: 5, name: 'Dr. Yoseph Hailemariam', specialty: 'Orthopedics', hospitalId: 3, imageId: 'doctor-5', bio: 'Dr. Yoseph specializes in sports medicine and joint replacement, helping patients recover mobility.', consultationFee: 180, rating: 4.8, status: 'active', experience: 9 },
+  { id: 6, name: 'Dr. Rahel Tadesse', specialty: 'Dentistry', hospitalId: 3, imageId: 'doctor-6', bio: 'Dr. Rahel offers a full range of dental care — from preventive cleanings to restorative and cosmetic procedures.', consultationFee: 90, rating: 4.9, status: 'active', experience: 7 },
+  { id: 7, name: 'Dr. Dawit Abebe', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-7', bio: 'Dr. Dawit focuses on preventive cardiology and lifestyle-based treatment approaches for heart health.', consultationFee: 160, rating: 4.8, status: 'active', experience: 5 },
 ];
 
 function getISODate(daysOffset = 0) {
@@ -24,50 +25,50 @@ function getISODate(daysOffset = 0) {
 
 // In-memory store for appointments
 let appointments: Appointment[] = [
-    // Today's appointments for Queue
-    { id: 'q1', patientName: 'Alice Johnson', patientPhone: '555-0110', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:00 AM', status: 'confirmed' },
-    { id: 'q2', patientName: 'Bob Williams', patientPhone: '555-0111', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure medication.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:30 AM', status: 'confirmed' },
-    { id: 'q3', patientName: 'Charlie Brown', patientPhone: '555-0112', patientAge: 35, patientGender: 'male', symptoms: 'Skin rash on arm.', doctorId: 2, appointmentDate: getISODate(0), appointmentSlot: '10:00 AM', status: 'confirmed' },
-    { id: 'q4', patientName: 'Diana Miller', patientPhone: '555-0113', patientAge: 41, patientGender: 'female', symptoms: 'Migraine consultation.', doctorId: 3, appointmentDate: getISODate(0), appointmentSlot: '10:30 AM', status: 'confirmed' },
-    { id: 'q5', patientName: 'Ethan Davis', patientPhone: '555-0114', patientAge: 6, patientGender: 'male', symptoms: 'Vaccination appointment.', doctorId: 4, appointmentDate: getISODate(0), appointmentSlot: '11:00 AM', status: 'confirmed' },
+  // Today's appointments for Queue
+  { id: 'q1', patientName: 'Hana Worku', patientPhone: '0912-345678', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:00 AM', status: 'confirmed' },
+  { id: 'q2', patientName: 'Kebede Alemayehu', patientPhone: '0911-987654', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure.', doctorId: 1, appointmentDate: getISODate(0), appointmentSlot: '09:30 AM', status: 'confirmed' },
+  { id: 'q3', patientName: 'Marta Gebremedhin', patientPhone: '0913-222333', patientAge: 35, patientGender: 'female', symptoms: 'Skin rash consultation.', doctorId: 2, appointmentDate: getISODate(0), appointmentSlot: '10:00 AM', status: 'confirmed' },
+  { id: 'q4', patientName: 'Abel Tesema', patientPhone: '0910-444555', patientAge: 41, patientGender: 'male', symptoms: 'Migraine and fatigue.', doctorId: 3, appointmentDate: getISODate(0), appointmentSlot: '10:30 AM', status: 'confirmed' },
+  { id: 'q5', patientName: 'Lulit Fikre', patientPhone: '0919-111222', patientAge: 6, patientGender: 'female', symptoms: 'Child vaccination.', doctorId: 4, appointmentDate: getISODate(0), appointmentSlot: '11:00 AM', status: 'confirmed' },
 
-    // Past appointments for reports
-    ...Array.from({ length: 15 }, (_, i) => ({
-        id: `p_c_${i}`,
-        patientName: `Completed Patient ${i + 1}`,
-        patientPhone: `555-02${i.toString().padStart(2, '0')}`,
-        patientAge: 20 + i * 2,
-        patientGender: i % 2 === 0 ? 'female' : 'male',
-        symptoms: `Symptom description ${i + 1}`,
-        doctorId: (i % 7) + 1,
-        appointmentDate: getISODate(- (i + 1)),
-        appointmentSlot: '10:00 AM',
-        status: 'completed' as 'completed',
-    })),
-    ...Array.from({ length: 5 }, (_, i) => ({
-        id: `p_x_${i}`,
-        patientName: `Cancelled Patient ${i + 1}`,
-        patientPhone: `555-03${i.toString().padStart(2, '0')}`,
-        patientAge: 30 + i * 3,
-        patientGender: 'female',
-        symptoms: `Reason for cancellation ${i + 1}`,
-        doctorId: (i % 7) + 1,
-        appointmentDate: getISODate(- (i + 2)),
-        appointmentSlot: '11:00 AM',
-        status: 'cancelled' as 'cancelled',
-    })),
-     ...Array.from({ length: 10 }, (_, i) => ({
-        id: `p_c2_${i}`,
-        patientName: `Past Patient ${i + 1}`,
-        patientPhone: `555-04${i.toString().padStart(2, '0')}`,
-        patientAge: 25 + i * 2,
-        patientGender: i % 2 === 0 ? 'male' : 'female',
-        symptoms: `Past issue ${i + 1}`,
-        doctorId: (i % 4) + 1, // Focus on first 4 doctors
-        appointmentDate: getISODate(- (i + 15)),
-        appointmentSlot: '02:00 PM',
-        status: 'completed' as 'completed',
-    })),
+  // Past appointments for reports
+  ...Array.from({ length: 15 }, (_, i) => ({
+    id: `p_c_${i}`,
+    patientName: `Completed Patient ${i + 1}`,
+    patientPhone: `0912-00${i.toString().padStart(2, '0')}`,
+    patientAge: 20 + i * 2,
+    patientGender: i % 2 === 0 ? 'female' : 'male',
+    symptoms: `Symptom description ${i + 1}`,
+    doctorId: (i % 7) + 1,
+    appointmentDate: getISODate(- (i + 1)),
+    appointmentSlot: '10:00 AM',
+    status: 'completed' as 'completed',
+  })),
+  ...Array.from({ length: 5 }, (_, i) => ({
+    id: `p_x_${i}`,
+    patientName: `Cancelled Patient ${i + 1}`,
+    patientPhone: `0913-01${i.toString().padStart(2, '0')}`,
+    patientAge: 30 + i * 3,
+    patientGender: 'female',
+    symptoms: `Reason for cancellation ${i + 1}`,
+    doctorId: (i % 7) + 1,
+    appointmentDate: getISODate(- (i + 2)),
+    appointmentSlot: '11:00 AM',
+    status: 'cancelled' as 'cancelled',
+  })),
+  ...Array.from({ length: 10 }, (_, i) => ({
+    id: `p_c2_${i}`,
+    patientName: `Past Patient ${i + 1}`,
+    patientPhone: `0914-02${i.toString().padStart(2, '0')}`,
+    patientAge: 25 + i * 2,
+    patientGender: i % 2 === 0 ? 'male' : 'female',
+    symptoms: `Past issue ${i + 1}`,
+    doctorId: (i % 4) + 1,
+    appointmentDate: getISODate(- (i + 15)),
+    appointmentSlot: '02:00 PM',
+    status: 'completed' as 'completed',
+  })),
 ];
 
 

@@ -13,6 +13,7 @@ import { placeholderImages } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const quickActions = [
@@ -125,16 +126,17 @@ export default function Home() {
                         const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
                         return (
                              <CarouselItem key={doctor.id} className="basis-2/5 sm:basis-1/3 md:basis-1/4">
-                                <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg">
-                                    <div className="aspect-square relative">
+                                <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg flex flex-col items-center p-4">
+                                    <Avatar className="h-24 w-24 mb-4 border-2 shadow-md" style={{ borderColor: '#b59b7d' }}>
                                         {doctorImage && (
-                                            <Image src={doctorImage.imageUrl} alt={doctor.name} fill className="object-cover" />
+                                            <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />
                                         )}
-                                    </div>
-                                    <div className="p-3">
+                                        <AvatarFallback><UserIcon /></AvatarFallback>
+                                    </Avatar>
+                                    <div className="p-3 pt-0">
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
-                                        <Button asChild size="sm" className="mt-2 w-full" variant="accent">
+                                        <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105" variant="accent">
                                             <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
                                         </Button>
                                     </div>

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
@@ -66,14 +67,10 @@ export default function BookingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state?.success === true && state.message) {
-      toast({
-        title: 'Booking Confirmed!',
-        description: state.message,
-      });
-      if (state.appointmentId) {
-        router.push(`/user/confirmation/${state.appointmentId}`);
-      }
+    if (state?.success === true && state.appointmentId) {
+      // The toast is now shown on the confirmation page.
+      // Redirect with a query param to trigger the toast there.
+      router.push(`/user/confirmation/${state.appointmentId}?success=true`);
     } else if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',

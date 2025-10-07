@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
         hostname: 'old.ethioistanbulgeneralhospital.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.semafor.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

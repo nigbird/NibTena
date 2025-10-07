@@ -1,17 +1,50 @@
 
+'use client';
+
+import Link from 'next/link';
+import { Bell, User, Search } from 'lucide-react';
 import BottomNavbar from '@/components/bottom-navbar';
-import Header from '@/components/header';
-import { Logo } from '@/components/icons';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { usePathname } from 'next/navigation';
+
+// Mock user data for display
+const user = {
+    name: 'Leon Fernandez',
+    avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx1c2VyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzU5Mzk0MjEwfDA&ixlib=rb-4.1.0&q=80&w=1080'
+};
 
 export default function UserLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isHomePage = pathname === '/user';
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 p-4">
-        <Logo />
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
+        <div className="container flex h-16 items-center">
+            <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border">
+                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                    <AvatarFallback><User /></AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="text-xs text-muted-foreground">Hi, Welcome Back!</p>
+                    <p className="font-semibold text-foreground">{user.name}</p>
+                </div>
+            </div>
+
+            <div className="ml-auto">
+                 <Button variant="ghost" size="icon" className="relative rounded-full">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-background" />
+                    <span className="sr-only">View notifications</span>
+                </Button>
+            </div>
+        </div>
       </header>
       <main className="flex-1 pb-24">{children}</main>
       <BottomNavbar />

@@ -58,9 +58,9 @@ export default function Home() {
             <div className="grid grid-cols-4 gap-2 md:gap-4 max-w-md mx-auto">
                  {quickActions.map(({ href, label, icon: Icon, color }) => (
                     <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center">
-                        <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg", color)}>
+                        <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110", color)}>
                             <div className="absolute inset-0 bg-primary/30 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <div className="relative h-14 w-14 rounded-xl bg-white/40 flex items-center justify-center backdrop-blur-sm group-hover:shadow-inner border border-secondary/25">
+                            <div className="relative h-14 w-14 rounded-xl bg-white/40 flex items-center justify-center backdrop-blur-sm group-hover:shadow-inner border-2 border-secondary/40">
                                 <Icon className="h-7 w-7" />
                             </div>
                         </div>

@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams } from 'next/navigation';
 
-// Mocking a single patient 'Alice Johnson'
+// Mocking a single patient 'Hana Worku' to match user layout
 async function getMyAppointments(patientName: string): Promise<Appointment[]> {
   const allDocs = await getDoctors();
   const allAppointments = await Promise.all(
@@ -42,7 +42,7 @@ export default function MyAppointmentsPage() {
   const searchParams = useSearchParams();
   
   // In a real app, you'd get this from an auth context
-  const loggedInPatientName = 'Alice Johnson';
+  const loggedInPatientName = 'Hana Worku';
 
   useEffect(() => {
     if (searchParams.get('success') === 'true') {

@@ -69,6 +69,8 @@ export default function BookingPage() {
   const startBookingWithParams = startBookingProcess.bind(null, doctorId, slot, date);
   const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
   const { toast } = useToast();
+  
+  const loggedInPatientName = 'Hana Worku';
 
   useEffect(() => {
     // This form now redirects, so client-side success/error handling for navigation
@@ -104,7 +106,7 @@ export default function BookingPage() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
-                    <Input id="fullName" name="fullName" placeholder="John Doe" required />
+                    <Input id="fullName" name="fullName" defaultValue={loggedInPatientName} required />
                     {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                 </div>
                 <div className="space-y-2">

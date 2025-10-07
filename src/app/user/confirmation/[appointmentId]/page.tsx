@@ -49,8 +49,10 @@ export default function ConfirmationPage() {
         title: 'Booking Confirmed!',
         description: 'Your appointment has been successfully booked.',
       });
+      // Clean up the URL
+      window.history.replaceState(null, '', `/user/confirmation/${appointmentId}`);
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, appointmentId]);
 
   const confirmationImage = placeholderImages.find(p => p.id === 'confirmation-image');
 

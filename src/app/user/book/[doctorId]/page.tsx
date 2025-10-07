@@ -68,9 +68,8 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (state?.success === true && state.appointmentId) {
-      // The toast is now shown on the confirmation page.
-      // Redirect with a query param to trigger the toast there.
-      router.push(`/user/confirmation/${state.appointmentId}?success=true`);
+      // Redirect to the appointments page with a success flag
+      router.push(`/user/appointments?success=true`);
     } else if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',

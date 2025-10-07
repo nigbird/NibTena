@@ -16,6 +16,7 @@ import { Search, CalendarPlus, FileX } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSearchParams } from 'next/navigation';
 
 // Mocking a single patient 'Alice Johnson'
 async function getMyAppointments(patientName: string): Promise<Appointment[]> {
@@ -38,9 +39,21 @@ export default function MyAppointmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   
   // In a real app, you'd get this from an auth context
   const loggedInPatientName = 'Alice Johnson';
+
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      toast({
+        title: 'Booking Confirmed!',
+        description: 'Your appointment has been successfully booked.',
+      });
+      // Clean up the URL
+      window.history.replaceState(null, '', '/user/appointments');
+    }
+  }, [searchParams, toast]);
 
   const fetchData = async () => {
     setIsLoading(true);

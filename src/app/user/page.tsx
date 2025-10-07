@@ -71,18 +71,18 @@ export default function Home() {
       </div>
         {/* Hospital Highlights Section */}
         <section className="py-8 space-y-4">
-            <div className="flex justify-between items-center px-6">
-                <h2 className="font-headline text-2xl font-bold">🏥 Top Hospitals</h2>
+            <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
+                <h2 className="font-headline text-2xl font-bold">Top Hospitals</h2>
                 <Link href="/user/hospitals" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
                     See all <ArrowRight className="h-4 w-4" />
                 </Link>
             </div>
             <Carousel opts={{ align: 'start', loop: true }} className="w-full">
-                <CarouselContent className="-ml-4">
+                <CarouselContent className="-ml-4 px-6">
                     {hospitals.map(hospital => {
                         const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
                         return (
-                            <CarouselItem key={hospital.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={hospital.id} className="md:basis-1/2 lg:basis-1/3">
                                 <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl">
                                     {hospitalImage && (
                                         <div className="aspect-video relative overflow-hidden">
@@ -113,18 +113,18 @@ export default function Home() {
 
         {/* Featured Doctors Section */}
         <section className="py-8 space-y-4 bg-muted/20">
-             <div className="flex justify-between items-center px-6">
-                <h2 className="font-headline text-2xl font-bold">👨‍⚕️ Featured Doctors</h2>
+             <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
+                <h2 className="font-headline text-2xl font-bold">Featured Doctors</h2>
                 <Link href="/user/doctors" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
                     See all <ArrowRight className="h-4 w-4" />
                 </Link>
             </div>
             <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
-                <CarouselContent className="-ml-4">
+                <CarouselContent className="-ml-4 px-6">
                     {doctors.map(doctor => {
                         const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
                         return (
-                             <CarouselItem key={doctor.id} className="pl-6 basis-2/5 sm:basis-1/3 md:basis-1/4">
+                             <CarouselItem key={doctor.id} className="basis-2/5 sm:basis-1/3 md:basis-1/4">
                                 <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg">
                                     <div className="aspect-square relative">
                                         {doctorImage && (

@@ -10,8 +10,8 @@ import { usePathname } from 'next/navigation';
 
 // Mock user data for display
 const user = {
-    name: 'Leon Fernandez',
-    avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx1c2VyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzU5Mzk0MjEwfDA&ixlib=rb-4.1.0&q=80&w=1080'
+    name: 'Alice Johnson',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTk0ODMzNTV8MA&ixlib=rb-4.1.0&q=80&w=1080'
 };
 
 export default function UserLayout({

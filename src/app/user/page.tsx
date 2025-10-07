@@ -12,14 +12,14 @@ import type { Hospital as HospitalType, Doctor } from '@/lib/definitions';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 
 const quickActions = [
-  { href: '/user/hospitals', label: 'Hospitals', icon: Hospital },
-  { href: '/user/doctors', label: 'Doctors', icon: Stethoscope },
-  { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck },
-  { href: '/user/profile', label: 'Profile', icon: UserIcon },
+  { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-blue-600' },
+  { href: '/user/doctors', label: 'Doctors', icon: Stethoscope, color: 'bg-green-100 text-green-600' },
+  { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck, color: 'bg-violet-100 text-violet-600' },
+  { href: '/user/profile', label: 'Profile', icon: UserIcon, color: 'bg-orange-100 text-orange-600' },
 ];
 
 
@@ -55,12 +55,14 @@ export default function Home() {
         {/* Quick Actions Section */}
         <section>
             <div className="grid grid-cols-4 gap-4">
-                 {quickActions.map(({ href, label, icon: Icon }) => (
-                    <Link href={href} key={label} className="flex flex-col items-center gap-2 group">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-md transition-transform group-hover:-translate-y-1">
-                            <Icon className="h-7 w-7 text-muted-foreground" />
+                 {quickActions.map(({ href, label, icon: Icon, color }) => (
+                    <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center">
+                        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg", color)}>
+                            <div className="h-14 w-14 rounded-xl bg-white/40 flex items-center justify-center backdrop-blur-sm group-hover:shadow-inner">
+                                <Icon className="h-7 w-7" />
+                            </div>
                         </div>
-                        <p className="text-xs font-medium text-muted-foreground text-center">{label}</p>
+                        <p className="text-xs font-medium text-muted-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
                     </Link>
                 ))}
             </div>
@@ -69,21 +71,26 @@ export default function Home() {
       </div>
         {/* Hospital Highlights Section */}
         <section className="py-8 space-y-4">
-            <h2 className="font-headline text-xl font-bold px-6">🏥 Top Hospitals</h2>
+            <div className="flex justify-between items-center px-6">
+                <h2 className="font-headline text-2xl font-bold">🏥 Top Hospitals</h2>
+                <Link href="/user/hospitals" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                    See all <ArrowRight className="h-4 w-4" />
+                </Link>
+            </div>
             <Carousel opts={{ align: 'start', loop: true }} className="w-full">
                 <CarouselContent className="-ml-4">
                     {hospitals.map(hospital => {
                         const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
                         return (
                             <CarouselItem key={hospital.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
-                                <Card className="overflow-hidden shadow-lg">
+                                <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl">
                                     {hospitalImage && (
                                         <div className="aspect-video relative overflow-hidden">
                                             <Image
                                                 src={hospitalImage.imageUrl}
                                                 alt={hospital.name}
                                                 fill
-                                                className="object-cover"
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
                                             />
                                         </div>
                                     )}
@@ -106,14 +113,19 @@ export default function Home() {
 
         {/* Featured Doctors Section */}
         <section className="py-8 space-y-4 bg-muted/20">
-            <h2 className="font-headline text-xl font-bold px-6">👨‍⚕️ Featured Doctors</h2>
+             <div className="flex justify-between items-center px-6">
+                <h2 className="font-headline text-2xl font-bold">👨‍⚕️ Featured Doctors</h2>
+                <Link href="/user/doctors" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                    See all <ArrowRight className="h-4 w-4" />
+                </Link>
+            </div>
             <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
                 <CarouselContent className="-ml-4">
                     {doctors.map(doctor => {
                         const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
                         return (
                              <CarouselItem key={doctor.id} className="pl-6 basis-2/5 sm:basis-1/3 md:basis-1/4">
-                                <Card className="overflow-hidden text-center">
+                                <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg">
                                     <div className="aspect-square relative">
                                         {doctorImage && (
                                             <Image src={doctorImage.imageUrl} alt={doctor.name} fill className="object-cover" />

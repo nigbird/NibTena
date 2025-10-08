@@ -1,28 +1,23 @@
+
 'use client';
 
 import Link from 'next/link';
 import {
   Bell,
   CircleUser,
-  Home,
-  LineChart,
-  Menu,
-  Package,
-  Package2,
-  Search,
-  ShoppingCart,
+  LayoutGrid,
+  ClipboardPlus,
   Users,
+  CalendarDays,
+  ListOrdered,
+  LineChart,
+  Settings,
+  Menu,
+  Search,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +33,6 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
-import HospitalAdminSidebar from './hospital-admin-sidebar';
 
 export default function Header() {
     return (
@@ -66,49 +60,53 @@ export default function Header() {
                 </div>
                 <nav className="grid gap-2 text-lg font-medium p-2">
                     <Link
-                    href="/hospital-admin"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                      href="/hospital-admin"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <Home className="h-4 w-4" />
-                    Dashboard
+                      <LayoutGrid className="h-5 w-5" />
+                      Dashboard
                     </Link>
                     <Link
-                    href="/hospital-admin/doctors"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                      href="/hospital-admin/doctors"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <Users className="h-4 w-4" />
-                    Doctors
+                      <Users className="h-5 w-5" />
+                      Doctors
                     </Link>
                     <Link
-                    href="/hospital-admin/appointments"
-                    className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
+                      href="/hospital-admin/appointments"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <ShoppingCart className="h-4 w-4" />
-                    Appointments
-                    <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                        6
-                    </Badge>
+                      <ClipboardPlus className="h-5 w-5" />
+                      Appointments
                     </Link>
                     <Link
-                    href="#"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                      href="/hospital-admin/schedule"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <Package className="h-4 w-4" />
-                    Schedule
+                      <CalendarDays className="h-5 w-5" />
+                      Schedule
                     </Link>
                     <Link
-                    href="#"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                      href="/hospital-admin/queue"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <Users className="h-4 w-4" />
-                    Queue
+                      <ListOrdered className="h-5 w-5" />
+                      Queue
                     </Link>
                     <Link
-                    href="#"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                      href="/hospital-admin/reports"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
-                    <LineChart className="h-4 w-4" />
-                    Reports
+                      <LineChart className="h-5 w-5" />
+                      Reports
+                    </Link>
+                     <Link
+                      href="/hospital-admin/settings"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                      <Settings className="h-5 w-5" />
+                      Settings
                     </Link>
                 </nav>
             </SheetContent>
@@ -136,7 +134,9 @@ export default function Header() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/hospital-admin/settings">Settings</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Logout</DropdownMenuItem>

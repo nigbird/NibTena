@@ -42,6 +42,10 @@ const navLinks = [
   { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart },
 ];
 
+const bottomNavLinks = [
+    { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
+];
+
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
@@ -81,7 +85,22 @@ export default function HospitalAdminSidebar() {
           </Link>
         ))}
       </nav>
-      <div className="mt-auto border-t p-4">
+      <div className="mt-auto p-4 space-y-2 border-t">
+        <nav className="space-y-1">
+            {bottomNavLinks.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={label}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                  (pathname === href || pathname.startsWith(href)) && 'bg-muted text-primary'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            ))}
+        </nav>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
@@ -102,9 +121,11 @@ export default function HospitalAdminSidebar() {
                     <CircleUser className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                 </DropdownMenuItem>
-                 <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                 <DropdownMenuItem asChild>
+                    <Link href="/hospital-admin/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                    </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Logout</DropdownMenuItem>

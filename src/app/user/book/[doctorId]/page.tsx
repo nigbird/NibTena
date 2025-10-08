@@ -1,10 +1,9 @@
-
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Users } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -30,6 +29,8 @@ import {
 } from '@/components/ui/select';
 import { startBookingProcess, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -48,6 +49,14 @@ function SubmitButton() {
   );
 }
 
+// Mock data for the logged-in user
+const loggedInPatient = {
+    name: 'Hana Worku',
+    age: 28,
+    gender: 'female',
+    phone: '912345678',
+}
+
 export default function BookingPage() {
   const params = useParams();
   const doctorId = Number(params.doctorId);
@@ -64,17 +73,14 @@ export default function BookingPage() {
     ? format(new Date(dateParam), 'EEEE, MMMM d, yyyy')
     : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
 
   const initialState: State = { message: null, errors: {} };
   const startBookingWithParams = startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
   const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
   const { toast } = useToast();
   
-  const loggedInPatientName = 'Hana Worku';
-
   useEffect(() => {
-    // This form now redirects, so client-side success/error handling for navigation
-    // is no longer needed here. We just show validation errors.
     if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',
@@ -103,44 +109,89 @@ export default function BookingPage() {
         </CardHeader>
         <CardContent>
           <form action={dispatch} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            
+            <div className="space-y-3">
+                <Label>Who are you booking for?</Label>
+                <RadioGroup defaultValue="myself" name="bookingFor" onValueChange={(value: 'myself' | 'someoneElse') => setBookingFor(value)} className="grid grid-cols-2 gap-4">
+                    <Label htmlFor="myself" className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", bookingFor === 'myself' && "border-accent")}>
+                        <RadioGroupItem value="myself" id="myself" className="sr-only" />
+                        <User className="mb-3 h-6 w-6" />
+                        Myself
+                    </Label>
+                    <Label htmlFor="someoneElse" className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", bookingFor === 'someoneElse' && "border-accent")}>
+                         <RadioGroupItem value="someoneElse" id="someoneElse" className="sr-only" />
+                        <Users className="mb-3 h-6 w-6" />
+                        Someone Else
+                    </Label>
+                </RadioGroup>
+            </div>
+            
+            {bookingFor === 'someoneElse' && (
+                 <Card className="bg-muted/30">
+                    <CardHeader className="p-4">
+                        <CardTitle className="text-lg font-semibold">Patient's Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-6">
+                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="fullName">Full Name</Label>
+                                <Input id="fullName" name="fullName" placeholder="John Doe" required />
+                                {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="relationship">Relationship</Label>
+                                <Input id="relationship" name="relationship" placeholder="e.g., Child, Parent, Spouse" required />
+                                {state.errors?.relationship && <p className="text-sm font-medium text-destructive">{state.errors.relationship[0]}</p>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="age">Age</Label>
+                                <Input id="age" name="age" type="number" placeholder="30" required />
+                                {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gender">Gender</Label>
+                                <Select name="gender" required>
+                                    <SelectTrigger id="gender">
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">Male</SelectItem>
+                                        <SelectItem value="female">Female</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input id="fullName" name="fullName" defaultValue={loggedInPatientName} required />
-                    {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" name="phone" placeholder="(123) 456-7890" required />
-                     {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
+                    <Label htmlFor="phone">{bookingFor === 'myself' ? 'Your' : 'Your'} Phone Number</Label>
+                    <Input id="phone" name="phone" defaultValue={loggedInPatient.phone} placeholder="(123) 456-7890" required />
+                    {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                 </div>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                    <Label htmlFor="age">Age</Label>
-                    <Input id="age" name="age" type="number" placeholder="30" required />
-                     {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select name="gender" required>
-                        <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                        </SelectContent>
-                    </Select>
-                     {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
-                </div>
-            </div>
+
+            {/* Hidden fields for 'myself' booking */}
+            {bookingFor === 'myself' && (
+                <>
+                    <input type="hidden" name="fullName" value={loggedInPatient.name} />
+                    <input type="hidden" name="age" value={loggedInPatient.age} />
+                    <input type="hidden" name="gender" value={loggedInPatient.gender} />
+                </>
+            )}
+
+
             <div className="space-y-2">
               <Label htmlFor="symptoms">Symptoms & Concerns</Label>
               <Textarea
                 id="symptoms"
                 name="symptoms"
-                placeholder="Briefly describe your symptoms."
+                placeholder="Briefly describe the patient's symptoms."
                 className="min-h-[120px]"
                 required
               />

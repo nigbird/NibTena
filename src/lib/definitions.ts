@@ -45,4 +45,6 @@ export type Appointment = {
   appointmentSlot: string;
   appointmentDate: string;
   status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
+  bookedBy?: string;
+  relationship?: string;
 };

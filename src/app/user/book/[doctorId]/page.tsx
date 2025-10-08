@@ -53,7 +53,7 @@ function SubmitButton() {
 const loggedInPatient = {
     name: 'Hana Worku',
     age: 28,
-    gender: 'female',
+    gender: 'female' as 'male' | 'female',
     phone: '912345678',
 }
 
@@ -89,6 +89,8 @@ export default function BookingPage() {
       });
     }
   }, [state, toast, router]);
+  
+  const isBookingForSelf = bookingFor === 'myself';
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
@@ -126,65 +128,52 @@ export default function BookingPage() {
                 </RadioGroup>
             </div>
             
-            {bookingFor === 'someoneElse' && (
-                 <Card className="bg-muted/30">
-                    <CardHeader className="p-4">
-                        <CardTitle className="text-lg font-semibold">Patient's Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0 space-y-6">
-                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="fullName">Full Name</Label>
-                                <Input id="fullName" name="fullName" placeholder="John Doe" required />
-                                {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="relationship">Relationship</Label>
-                                <Input id="relationship" name="relationship" placeholder="e.g., Child, Parent, Spouse" required />
-                                {state.errors?.relationship && <p className="text-sm font-medium text-destructive">{state.errors.relationship[0]}</p>}
-                            </div>
+            <Card className="bg-muted/30">
+                <CardHeader className="p-4">
+                    <CardTitle className="text-lg font-semibold">Patient's Information</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-6">
+                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="fullName">Full Name</Label>
+                            <Input key={bookingFor} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? loggedInPatient.name : ''} required />
+                            {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                         </div>
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="age">Age</Label>
-                                <Input id="age" name="age" type="number" placeholder="30" required />
-                                {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="gender">Gender</Label>
-                                <Select name="gender" required>
-                                    <SelectTrigger id="gender">
-                                        <SelectValue placeholder="Select gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="male">Male</SelectItem>
-                                        <SelectItem value="female">Female</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
-                            </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input id="phone" name="phone" defaultValue={loggedInPatient.phone} placeholder="(123) 456-7890" required />
+                          {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-2">
-                    <Label htmlFor="phone">{bookingFor === 'myself' ? 'Your' : 'Your'} Phone Number</Label>
-                    <Input id="phone" name="phone" defaultValue={loggedInPatient.phone} placeholder="(123) 456-7890" required />
-                    {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
-                </div>
-            </div>
-
-            {/* Hidden fields for 'myself' booking */}
-            {bookingFor === 'myself' && (
-                <>
-                    <input type="hidden" name="fullName" value={loggedInPatient.name} />
-                    <input type="hidden" name="age" value={loggedInPatient.age} />
-                    <input type="hidden" name="gender" value={loggedInPatient.gender} />
-                </>
-            )}
-
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="age">Age</Label>
+                            <Input key={bookingFor} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? loggedInPatient.age : ''} required />
+                            {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="gender">Gender</Label>
+                            <Select key={bookingFor} name="gender" defaultValue={isBookingForSelf ? loggedInPatient.gender : undefined} required>
+                                <SelectTrigger id="gender">
+                                    <SelectValue placeholder="Select gender" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="male">Male</SelectItem>
+                                    <SelectItem value="female">Female</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
+                        </div>
+                    </div>
+                     {!isBookingForSelf && (
+                        <div className="space-y-2">
+                            <Label htmlFor="relationship">Your Relationship to Patient</Label>
+                            <Input id="relationship" name="relationship" placeholder="e.g., Child, Parent, Spouse" required />
+                            {state.errors?.relationship && <p className="text-sm font-medium text-destructive">{state.errors.relationship[0]}</p>}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <div className="space-y-2">
               <Label htmlFor="symptoms">Symptoms & Concerns</Label>

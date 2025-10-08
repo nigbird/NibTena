@@ -166,7 +166,7 @@ export default function Home() {
             priority
           />
         )}
-        <div className="relative z-10 p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
+        <div className="relative z-30 p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
         
           <section className="space-y-4 pt-8 pb-16 text-white text-center">
               <h1 className="text-3xl font-bold tracking-tight">

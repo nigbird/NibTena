@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getAppointmentsByDoctorId } from '@/lib/data';
+import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import { getAppointmentsByHospitalId } from '@/lib/data';
 import type { Appointment } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Search, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DoctorAppointmentList from '@/components/doctor-portal/appointment-list';
-import { updateAppointment } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
@@ -23,11 +23,14 @@ export default function DoctorAppointmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
+  const { activeHospitalId } = useContext(DoctorPortalContext);
 
   const fetchAppointments = useCallback(async () => {
-    const data = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
-    setAppointments(data);
-  }, []);
+    if (!activeHospitalId) return;
+    const data = await getAppointmentsByHospitalId(activeHospitalId);
+    const doctorAppointments = data.filter(a => a.doctorId === MOCK_DOCTOR_ID);
+    setAppointments(doctorAppointments);
+  }, [activeHospitalId]);
 
   useEffect(() => {
     fetchAppointments();

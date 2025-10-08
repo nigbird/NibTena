@@ -43,8 +43,8 @@ export default function SuperAdminDashboard() {
 
   const chartData = hospitals.map(hospital => ({
     name: hospital.name.split(' ')[0],
-    doctors: doctors.filter(d => d.hospitalId === hospital.id).length,
-    appointments: appointments.filter(a => doctors.some(d => d.id === a.doctorId && d.hospitalId === hospital.id)).length
+    doctors: doctors.filter(d => d.hospitalIds.includes(hospital.id)).length,
+    appointments: appointments.filter(a => doctors.some(d => d.id === a.doctorId && d.hospitalIds.includes(hospital.id))).length
   }));
 
   return (

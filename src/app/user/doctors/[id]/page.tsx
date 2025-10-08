@@ -47,8 +47,10 @@ export default function DoctorProfilePage() {
       }
       setDoctor(doctorData);
       
-      const hospitalData = await getHospitalById(doctorData.hospitalId);
-      setHospital(hospitalData);
+      if (doctorData.hospitalIds.length > 0) {
+        const hospitalData = await getHospitalById(doctorData.hospitalIds[0]);
+        setHospital(hospitalData);
+      }
     }
     fetchData();
   }, [doctorId]);

@@ -30,8 +30,10 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   const [hospital, setHospital] = useState<Hospital | undefined>();
 
   useEffect(() => {
-    getHospitalById(doctor.hospitalId).then(setHospital);
-  }, [doctor.hospitalId]);
+    if (doctor.hospitalIds.length > 0) {
+      getHospitalById(doctor.hospitalIds[0]).then(setHospital);
+    }
+  }, [doctor.hospitalIds]);
 
   return (
     <Card className="flex items-start p-4 gap-4 shadow-md">

@@ -8,13 +8,13 @@ let hospitals: Hospital[] = [
 ];
 
 let doctors: Doctor[] = [
-  { id: 1, name: 'Dr. Mulugeta Tesfaye', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-1', bio: 'Dr. Mulugeta is a senior cardiologist with over 15 years of experience treating heart and vascular conditions.', consultationFee: 150, rating: 4.9, status: 'active', experience: 15 },
-  { id: 2, name: 'Dr. Selamawit Bekele', specialty: 'Dermatology', hospitalId: 1, imageId: 'doctor-2', bio: 'Dr. Selamawit specializes in both cosmetic and clinical dermatology, focusing on holistic skin care.', consultationFee: 120, rating: 4.8, status: 'active', experience: 10 },
-  { id: 3, name: 'Dr. Tewodros Mekonnen', specialty: 'Neurology', hospitalId: 2, imageId: 'doctor-3', bio: 'Dr. Tewodros is a neurologist focusing on brain and spinal disorders, epilepsy, and stroke recovery.', consultationFee: 200, rating: 4.9, status: 'active', experience: 12 },
-  { id: 4, name: 'Dr. Meron Alemu', specialty: 'Pediatrics', hospitalId: 2, imageId: 'doctor-4', bio: 'Dr. Meron provides compassionate pediatric care for children from infancy through adolescence.', consultationFee: 100, rating: 4.7, status: 'active', experience: 8 },
-  { id: 5, name: 'Dr. Yoseph Hailemariam', specialty: 'Orthopedics', hospitalId: 3, imageId: 'doctor-5', bio: 'Dr. Yoseph specializes in sports medicine and joint replacement, helping patients recover mobility.', consultationFee: 180, rating: 4.8, status: 'active', experience: 9 },
-  { id: 6, name: 'Dr. Rahel Tadesse', specialty: 'Dentistry', hospitalId: 3, imageId: 'doctor-6', bio: 'Dr. Rahel offers a full range of dental care — from preventive cleanings to restorative and cosmetic procedures.', consultationFee: 90, rating: 4.9, status: 'active', experience: 7 },
-  { id: 7, name: 'Dr. Dawit Abebe', specialty: 'Cardiology', hospitalId: 1, imageId: 'doctor-7', bio: 'Dr. Dawit focuses on preventive cardiology and lifestyle-based treatment approaches for heart health.', consultationFee: 160, rating: 4.8, status: 'active', experience: 5 },
+  { id: 1, name: 'Dr. Mulugeta Tesfaye', specialty: 'Cardiology', hospitalIds: [1, 2], imageId: 'doctor-1', bio: 'Dr. Mulugeta is a senior cardiologist with over 15 years of experience treating heart and vascular conditions.', consultationFee: 150, rating: 4.9, status: 'active', experience: 15 },
+  { id: 2, name: 'Dr. Selamawit Bekele', specialty: 'Dermatology', hospitalIds: [1], imageId: 'doctor-2', bio: 'Dr. Selamawit specializes in both cosmetic and clinical dermatology, focusing on holistic skin care.', consultationFee: 120, rating: 4.8, status: 'active', experience: 10 },
+  { id: 3, name: 'Dr. Tewodros Mekonnen', specialty: 'Neurology', hospitalIds: [2], imageId: 'doctor-3', bio: 'Dr. Tewodros is a neurologist focusing on brain and spinal disorders, epilepsy, and stroke recovery.', consultationFee: 200, rating: 4.9, status: 'active', experience: 12 },
+  { id: 4, name: 'Dr. Meron Alemu', specialty: 'Pediatrics', hospitalIds: [2], imageId: 'doctor-4', bio: 'Dr. Meron provides compassionate pediatric care for children from infancy through adolescence.', consultationFee: 100, rating: 4.7, status: 'active', experience: 8 },
+  { id: 5, name: 'Dr. Yoseph Hailemariam', specialty: 'Orthopedics', hospitalIds: [3], imageId: 'doctor-5', bio: 'Dr. Yoseph specializes in sports medicine and joint replacement, helping patients recover mobility.', consultationFee: 180, rating: 4.8, status: 'active', experience: 9 },
+  { id: 6, name: 'Dr. Rahel Tadesse', specialty: 'Dentistry', hospitalIds: [3], imageId: 'doctor-6', bio: 'Dr. Rahel offers a full range of dental care — from preventive cleanings to restorative and cosmetic procedures.', consultationFee: 90, rating: 4.9, status: 'active', experience: 7 },
+  { id: 7, name: 'Dr. Dawit Abebe', specialty: 'Cardiology', hospitalIds: [1], imageId: 'doctor-7', bio: 'Dr. Dawit focuses on preventive cardiology and lifestyle-based treatment approaches for heart health.', consultationFee: 160, rating: 4.8, status: 'active', experience: 5 },
 ];
 
 function getISODate(daysOffset = 0) {
@@ -104,13 +104,13 @@ export async function deleteHospital(id: number): Promise<{ success: boolean }> 
     const initialLength = hospitals.length;
     hospitals = hospitals.filter(h => h.id !== id);
     // Also remove doctors associated with this hospital
-    doctors = doctors.filter(d => d.hospitalId !== id);
+    doctors = doctors.map(d => ({...d, hospitalIds: d.hospitalIds.filter(hid => hid !== id) })).filter(d => d.hospitalIds.length > 0);
     return { success: hospitals.length < initialLength };
 }
 
 
 export async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
-  return doctors.filter(d => d.hospitalId === hospitalId);
+  return doctors.filter(d => d.hospitalIds.includes(hospitalId));
 }
 
 export async function getDoctors(specialty?: string): Promise<Doctor[]> {
@@ -124,10 +124,11 @@ export async function getDoctorById(id: number): Promise<Doctor | undefined> {
   return doctors.find(d => d.id === id);
 }
 
-export async function addDoctor(doctor: Omit<Doctor, 'id' | 'rating' | 'imageId' | 'status'> & { hospitalId: number }): Promise<Doctor> {
+export async function addDoctor(doctor: Omit<Doctor, 'id' | 'rating' | 'imageId' | 'status' | 'hospitalIds'> & { hospitalId: number }): Promise<Doctor> {
     const newDoctor: Doctor = {
         ...doctor,
         id: doctors.length > 0 ? Math.max(...doctors.map(d => d.id)) + 1 : 1,
+        hospitalIds: [doctor.hospitalId],
         rating: Math.floor(Math.random() * (50 - 45) + 45) / 10, // random rating between 4.5 and 5
         imageId: `doctor-${((doctors.length + 1) % 7) + 1}`, // cycle through placeholder images
         status: 'active',
@@ -136,7 +137,7 @@ export async function addDoctor(doctor: Omit<Doctor, 'id' | 'rating' | 'imageId'
     return newDoctor;
 }
 
-export async function updateDoctor(id: number, updatedData: Partial<Omit<Doctor, 'id'>>): Promise<Doctor | undefined> {
+export async function updateDoctor(id: number, updatedData: Partial<Omit<Doctor, 'id' | 'hospitalIds'>>): Promise<Doctor | undefined> {
     const doctorIndex = doctors.findIndex(d => d.id === id);
     if (doctorIndex === -1) {
         return undefined;
@@ -209,7 +210,7 @@ export async function getSpecialties(): Promise<string[]> {
 }
 
 export async function getHospitalSpecialties(hospitalId: number): Promise<string[]> {
-    const hospitalDoctors = doctors.filter(d => d.hospitalId === hospitalId);
+    const hospitalDoctors = doctors.filter(d => d.hospitalIds.includes(hospitalId));
     const specialties = new Set(hospitalDoctors.map(d => d.specialty));
     return Array.from(specialties);
 }

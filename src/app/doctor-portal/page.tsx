@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { getAppointmentsByDoctorId, getDoctorById } from '@/lib/data';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import {
@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, Users, CalendarCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { getAppointmentsByHospitalId } from '@/lib/data';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
@@ -27,19 +29,23 @@ export default function DoctorPortalPage() {
     todays: 0,
     totalPatients: 0,
   });
+  const { activeHospitalId } = useContext(DoctorPortalContext);
 
   useEffect(() => {
     async function fetchData() {
+      if (!activeHospitalId) return;
+
       const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
-      const appointmentsData = await getAppointmentsByDoctorId(MOCK_DOCTOR_ID);
+      const allAppointments = await getAppointmentsByHospitalId(activeHospitalId);
+      const doctorAppointments = allAppointments.filter(a => a.doctorId === MOCK_DOCTOR_ID);
       
       setDoctor(doctorData || null);
-      setAppointments(appointmentsData);
+      setAppointments(doctorAppointments);
 
-      const upcomingAppointments = appointmentsData.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
+      const upcomingAppointments = doctorAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
       const today = new Date().toISOString().split('T')[0];
       const todaysAppointments = upcomingAppointments.filter(a => a.appointmentDate === today);
-      const uniquePatients = new Set(appointmentsData.map(a => a.patientName));
+      const uniquePatients = new Set(doctorAppointments.map(a => a.patientName));
 
       setStats({
           upcoming: upcomingAppointments.length,
@@ -48,7 +54,7 @@ export default function DoctorPortalPage() {
       });
     }
     fetchData();
-  }, []);
+  }, [activeHospitalId]);
 
   const todaysUpcomingAppointments = appointments
     .filter(a => a.appointmentDate === new Date().toISOString().split('T')[0] && (a.status === 'confirmed' || a.status === 'rescheduled'))

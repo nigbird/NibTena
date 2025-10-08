@@ -22,7 +22,7 @@ export type Doctor = {
   id: number;
   name: string;
   specialty: string;
-  hospitalId: number;
+  hospitalIds: number[];
   imageId: string;
   bio: string;
   consultationFee: number;

@@ -28,6 +28,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
+import HospitalSwitcher from './doctor-portal/hospital-switcher';
 
 export default function DoctorPortalHeader() {
     return (
@@ -84,6 +85,8 @@ export default function DoctorPortalHeader() {
 
           <div className="w-full flex-1" />
           
+          <HospitalSwitcher />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">

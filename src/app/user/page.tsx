@@ -252,17 +252,16 @@ export default function Home() {
         </div>
       </div>
       
-      <div className="-mt-16 relative z-20">
-          {/* Quick Actions Section */}
-          <section className="px-4">
-              <div className="grid grid-cols-4 gap-2 md:gap-4 max-w-md mx-auto p-2 bg-background/80 backdrop-blur-sm rounded-2xl border shadow-lg">
+       <div className="-mt-12 relative z-20 pb-4">
+          <section className="container mx-auto max-w-md">
+              <div className="flex justify-around items-center">
                   {quickActions.map(({ href, label, icon: Icon, color }) => (
                       <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                          <div className={cn("relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-inner transition-all duration-300 group-hover:scale-110 border-2", color, "border-secondary/40")}>
-                               <div className="absolute -inset-1 bg-primary/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                              <Icon className="h-6 w-6 sm:h-7 sm:w-7 z-10" />
+                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl", color)}>
+                              <div className="absolute -inset-1 bg-primary/30 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              <Icon className="h-8 w-8 z-10" />
                           </div>
-                          <p className="text-xs font-medium text-muted-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
+                          <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
                       </Link>
                   ))}
               </div>

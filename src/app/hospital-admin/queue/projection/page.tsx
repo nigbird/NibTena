@@ -16,7 +16,7 @@ export default function QueueProjectionPage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   const fetchAndFilterQueue = useCallback(async () => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -54,6 +54,9 @@ export default function QueueProjectionPage() {
   }, []);
 
   useEffect(() => {
+    // Set initial time on client
+    setCurrentTime(new Date());
+
     fetchAndFilterQueue();
     // Refresh data every 15 seconds
     const interval = setInterval(fetchAndFilterQueue, 15000);
@@ -89,8 +92,17 @@ export default function QueueProjectionPage() {
       <header className="flex justify-between items-center pb-4 border-b-2 border-primary/20">
         <Logo />
         <div className="text-right">
-            <p className="font-headline font-bold text-4xl">{format(currentTime, 'h:mm:ss a')}</p>
-            <p className="text-lg text-muted-foreground">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
+            {currentTime ? (
+              <>
+                <p className="font-headline font-bold text-4xl">{format(currentTime, 'h:mm:ss a')}</p>
+                <p className="text-lg text-muted-foreground">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-10 w-48 mb-2" />
+                <Skeleton className="h-6 w-64" />
+              </>
+            )}
         </div>
       </header>
 

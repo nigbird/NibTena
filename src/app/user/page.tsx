@@ -44,17 +44,17 @@ type SearchResult = {
 
 function Highlight({ text, highlight }: { text: string; highlight: string }) {
   if (!highlight.trim()) {
-    return <span>{text}</span>;
+    return <span className="text-foreground/80">{text}</span>;
   }
   const regex = new RegExp(`(${highlight})`, 'gi');
   const parts = text.split(regex);
   return (
-    <span>
+    <span className="text-foreground/80">
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <span key={i} className="font-bold text-primary-foreground bg-primary/20 rounded-sm">
+          <strong key={i} className="font-bold text-foreground bg-primary/20 rounded-sm">
             {part}
-          </span>
+          </strong>
         ) : (
           part
         )
@@ -166,7 +166,7 @@ export default function Home() {
             priority
           />
         )}
-        <div className="relative z-30 p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
+        <div className="relative z-10 p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
         
           <section className="space-y-4 pt-8 pb-16 text-white text-center">
               <h1 className="text-3xl font-bold tracking-tight">
@@ -187,7 +187,7 @@ export default function Home() {
                     />
                 </form>
                 {showResults && (
-                  <div className="absolute z-10 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
+                  <div className="absolute z-20 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
                     {isSearching ? (
                       <div className="p-4 text-center text-muted-foreground">Searching...</div>
                     ) : hasResults ? (
@@ -258,7 +258,7 @@ export default function Home() {
               <div className="flex justify-around items-center">
                   {quickActions.map(({ href, label, icon: Icon, color }) => (
                       <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-secondary/40 group-hover:border-secondary/80 group-hover:shadow-inner", color)}>
+                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-secondary/20 hover:border-secondary/60", color)}>
                               <Icon className="h-8 w-8 z-10" />
                           </div>
                           <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>

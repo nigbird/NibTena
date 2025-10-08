@@ -11,10 +11,12 @@ import { getHospitals, getDoctors, getSpecialties, getHospitalById } from '@/lib
 import type { Hospital as HospitalType, Doctor } from '@/lib/definitions';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useDebounce } from '@/hooks/use-debounce';
+import Autoplay from "embla-carousel-autoplay";
+
 
 const quickActions = [
   { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-blue-600' },
@@ -70,6 +72,12 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [allData, setAllData] = useState<{ doctors: Doctor[]; hospitals: HospitalType[]; specialties: string[] }>({ doctors: [], hospitals: [], specialties: [] });
+  
+  const [hospitalApi, setHospitalApi] = useState<any>();
+  const [doctorApi, setDoctorApi] = useState<any>();
+  const [currentHospitalSlide, setCurrentHospitalSlide] = useState(0);
+  const [currentDoctorSlide, setCurrentDoctorSlide] = useState(0);
+
 
   const router = useRouter();
 
@@ -86,6 +94,23 @@ export default function Home() {
     }
     fetchAllData();
   }, []);
+
+  useEffect(() => {
+    if (!hospitalApi) return;
+    setCurrentHospitalSlide(hospitalApi.selectedScrollSnap());
+    hospitalApi.on("select", () => {
+      setCurrentHospitalSlide(hospitalApi.selectedScrollSnap());
+    });
+  }, [hospitalApi]);
+
+  useEffect(() => {
+    if (!doctorApi) return;
+    setCurrentDoctorSlide(doctorApi.selectedScrollSnap());
+    doctorApi.on("select", () => {
+      setCurrentDoctorSlide(doctorApi.selectedScrollSnap());
+    });
+  }, [doctorApi]);
+
 
   useEffect(() => {
     if (debouncedSearchQuery) {
@@ -125,188 +150,240 @@ export default function Home() {
   
   const hasResults = searchResults && (searchResults.doctors.length > 0 || searchResults.hospitals.length > 0 || searchResults.specialties.length > 0);
 
+  const heroImage = placeholderImages.find(p => p.id === 'mediverse-hero');
+
   return (
     <div className="flex flex-col">
-      <div className="p-6 space-y-8 bg-muted/20">
+      <div className="relative">
+        {heroImage && (
+          <Image
+            src={heroImage.imageUrl}
+            alt={heroImage.description}
+            fill
+            className="object-cover"
+            data-ai-hint={heroImage.imageHint}
+            priority
+          />
+        )}
+        <div className="relative z-10 p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
         
-        <section className="space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground text-center">
-                How are you feeling today?
-            </h1>
-             <p className="text-center text-muted-foreground">Find the best doctors and hospitals near you.</p>
-            <div className="relative max-w-lg mx-auto">
-              <form onSubmit={handleSearchSubmit}>
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                      type="search"
-                      placeholder="Search doctors, hospitals, or specialties…"
-                      className="w-full h-14 rounded-full bg-background pl-12 pr-4 text-base shadow-md"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                      onFocus={() => { if (debouncedSearchQuery) setShowResults(true); }}
-                  />
-              </form>
-               {showResults && (
-                <div className="absolute z-10 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden">
-                  {isSearching ? (
-                    <div className="p-4 text-center text-muted-foreground">Searching...</div>
-                  ) : hasResults ? (
-                    <ul className="divide-y">
-                      {searchResults.specialties.length > 0 && (
-                        <>
-                          <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Specialties</li>
-                          {searchResults.specialties.map(specialty => {
-                            const Icon = specialtyIcons[specialty] || Stethoscope;
-                            return (
-                               <li key={specialty}>
-                                <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                  <Icon className="h-5 w-5 text-primary" />
-                                  <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
+          <section className="space-y-4 pt-8 pb-16 text-white text-center">
+              <h1 className="text-3xl font-bold tracking-tight">
+                  How are you feeling today?
+              </h1>
+              <p className="text-white/90">Find the best doctors and hospitals near you.</p>
+              <div className="relative max-w-lg mx-auto">
+                <form onSubmit={handleSearchSubmit}>
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search doctors, hospitals, or specialties…"
+                        className="w-full h-14 rounded-full bg-background/90 text-foreground pl-12 pr-4 text-base shadow-lg"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                        onFocus={() => { if (debouncedSearchQuery) setShowResults(true); }}
+                    />
+                </form>
+                {showResults && (
+                  <div className="absolute z-10 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
+                    {isSearching ? (
+                      <div className="p-4 text-center text-muted-foreground">Searching...</div>
+                    ) : hasResults ? (
+                      <ul className="divide-y max-h-96 overflow-y-auto">
+                        {searchResults.specialties.length > 0 && (
+                          <>
+                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Specialties</li>
+                            {searchResults.specialties.map(specialty => {
+                              const Icon = specialtyIcons[specialty] || Stethoscope;
+                              return (
+                                <li key={specialty}>
+                                  <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                    <Icon className="h-5 w-5 text-primary" />
+                                    <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </>
+                        )}
+                        {searchResults.hospitals.length > 0 && (
+                          <>
+                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Hospitals</li>
+                            {searchResults.hospitals.map(hospital => (
+                              <li key={`h-${hospital.id}`}>
+                                <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                  <Avatar className="h-8 w-8 rounded-md"><AvatarFallback><Building/></AvatarFallback></Avatar>
+                                  <div>
+                                    <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
+                                    <p className="text-xs text-muted-foreground">{hospital.city}</p>
+                                  </div>
                                 </button>
                               </li>
-                            )
-                           })}
-                        </>
-                      )}
-                      {searchResults.hospitals.length > 0 && (
-                        <>
-                          <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Hospitals</li>
-                          {searchResults.hospitals.map(hospital => (
-                            <li key={`h-${hospital.id}`}>
-                              <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                <Avatar className="h-8 w-8 rounded-md"><AvatarFallback><Building/></AvatarFallback></Avatar>
-                                <div>
-                                  <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
-                                  <p className="text-xs text-muted-foreground">{hospital.city}</p>
-                                </div>
-                              </button>
-                            </li>
-                          ))}
-                        </>
-                      )}
-                      {searchResults.doctors.length > 0 && (
-                        <>
-                           <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Doctors</li>
-                          {searchResults.doctors.map(doctor => (
-                             <li key={`d-${doctor.id}`}>
-                              <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                 <Avatar className="h-8 w-8"><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
-                                <div>
-                                  <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
-                                  <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
-                                </div>
-                              </button>
-                            </li>
-                          ))}
-                        </>
-                      )}
-                    </ul>
-                  ) : (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No results for "{debouncedSearchQuery}"
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-        </section>
-
-        {/* Quick Actions Section */}
-        <section>
-            <div className="grid grid-cols-4 gap-2 md:gap-4 max-w-md mx-auto">
-                 {quickActions.map(({ href, label, icon: Icon, color }) => (
-                    <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center">
-                        <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110", color)}>
-                            <div className="absolute inset-0 bg-primary/30 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <div className="relative h-14 w-14 rounded-xl bg-white/40 flex items-center justify-center backdrop-blur-sm group-hover:shadow-inner border-2 border-secondary/40">
-                                <Icon className="h-7 w-7" />
-                            </div>
-                        </div>
-                        <p className="text-xs font-medium text-muted-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
-                    </Link>
-                ))}
-            </div>
-        </section>
-
+                            ))}
+                          </>
+                        )}
+                        {searchResults.doctors.length > 0 && (
+                          <>
+                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Doctors</li>
+                            {searchResults.doctors.map(doctor => (
+                              <li key={`d-${doctor.id}`}>
+                                <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                  <Avatar className="h-8 w-8"><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
+                                  <div>
+                                    <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
+                                    <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </>
+                        )}
+                      </ul>
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No results for "{debouncedSearchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+          </section>
+        </div>
       </div>
-        {/* Hospital Highlights Section */}
-        <section className="py-8 space-y-4">
-            <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
-                <h2 className="font-headline text-2xl font-bold">Top Hospitals</h2>
-                <Link href="/user/hospitals" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
-                    See all <ArrowRight className="h-4 w-4" />
-                </Link>
-            </div>
-            <Carousel opts={{ align: 'start', loop: true }} className="w-full">
-                <CarouselContent className="-ml-4 px-6">
-                    {topHospitals.map(hospital => {
-                        const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
-                        return (
-                            <CarouselItem key={hospital.id} className="md:basis-1/2 lg:basis-1/3">
-                                <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl">
-                                    {hospitalImage && (
-                                        <div className="aspect-video relative overflow-hidden">
-                                            <Image
-                                                src={hospitalImage.imageUrl}
-                                                alt={hospital.name}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                            />
-                                        </div>
-                                    )}
-                                    <CardContent className="p-4">
-                                        <h3 className="font-bold font-headline">{hospital.name}</h3>
-                                        <p className="text-sm text-muted-foreground">{hospital.city} | Multi-Specialty Care</p>
-                                        <Button asChild variant="link" className="p-0 h-auto mt-2">
-                                            <Link href={`/user/hospitals/${hospital.id}`}>
-                                                View Details <ArrowRight className="ml-1 h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </CarouselItem>
-                        );
-                    })}
-                </CarouselContent>
-            </Carousel>
-        </section>
+      
+      <div className="-mt-16 relative z-20">
+          {/* Quick Actions Section */}
+          <section className="px-4">
+              <div className="grid grid-cols-4 gap-2 md:gap-4 max-w-md mx-auto p-2 bg-background/80 backdrop-blur-sm rounded-2xl border shadow-lg">
+                  {quickActions.map(({ href, label, icon: Icon, color }) => (
+                      <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
+                          <div className={cn("relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-inner transition-all duration-300 group-hover:scale-110 border-2", color, "border-secondary/40")}>
+                               <div className="absolute -inset-1 bg-primary/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              <Icon className="h-6 w-6 sm:h-7 sm:w-7 z-10" />
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
+                      </Link>
+                  ))}
+              </div>
+          </section>
+      </div>
 
-        {/* Featured Doctors Section */}
-        <section className="py-8 space-y-4 bg-muted/20">
-             <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
-                <h2 className="font-headline text-2xl font-bold">Featured Doctors</h2>
-                <Link href="/user/doctors" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
-                    See all <ArrowRight className="h-4 w-4" />
-                </Link>
-            </div>
-            <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
-                <CarouselContent className="-ml-4 px-6">
-                    {featuredDoctors.map(doctor => {
-                        const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
-                        return (
-                             <CarouselItem key={doctor.id} className="basis-2/5 sm:basis-1/3 md:basis-1/4">
-                                <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg flex flex-col items-center p-4">
-                                    <Avatar className="h-24 w-24 mb-4 border-2 shadow-md" style={{ borderColor: '#b59b7d' }}>
-                                        {doctorImage && (
-                                            <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />
-                                        )}
-                                        <AvatarFallback><UserIcon /></AvatarFallback>
-                                    </Avatar>
-                                    <div className="p-3 pt-0">
+      <section className="py-8 space-y-4">
+          <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
+              <h2 className="font-headline text-2xl font-bold">Top Hospitals</h2>
+              <Link href="/user/hospitals" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                  See all <ArrowRight className="h-4 w-4" />
+              </Link>
+          </div>
+          <Carousel
+            setApi={setHospitalApi}
+            opts={{ align: 'start', loop: true }}
+            plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
+            className="w-full"
+          >
+              <CarouselContent className="-ml-4 px-6">
+                  {topHospitals.map(hospital => {
+                      const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
+                      return (
+                          <CarouselItem key={hospital.id} className="md:basis-1/2 lg:basis-1/3 group">
+                              <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl">
+                                  {hospitalImage && (
+                                      <div className="aspect-video relative overflow-hidden">
+                                          <Image
+                                              src={hospitalImage.imageUrl}
+                                              alt={hospital.name}
+                                              fill
+                                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                          />
+                                      </div>
+                                  )}
+                                  <CardContent className="p-4">
+                                      <h3 className="font-bold font-headline">{hospital.name}</h3>
+                                      <p className="text-sm text-muted-foreground">{hospital.city} | Multi-Specialty Care</p>
+                                      <Button asChild variant="link" className="p-0 h-auto mt-2">
+                                          <Link href={`/user/hospitals/${hospital.id}`}>
+                                              View Details <ArrowRight className="ml-1 h-4 w-4" />
+                                          </Link>
+                                      </Button>
+                                  </CardContent>
+                              </Card>
+                          </CarouselItem>
+                      );
+                  })}
+              </CarouselContent>
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
+          </Carousel>
+           <div className="py-2 flex justify-center gap-2">
+            {topHospitals.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => hospitalApi?.scrollTo(index)}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  index === currentHospitalSlide ? "p-1 bg-accent" : "bg-accent/30"
+                )}
+              />
+            ))}
+          </div>
+      </section>
+
+      <section className="py-8 space-y-4 bg-muted/20">
+            <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
+              <h2 className="font-headline text-2xl font-bold">Featured Doctors</h2>
+              <Link href="/user/doctors" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                  See all <ArrowRight className="h-4 w-4" />
+              </Link>
+          </div>
+          <Carousel
+            setApi={setDoctorApi}
+            opts={{ align: 'start', loop: true }}
+            plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
+            className="w-full"
+          >
+              <CarouselContent className="-ml-4 px-6">
+                  {featuredDoctors.map(doctor => {
+                      const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
+                      return (
+                            <CarouselItem key={doctor.id} className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                              <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg flex flex-col items-center p-4 h-full">
+                                  <Avatar className="h-24 w-24 mb-4 border-2 shadow-md" style={{ borderColor: 'hsl(var(--accent))' }}>
+                                      {doctorImage && (
+                                          <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />
+                                      )}
+                                      <AvatarFallback><UserIcon /></AvatarFallback>
+                                  </Avatar>
+                                  <div className="p-3 pt-0 flex flex-col flex-grow justify-between">
+                                      <div>
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
-                                        <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="brand">
-                                            <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
-                                        </Button>
-                                    </div>
-                                </Card>
-                            </CarouselItem>
-                        );
-                    })}
-                </CarouselContent>
-            </Carousel>
-        </section>
+                                      </div>
+                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="accent">
+                                          <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
+                                      </Button>
+                                  </div>
+                              </Card>
+                          </CarouselItem>
+                      );
+                  })}
+              </CarouselContent>
+               <CarouselPrevious className="left-2" />
+               <CarouselNext className="right-2" />
+          </Carousel>
+           <div className="py-2 flex justify-center gap-2">
+            {featuredDoctors.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => doctorApi?.scrollTo(index)}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  index === currentDoctorSlide ? "p-1 bg-accent" : "bg-accent/30"
+                )}
+              />
+            ))}
+          </div>
+      </section>
     </div>
   );
 }

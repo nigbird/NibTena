@@ -258,8 +258,7 @@ export default function Home() {
               <div className="flex justify-around items-center">
                   {quickActions.map(({ href, label, icon: Icon, color }) => (
                       <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl border-2 border-secondary hover:border-secondary/80", color)}>
-                              <div className="absolute -inset-1 bg-primary/30 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-secondary/40 group-hover:border-secondary/80 group-hover:shadow-inner", color)}>
                               <Icon className="h-8 w-8 z-10" />
                           </div>
                           <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>

@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   getDoctors,
   getSpecialties,
   getHospitalById,
 } from '@/lib/data';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Search as SearchIcon } from 'lucide-react';
@@ -61,18 +62,27 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
 }
 
 export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const specialtyQuery = searchParams.get('specialty');
+
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>('all');
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>(specialtyQuery || 'all');
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
 
   useEffect(() => {
     getDoctors().then((data) => {
       setDoctors(data);
-      setFilteredDoctors(data);
     });
     getSpecialties().then(setSpecialties);
   }, []);
+  
+  useEffect(() => {
+    // If a specialty is in the URL, set it as the selected filter
+    const initialSpecialty = specialtyQuery || 'all';
+    setSelectedSpecialty(initialSpecialty);
+  }, [specialtyQuery]);
+
 
   useEffect(() => {
     if (selectedSpecialty === 'all') {

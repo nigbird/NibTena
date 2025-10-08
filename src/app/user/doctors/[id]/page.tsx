@@ -18,17 +18,29 @@ import { cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const availableSlots = [
+// Mock schedules for different hospitals
+const hospital1Slots = [
   '09:00 AM',
   '09:30 AM',
   '10:00 AM',
   '10:30 AM',
   '11:00 AM',
+];
+
+const hospital2Slots = [
   '02:00 PM',
   '02:30 PM',
   '03:00 PM',
   '03:30 PM',
+  '04:00 PM',
+  '04:30 PM',
 ];
+
+const defaultSlots = [
+  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM',
+  '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
+];
+
 
 export default function DoctorProfilePage() {
   const params = useParams();
@@ -64,6 +76,17 @@ export default function DoctorProfilePage() {
     }
     fetchData();
   }, [doctorId, searchParams]);
+
+  useEffect(() => {
+    // Reset selected slot when hospital changes
+    setSelectedSlot(null);
+  }, [selectedHospitalId]);
+
+  const availableSlots = useMemo(() => {
+    if (selectedHospitalId === 1) return hospital1Slots;
+    if (selectedHospitalId === 2) return hospital2Slots;
+    return defaultSlots;
+  }, [selectedHospitalId]);
 
   const next7Days = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));

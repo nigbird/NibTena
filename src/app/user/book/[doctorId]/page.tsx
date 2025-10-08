@@ -166,13 +166,6 @@ export default function BookingPage() {
                             {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
                         </div>
                     </div>
-                     {!isBookingForSelf && (
-                        <div className="space-y-2">
-                            <Label htmlFor="relationship">Your Relationship to Patient</Label>
-                            <Input id="relationship" name="relationship" placeholder="e.g., Child, Parent, Spouse" required />
-                            {state.errors?.relationship && <p className="text-sm font-medium text-destructive">{state.errors.relationship[0]}</p>}
-                        </div>
-                    )}
                 </CardContent>
             </Card>
 

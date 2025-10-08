@@ -175,7 +175,7 @@ export default function Home() {
               <p className="text-white/90">Find the best doctors and hospitals near you.</p>
               <div className="relative max-w-lg mx-auto">
                 <form onSubmit={handleSearchSubmit}>
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                     <Input
                         type="search"
                         placeholder="Search doctors, hospitals, or specialties…"
@@ -187,7 +187,7 @@ export default function Home() {
                     />
                 </form>
                 {showResults && (
-                  <div className="absolute z-20 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
+                  <div className="absolute z-50 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
                     {isSearching ? (
                       <div className="p-4 text-center text-muted-foreground">Searching...</div>
                     ) : hasResults ? (

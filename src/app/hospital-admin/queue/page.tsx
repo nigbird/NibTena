@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ListOrdered, User, Clock, Check, Play, CheckCircle2 } from "lucide-react";
+import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay } from "lucide-react";
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
@@ -11,13 +12,14 @@ import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
 type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 
-type QueueItem = Appointment & {
+export type QueueItem = Appointment & {
   queueStatus: QueueStatus;
 };
 
@@ -46,14 +48,16 @@ export default function QueueManagementPage() {
         getDoctorsByHospitalId(MOCK_HOSPITAL_ID),
       ]);
 
-      const todaysAppointments = allAppointments
+       const todaysAppointments = allAppointments
         .filter(app => format(parseISO(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
-        .map(app => ({
-          ...app,
-          // This state is ephemeral and resets on reload.
-          // In a real app, this would be persisted.
-          queueStatus: 'Waiting' as QueueStatus, 
-        }))
+        .map((app, index) => {
+           // In a real app, this would be persisted. We'll use localStorage for a simple mock.
+           const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueStatus | null;
+           return {
+            ...app,
+            queueStatus: storedStatus || 'Waiting',
+           }
+        })
         .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
       setQueue(todaysAppointments);
@@ -69,12 +73,29 @@ export default function QueueManagementPage() {
       setIsLoading(false);
     }
   }, [toast]);
-
+  
   useEffect(() => {
     fetchTodaysAppointments();
+    
+    // Listen for storage changes to update UI in real-time if projection screen is open
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key?.startsWith('queue-status-')) {
+        fetchTodaysAppointments();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+
   }, [fetchTodaysAppointments]);
 
+
   const handleStatusUpdate = (appointmentId: string, newStatus: QueueStatus) => {
+    // Persist status to localStorage for cross-tab communication
+    localStorage.setItem(`queue-status-${appointmentId}`, newStatus);
+
     setQueue(currentQueue => currentQueue.map(item =>
       item.id === appointmentId ? { ...item, queueStatus: newStatus } : item
     ));
@@ -177,9 +198,17 @@ export default function QueueManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Queue Management</h1>
-        <p className="text-lg text-muted-foreground">Manage the daily patient queue for today's appointments.</p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Queue Management</h1>
+            <p className="text-lg text-muted-foreground">Manage the daily patient queue for today's appointments.</p>
+        </div>
+         <Button asChild variant="outline">
+            <Link href="/hospital-admin/queue/projection" target="_blank">
+                <MonitorPlay className="mr-2 h-4 w-4" />
+                Start Projection
+            </Link>
+        </Button>
       </div>
 
       <Card>

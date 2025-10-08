@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ClipboardList } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import DoctorAppointmentList from '@/components/doctor-portal/appointment-list';
 import { useToast } from '@/hooks/use-toast';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';

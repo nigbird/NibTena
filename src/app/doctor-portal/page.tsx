@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useContext } from 'react';
-import { getAppointmentsByDoctorId, getDoctorById } from '@/lib/data';
+import { getAppointmentsByHospitalId, getDoctorById } from '@/lib/data';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import {
   Card,
@@ -12,34 +12,29 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Users, CalendarCheck2 } from 'lucide-react';
+import { Calendar, Users, CalendarCheck2 } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
-import { getAppointmentsByHospitalId } from '@/lib/data';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
 
 export default function DoctorPortalPage() {
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const { doctor, activeHospitalId } = useContext(DoctorPortalContext);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState({
     upcoming: 0,
     todays: 0,
     totalPatients: 0,
   });
-  const { activeHospitalId } = useContext(DoctorPortalContext);
 
   useEffect(() => {
     async function fetchData() {
       if (!activeHospitalId) return;
 
-      const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
       const allAppointments = await getAppointmentsByHospitalId(activeHospitalId);
       const doctorAppointments = allAppointments.filter(a => a.doctorId === MOCK_DOCTOR_ID);
       
-      setDoctor(doctorData || null);
       setAppointments(doctorAppointments);
 
       const upcomingAppointments = doctorAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');

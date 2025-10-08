@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CalendarClock } from 'lucide-react';
+import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function DoctorSchedulePage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { activeHospitalId } = useContext(DoctorPortalContext);
 
   // In a real app, this state would be fetched and updated via server actions
   const [schedule, setSchedule] = useState({
@@ -42,13 +44,22 @@ export default function DoctorSchedulePage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!activeHospitalId) {
+        toast({
+            variant: "destructive",
+            title: "No Hospital Selected",
+            description: "Please select a hospital to update the schedule.",
+        });
+        return;
+    }
     setIsLoading(true);
-    // Mock saving the schedule
+    // Mock saving the schedule for the specific hospital
+    console.log(`Saving schedule for hospital ${activeHospitalId}`, schedule);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
     toast({
       title: "Schedule Updated",
-      description: "Your availability has been saved successfully.",
+      description: "Your availability has been saved successfully for the selected hospital.",
     });
   };
 
@@ -67,7 +78,7 @@ export default function DoctorSchedulePage() {
               Weekly Availability
             </CardTitle>
             <CardDescription>
-              Set your standard working days and hours.
+              Set your standard working days and hours. This schedule is specific to the currently selected hospital.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -147,4 +158,3 @@ export default function DoctorSchedulePage() {
     </div>
   );
 }
-

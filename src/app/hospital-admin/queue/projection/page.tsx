@@ -1,14 +1,16 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { format, parseISO } from 'date-fns';
-import { Clock, Play } from 'lucide-react';
+import { Clock, Play, User, Users } from 'lucide-react';
 import type { QueueItem } from '../page';
 import { Logo } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 const MOCK_HOSPITAL_ID = 1;
 
@@ -35,14 +37,7 @@ export default function QueueProjectionPage() {
             queueStatus: storedStatus || 'Waiting',
           };
         })
-        .filter(app => app.queueStatus === 'Checked-in' || app.queueStatus === 'In Progress')
-        .sort((a, b) => {
-            // 'In Progress' comes before 'Checked-in'
-            if (a.queueStatus === 'In Progress' && b.queueStatus === 'Checked-in') return -1;
-            if (a.queueStatus === 'Checked-in' && b.queueStatus === 'In Progress') return 1;
-            // Otherwise, sort by time
-            return a.appointmentSlot.localeCompare(b.appointmentSlot);
-        });
+        .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
       setQueue(todaysAppointments);
       setDoctors(doctorsData);
@@ -55,7 +50,9 @@ export default function QueueProjectionPage() {
 
   useEffect(() => {
     // Set initial time on client
-    setCurrentTime(new Date());
+    if (typeof window !== 'undefined') {
+      setCurrentTime(new Date());
+    }
 
     fetchAndFilterQueue();
     // Refresh data every 15 seconds
@@ -86,16 +83,19 @@ export default function QueueProjectionPage() {
   
   const inProgressPatients = queue.filter(p => p.queueStatus === 'In Progress');
   const checkedInPatients = queue.filter(p => p.queueStatus === 'Checked-in');
+  
+  const nextPatient = checkedInPatients[0];
+  const comingUpPatient = checkedInPatients[1];
 
   return (
-    <div className="bg-background text-foreground min-h-screen flex flex-col p-8">
+    <div className="bg-background text-foreground min-h-screen flex flex-col p-8 lg:p-12">
       <header className="flex justify-between items-center pb-4 border-b-2 border-primary/20">
         <Logo />
         <div className="text-right">
             {currentTime ? (
               <>
-                <p className="font-headline font-bold text-4xl">{format(currentTime, 'h:mm:ss a')}</p>
-                <p className="text-lg text-muted-foreground">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
+                <p className="font-headline font-bold text-3xl md:text-4xl">{format(currentTime, 'h:mm:ss a')}</p>
+                <p className="text-md md:text-lg text-muted-foreground">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
               </>
             ) : (
               <>
@@ -106,53 +106,70 @@ export default function QueueProjectionPage() {
         </div>
       </header>
 
-      <main className="flex-1 grid grid-cols-3 gap-8 pt-8">
-        <div className="col-span-2">
-            <h2 className="font-headline text-4xl font-bold mb-6 pb-2 border-b-2 border-muted">Now Serving</h2>
-            {isLoading ? (
-                <div className="space-y-4">
-                    <Skeleton className="h-32 w-full rounded-lg" />
-                    <Skeleton className="h-32 w-full rounded-lg" />
-                </div>
-            ) : inProgressPatients.length > 0 ? (
-                <div className="space-y-4">
-                {inProgressPatients.map(patient => (
-                    <div key={patient.id} className="bg-primary/10 border-2 border-primary rounded-lg p-6 flex items-center justify-between animate-pulse">
-                        <div>
-                            <p className="font-bold text-5xl text-primary-foreground tracking-wide">{patient.patientName}</p>
-                            <p className="text-2xl text-muted-foreground mt-2">{getDoctorName(patient.doctorId)}</p>
-                        </div>
-                        <div className="flex items-center gap-4 text-green-600">
-                             <Play className="h-12 w-12 fill-current" />
-                             <span className="text-3xl font-semibold">In Progress</span>
+      <main className="flex-1 flex flex-col items-center justify-center pt-8">
+        {isLoading ? (
+          <div className="w-full max-w-4xl space-y-8">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : nextPatient ? (
+          <div className="w-full max-w-5xl text-center">
+            <h2 className="font-headline text-3xl md:text-4xl font-bold text-muted-foreground mb-4">Next Patient</h2>
+            <Card className="bg-primary/10 border-2 border-primary rounded-xl p-6 md:p-10 shadow-2xl animate-fade-in">
+              <CardContent className="p-0">
+                  <p className="font-bold text-5xl md:text-7xl text-primary-foreground tracking-tight">{nextPatient.patientName}</p>
+                  <div className="mt-4 flex flex-col md:flex-row items-center justify-center gap-x-8 gap-y-2 text-2xl md:text-3xl text-muted-foreground">
+                      <div className="flex items-center gap-3">
+                          <User className="h-8 w-8" />
+                          <span>with {getDoctorName(nextPatient.doctorId)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                          <Clock className="h-8 w-8" />
+                          <span>at {nextPatient.appointmentSlot}</span>
+                      </div>
+                  </div>
+              </CardContent>
+            </Card>
+
+            {comingUpPatient && (
+               <div className="mt-12 animate-fade-in-delay">
+                <h3 className="font-headline text-2xl md:text-3xl font-bold text-muted-foreground mb-3">Coming Up Next</h3>
+                 <Card className="bg-muted/50 border rounded-lg p-4 max-w-2xl mx-auto">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="font-semibold text-3xl md:text-4xl text-foreground">{comingUpPatient.patientName}</p>
+                        <div className="text-xl text-muted-foreground flex items-center gap-3">
+                            <User className="h-6 w-6" />
+                            <span>{getDoctorName(comingUpPatient.doctorId)}</span>
                         </div>
                     </div>
-                ))}
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground text-2xl pt-16">No patients are currently being served.</div>
+                </Card>
+            </div>
             )}
-        </div>
-        <div className="col-span-1 border-l-2 border-muted pl-8">
-            <h2 className="font-headline text-4xl font-bold mb-6 pb-2 border-b-2 border-muted">Waiting</h2>
-            {isLoading ? (
-                <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
-                </div>
-            ) : checkedInPatients.length > 0 ? (
-                 <div className="space-y-3">
-                    {checkedInPatients.map(patient => (
-                        <div key={patient.id} className="bg-muted/50 rounded-lg p-4">
-                            <p className="font-semibold text-2xl text-foreground">{patient.patientName}</p>
-                            <p className="text-lg text-muted-foreground">{getDoctorName(patient.doctorId)}</p>
-                        </div>
-                    ))}
-                 </div>
-            ) : (
-                <div className="text-center text-muted-foreground text-xl pt-16">The waiting queue is currently empty.</div>
-            )}
-        </div>
+          </div>
+        ) : (
+            <div className="text-center">
+                <Users className="h-24 w-24 mx-auto text-muted-foreground/50" />
+                <h2 className="font-headline text-4xl md:text-5xl font-bold text-muted-foreground mt-8">Waiting queue is currently empty.</h2>
+            </div>
+        )}
       </main>
+
+       {inProgressPatients.length > 0 && (
+          <footer className="mt-auto pt-6 border-t-2 border-muted">
+            <h3 className="text-center font-headline text-xl text-muted-foreground font-bold mb-3">Now Serving</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {inProgressPatients.map(patient => (
+                <div key={patient.id} className="bg-green-100/50 dark:bg-green-900/30 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
+                  <p className="font-semibold text-lg">{patient.patientName}</p>
+                  <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                    <Play className="h-4 w-4 fill-current" />
+                    <span>{getDoctorName(patient.doctorId)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </footer>
+       )}
     </div>
   );
 }

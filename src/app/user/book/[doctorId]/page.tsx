@@ -82,14 +82,35 @@ export default function BookingPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (state?.success === false && state.message) {
+    if (state?.success === true) {
+      const bookingData = {
+        bookingFor,
+        fullName: state.data?.fullName,
+        phone: state.data?.phone,
+        age: state.data?.age,
+        gender: state.data?.gender,
+        symptoms: state.data?.symptoms,
+      };
+      
+      const params = new URLSearchParams({
+        bookingData: JSON.stringify({
+          ...bookingData,
+          doctorId,
+          hospitalId,
+          appointmentSlot: slot,
+          appointmentDate: date,
+        }),
+      });
+      router.push(`/user/verify/phone?${params.toString()}`);
+
+    } else if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',
         title: 'Booking Failed',
         description: state.message,
       });
     }
-  }, [state, toast, router]);
+  }, [state, toast, router, bookingFor, doctorId, hospitalId, slot, date]);
   
   const isBookingForSelf = bookingFor === 'myself';
 
@@ -107,7 +128,7 @@ export default function BookingPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Book Your Appointment</CardTitle>
           <CardDescription>
-            You are booking for <span className="font-semibold text-accent-foreground">{slot}</span> on <span className="font-semibold text-accent-foreground">{displayDate}</span>.
+            You are booking for <span className="font-semibold text-foreground">{slot}</span> on <span className="font-semibold text-foreground">{displayDate}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>

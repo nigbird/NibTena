@@ -115,7 +115,7 @@ export default function BookingPage() {
             
             <div className="space-y-3">
                 <Label>Who are you booking for?</Label>
-                <RadioGroup defaultValue="myself" name="bookingFor" onValueChange={(value: 'myself' | 'someoneElse') => setBookingFor(value)} className="grid grid-cols-2 gap-4">
+                <RadioGroup name="bookingFor" value={bookingFor} onValueChange={(value: 'myself' | 'someoneElse') => setBookingFor(value)} className="grid grid-cols-2 gap-4">
                     <Label htmlFor="myself" className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", bookingFor === 'myself' && "border-accent")}>
                         <RadioGroupItem value="myself" id="myself" className="sr-only" />
                         <User className="mb-3 h-6 w-6" />
@@ -127,7 +127,6 @@ export default function BookingPage() {
                         Someone Else
                     </Label>
                 </RadioGroup>
-                <input type="hidden" name="bookingFor" value={bookingFor} />
             </div>
             
             <Card className="bg-muted/30">
@@ -138,7 +137,7 @@ export default function BookingPage() {
                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Full Name</Label>
-                            <Input key={bookingFor} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? loggedInPatient.name : ''} required />
+                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? loggedInPatient.name : ''} required />
                             {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                         </div>
                         <div className="space-y-2">
@@ -150,12 +149,12 @@ export default function BookingPage() {
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input key={bookingFor} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? loggedInPatient.age : ''} required />
+                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? loggedInPatient.age : ''} required />
                             {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="gender">Gender</Label>
-                            <Select key={bookingFor} name="gender" defaultValue={isBookingForSelf ? loggedInPatient.gender : undefined} required>
+                            <Select key={`gender-${bookingFor}`} name="gender" defaultValue={isBookingForSelf ? loggedInPatient.gender : undefined} required>
                                 <SelectTrigger id="gender">
                                     <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>

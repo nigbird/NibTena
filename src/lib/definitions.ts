@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   fullName: string;
@@ -34,6 +35,7 @@ export type Doctor = {
 
 export type Appointment = {
   id: string;
+  hospitalId: number;
   patientName: string;
   patientPhone: string;
   patientGender: 'male' | 'female';

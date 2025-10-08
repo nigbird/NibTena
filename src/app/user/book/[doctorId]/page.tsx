@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
@@ -53,6 +54,7 @@ export default function BookingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const slot = searchParams.get('slot') || 'Not specified';
+  const hospitalId = Number(searchParams.get('hospitalId'));
   const dateParam = searchParams.get('date');
   const date = dateParam 
     ? format(new Date(dateParam), 'yyyy-MM-dd')
@@ -64,7 +66,7 @@ export default function BookingPage() {
 
 
   const initialState: State = { message: null, errors: {} };
-  const startBookingWithParams = startBookingProcess.bind(null, doctorId, slot, date);
+  const startBookingWithParams = startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
   const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
   const { toast } = useToast();
   

@@ -28,6 +28,7 @@ export type State = {
 
 export async function startBookingProcess(
   doctorId: number,
+  hospitalId: number,
   appointmentSlot: string,
   appointmentDate: string,
   prevState: State,
@@ -52,6 +53,7 @@ export async function startBookingProcess(
   const bookingDetails = {
     ...validatedFields.data,
     doctorId,
+    hospitalId,
     appointmentSlot,
     appointmentDate,
   };
@@ -78,6 +80,7 @@ export async function completeBooking(bookingData: any) {
       patientGender: bookingData.gender,
       symptoms: bookingData.symptoms,
       doctorId: bookingData.doctorId,
+      hospitalId: bookingData.hospitalId,
       appointmentSlot: bookingData.appointmentSlot,
       appointmentDate: bookingData.appointmentDate,
     });
@@ -95,4 +98,3 @@ export async function completeBooking(bookingData: any) {
   // Instead of returning state, we redirect on success.
   redirect(`/user/appointments?success=true`);
 }
-

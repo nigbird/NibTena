@@ -2,7 +2,7 @@
 'use client';
 
 import { getDoctorById, getHospitalById } from '@/lib/data';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Clock, Stethoscope, User, Hospital, Wallet, Calendar } from 'lucide-react';
@@ -16,6 +16,7 @@ import type { Doctor, Hospital as HospitalType } from '@/lib/definitions';
 import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const availableSlots = [
   '09:00 AM',
@@ -32,12 +33,15 @@ const availableSlots = [
 export default function DoctorProfilePage() {
   const params = useParams();
   const doctorId = Number(params.id);
+  const searchParams = useSearchParams();
 
   const [doctor, setDoctor] = useState<Doctor | undefined>();
-  const [hospital, setHospital] = useState<HospitalType | undefined>();
+  const [doctorHospitals, setDoctorHospitals] = useState<HospitalType[]>([]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<number | null>(null);
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-
+  
   useEffect(() => {
     async function fetchData() {
       if (!doctorId) return;
@@ -48,12 +52,18 @@ export default function DoctorProfilePage() {
       setDoctor(doctorData);
       
       if (doctorData.hospitalIds.length > 0) {
-        const hospitalData = await getHospitalById(doctorData.hospitalIds[0]);
-        setHospital(hospitalData);
+         const hospitalPromises = doctorData.hospitalIds.map(id => getHospitalById(id));
+         const hospitals = (await Promise.all(hospitalPromises)).filter((h): h is HospitalType => !!h);
+         setDoctorHospitals(hospitals);
+         
+         // Set selected hospital from URL param or default to first
+         const hospitalIdParam = searchParams.get('hospitalId');
+         const initialHospitalId = hospitalIdParam ? Number(hospitalIdParam) : hospitals[0]?.id;
+         setSelectedHospitalId(initialHospitalId);
       }
     }
     fetchData();
-  }, [doctorId]);
+  }, [doctorId, searchParams]);
 
   const next7Days = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
@@ -63,6 +73,10 @@ export default function DoctorProfilePage() {
     if (!doctor) return null;
     return placeholderImages.find((p) => p.id === doctor.imageId);
   }, [doctor]);
+  
+  const selectedHospital = useMemo(() => {
+      return doctorHospitals.find(h => h.id === selectedHospitalId);
+  }, [selectedHospitalId, doctorHospitals]);
 
   if (!doctor) {
     return (
@@ -97,12 +111,26 @@ export default function DoctorProfilePage() {
                 <Stethoscope className="mr-2 h-4 w-4" />
                 {doctor.specialty}
               </Badge>
-              {hospital && (
-                <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+
+               {doctorHospitals.length > 1 ? (
+                <Select 
+                    value={selectedHospitalId?.toString()}
+                    onValueChange={(val) => setSelectedHospitalId(Number(val))}
+                >
+                    <SelectTrigger className="w-[200px] mt-4">
+                        <SelectValue placeholder="Select Hospital" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {doctorHospitals.map(h => <SelectItem key={h.id} value={h.id.toString()}>{h.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+               ) : selectedHospital && (
+                 <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
                     <Hospital className="h-4 w-4" />
-                    <span>{hospital.name}</span>
+                    <span>{selectedHospital.name}</span>
                 </div>
-              )}
+               )}
+
                <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
                     <Wallet className="h-4 w-4" />
                     <span>${doctor.consultationFee} Consultation Fee</span>
@@ -169,10 +197,10 @@ export default function DoctorProfilePage() {
                     asChild
                     size="lg" 
                     className="w-full"
-                    disabled={!selectedSlot}
+                    disabled={!selectedSlot || !selectedHospitalId}
                 >
                     <Link
-                        href={`/user/book/${doctor.id}?slot=${encodeURIComponent(selectedSlot || '')}&date=${encodeURIComponent(format(selectedDate, 'yyyy-MM-dd'))}`}
+                        href={`/user/book/${doctor.id}?slot=${encodeURIComponent(selectedSlot || '')}&date=${encodeURIComponent(format(selectedDate, 'yyyy-MM-dd'))}&hospitalId=${selectedHospitalId}`}
                     >
                        Book Now
                     </Link>

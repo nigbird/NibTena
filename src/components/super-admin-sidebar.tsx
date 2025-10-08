@@ -67,9 +67,9 @@ export default function SuperAdminSidebar() {
                     <Avatar className="h-10 w-10 border">
                         <AvatarFallback>SA</AvatarFallback>
                     </Avatar>
-                    <div className="text-left">
-                        <p className="font-semibold text-sm leading-tight">Super Admin</p>
-                        <p className="text-xs text-muted-foreground">Mediverse Platform</p>
+                    <div className="text-left overflow-hidden">
+                        <p className="font-semibold text-sm leading-tight truncate">Super Admin</p>
+                        <p className="text-xs text-muted-foreground truncate">Mediverse Platform</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>

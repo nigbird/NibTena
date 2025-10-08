@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -88,8 +89,8 @@ export default function HospitalAdminSidebar() {
                         {hospitalImage && <AvatarImage src={hospitalImage.imageUrl} alt={hospital?.name} />}
                         <AvatarFallback>{hospital?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="text-left">
-                        <p className="font-semibold text-sm leading-tight">{hospital?.name}</p>
+                    <div className="text-left overflow-hidden">
+                        <p className="font-semibold text-sm leading-tight truncate">{hospital?.name}</p>
                         <p className="text-xs text-muted-foreground">Admin</p>
                     </div>
                 </Button>

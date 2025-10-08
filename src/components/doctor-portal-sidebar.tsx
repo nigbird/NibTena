@@ -76,9 +76,9 @@ export default function DoctorPortalSidebar() {
                         {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor?.name} />}
                         <AvatarFallback>{doctor?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="text-left">
-                        <p className="font-semibold text-sm leading-tight">{doctor?.name}</p>
-                        <p className="text-xs text-muted-foreground">{doctor?.specialty}</p>
+                    <div className="text-left overflow-hidden">
+                        <p className="font-semibold text-sm leading-tight truncate">{doctor?.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{doctor?.specialty}</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>

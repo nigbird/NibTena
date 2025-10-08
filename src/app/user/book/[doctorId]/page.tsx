@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
@@ -126,6 +127,7 @@ export default function BookingPage() {
                         Someone Else
                     </Label>
                 </RadioGroup>
+                <input type="hidden" name="bookingFor" value={bookingFor} />
             </div>
             
             <Card className="bg-muted/30">

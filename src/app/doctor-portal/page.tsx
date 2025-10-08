@@ -69,26 +69,30 @@ export default function DoctorPortalPage() {
       
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.todays}</div>
-            <p className="text-xs text-muted-foreground">appointments scheduled for today</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Upcoming</CardTitle>
-            <CalendarCheck2 className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.upcoming}</div>
-            <p className="text-xs text-muted-foreground">confirmed & rescheduled</p>
-          </CardContent>
-        </Card>
+        <Link href="/doctor-portal/appointments">
+          <Card className="shadow-md hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.todays}</div>
+              <p className="text-xs text-muted-foreground">appointments scheduled for today</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/doctor-portal/appointments">
+          <Card className="shadow-md hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Upcoming</CardTitle>
+              <CalendarCheck2 className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.upcoming}</div>
+              <p className="text-xs text-muted-foreground">confirmed & rescheduled</p>
+            </CardContent>
+          </Card>
+        </Link>
          <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Patients</CardTitle>

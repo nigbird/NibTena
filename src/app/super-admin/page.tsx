@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Hospital as HospitalIcon, Users, BriefcaseMedical, LineChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Link from 'next/link';
 
 export default function SuperAdminDashboard() {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -59,16 +60,18 @@ export default function SuperAdminDashboard() {
 
        {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hospitals</CardTitle>
-            <HospitalIcon className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{hospitals.length}</div>
-            <p className="text-xs text-muted-foreground">hospitals on the platform</p>
-          </CardContent>
-        </Card>
+        <Link href="/super-admin/hospitals">
+          <Card className="shadow-md hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Hospitals</CardTitle>
+              <HospitalIcon className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{hospitals.length}</div>
+              <p className="text-xs text-muted-foreground">hospitals on the platform</p>
+            </CardContent>
+          </Card>
+        </Link>
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>

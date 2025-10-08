@@ -2,10 +2,10 @@
 'use client';
 
 import { getDoctorById, getHospitalById } from '@/lib/data';
-import { notFound, useParams, useSearchParams } from 'next/navigation';
+import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Stethoscope, User, Hospital, Wallet, Calendar } from 'lucide-react';
+import { Clock, Stethoscope, User, Hospital, Wallet, Calendar, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +46,7 @@ export default function DoctorProfilePage() {
   const params = useParams();
   const doctorId = Number(params.id);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [doctor, setDoctor] = useState<Doctor | undefined>();
   const [doctorHospitals, setDoctorHospitals] = useState<HospitalType[]>([]);
@@ -111,7 +112,11 @@ export default function DoctorProfilePage() {
 
   return (
     <div className="bg-muted/20">
-      <div className="container py-12">
+      <div className="container py-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4 text-secondary hover:text-secondary/80">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+        </Button>
         <Card className="overflow-hidden shadow-2xl">
           <div className="grid md:grid-cols-3">
             <div className="md:col-span-1 p-8 bg-primary/10 flex flex-col items-center justify-center text-center">

@@ -2,7 +2,7 @@
 'use client';
 
 import { getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -15,6 +15,7 @@ import {
   Sparkles,
   Star,
   X,
+  ArrowLeft,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -50,6 +51,7 @@ const specialtyColors = {
 
 export default function HospitalDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const hospitalId = Number(params.id);
   const [hospital, setHospital] = useState<Hospital | undefined>();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -93,7 +95,7 @@ export default function HospitalDetailsPage() {
   
   return (
     <div className="flex flex-col">
-       <Header title={hospital.name} />
+       <Header title={hospital.name} backHref="/user/hospitals" />
         <div className="relative h-48 w-full">
           {hospitalImage && (
             <Image
@@ -190,7 +192,7 @@ export default function HospitalDetailsPage() {
                     variant="accent"
                     className="rounded-full"
                 >
-                    <Link href={`/user/doctors/${doctor.id}`}>
+                    <Link href={`/user/doctors/${doctor.id}?hospitalId=${hospitalId}`}>
                         Book
                     </Link>
                 </Button>

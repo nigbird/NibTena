@@ -68,6 +68,7 @@ export default function Home() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [allData, setAllData] = useState<{ doctors: Doctor[]; hospitals: HospitalType[]; specialties: string[] }>({ doctors: [], hospitals: [], specialties: [] });
 
   const router = useRouter();
@@ -88,6 +89,7 @@ export default function Home() {
 
   useEffect(() => {
     if (debouncedSearchQuery) {
+      setShowResults(true);
       setIsSearching(true);
       const lowercasedQuery = debouncedSearchQuery.toLowerCase();
       
@@ -102,6 +104,7 @@ export default function Home() {
       });
       setIsSearching(false);
     } else {
+      setShowResults(false);
       setSearchResults(null);
     }
   }, [debouncedSearchQuery, allData]);
@@ -109,8 +112,15 @@ export default function Home() {
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setShowResults(false);
       router.push(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
+  };
+  
+  const handleSuggestionClick = (name: string, url: string) => {
+    setSearchQuery(name);
+    setShowResults(false);
+    router.push(url);
   };
   
   const hasResults = searchResults && (searchResults.doctors.length > 0 || searchResults.hospitals.length > 0 || searchResults.specialties.length > 0);
@@ -133,10 +143,11 @@ export default function Home() {
                       className="w-full h-14 rounded-full bg-background pl-12 pr-4 text-base shadow-md"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      onBlur={() => setTimeout(() => setSearchResults(null), 150)} // Delay hiding results
+                      onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                      onFocus={() => { if (debouncedSearchQuery) setShowResults(true); }}
                   />
               </form>
-               {debouncedSearchQuery && (
+               {showResults && (
                 <div className="absolute z-10 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden">
                   {isSearching ? (
                     <div className="p-4 text-center text-muted-foreground">Searching...</div>
@@ -149,10 +160,10 @@ export default function Home() {
                             const Icon = specialtyIcons[specialty] || Stethoscope;
                             return (
                                <li key={specialty}>
-                                <Link href={`/user/doctors?specialty=${specialty}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
                                   <Icon className="h-5 w-5 text-primary" />
                                   <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
-                                </Link>
+                                </button>
                               </li>
                             )
                            })}
@@ -163,13 +174,13 @@ export default function Home() {
                           <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Hospitals</li>
                           {searchResults.hospitals.map(hospital => (
                             <li key={`h-${hospital.id}`}>
-                              <Link href={`/user/hospitals/${hospital.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                              <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
                                 <Avatar className="h-8 w-8 rounded-md"><AvatarFallback><Building/></AvatarFallback></Avatar>
                                 <div>
                                   <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
                                   <p className="text-xs text-muted-foreground">{hospital.city}</p>
                                 </div>
-                              </Link>
+                              </button>
                             </li>
                           ))}
                         </>
@@ -179,13 +190,13 @@ export default function Home() {
                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Doctors</li>
                           {searchResults.doctors.map(doctor => (
                              <li key={`d-${doctor.id}`}>
-                              <Link href={`/user/doctors/${doctor.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                              <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
                                  <Avatar className="h-8 w-8"><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
                                 <div>
                                   <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
                                   <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
                                 </div>
-                              </Link>
+                              </button>
                             </li>
                           ))}
                         </>

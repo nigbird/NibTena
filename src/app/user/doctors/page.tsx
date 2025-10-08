@@ -13,7 +13,7 @@ import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { User, Search as SearchIcon } from 'lucide-react';
+import { User, Search as SearchIcon, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { placeholderImages } from '@/lib/placeholder-images';
 import Header from '@/components/header';
+import { cn } from '@/lib/utils';
 
 function DoctorCard({ doctor }: { doctor: Doctor }) {
   const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
@@ -36,7 +37,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   }, [doctor.hospitalIds]);
 
   return (
-    <Card className="flex items-start p-4 gap-4 shadow-md">
+    <Card className="flex items-start p-4 gap-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
        <Avatar className="h-20 w-20 border-2 border-primary/20">
           {doctorImage && (
             <AvatarImage
@@ -49,16 +50,27 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             <User />
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1">
+        <div className="flex-1 space-y-1.5">
             <h3 className="font-bold text-lg">{doctor.name}</h3>
-            <Badge variant="secondary" className="mt-1">{doctor.specialty}</Badge>
+            <div className="flex items-center gap-2">
+                <Badge 
+                  variant="outline" 
+                  className="border-0 bg-primary/20 text-secondary font-medium px-3 py-1 text-sm"
+                  style={{ color: '#8B6B4A', backgroundColor: '#F7D48833' }}
+                  >
+                  {doctor.specialty}
+                </Badge>
+            </div>
             {hospital && (
-            <p className="text-sm text-muted-foreground mt-1">{hospital.name}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
+                <HospitalIcon className="h-4 w-4" />
+                <span>{hospital.name}</span>
+            </div>
             )}
-            <Button asChild size="sm" variant="accent" className="rounded-full mt-3">
-                <Link href={`/user/doctors/${doctor.id}`}>View Profile</Link>
-            </Button>
         </div>
+        <Button asChild size="sm" variant="primary" className="self-center rounded-lg text-primary-foreground font-semibold hover:bg-primary/90">
+            <Link href={`/user/doctors/${doctor.id}`}>View Profile</Link>
+        </Button>
     </Card>
   );
 }

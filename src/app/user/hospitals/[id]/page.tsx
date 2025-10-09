@@ -28,7 +28,6 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
-import Header from '@/components/header';
 
 const specialtyIcons: { [key: string]: React.ElementType } = {
   Cardiology: Heart,
@@ -95,7 +94,6 @@ export default function HospitalDetailsPage() {
   
   return (
     <div className="flex flex-col">
-       <Header title={hospital.name} backHref="/user/hospitals" />
         <div className="relative h-48 w-full">
           {hospitalImage && (
             <Image

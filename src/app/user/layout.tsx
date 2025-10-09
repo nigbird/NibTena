@@ -2,11 +2,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, User, Search } from 'lucide-react';
+import { Bell, User, Search, ArrowLeft } from 'lucide-react';
 import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { Logo } from '@/components/icons';
 
 // Mock user data for display
 const user = {
@@ -14,29 +16,63 @@ const user = {
     avatarUrl: 'https://picsum.photos/seed/user1/200/200'
 };
 
+const pageTitles: { [key: string]: string } = {
+    '/user': 'Home',
+    '/user/doctors': 'Doctors',
+    '/user/hospitals': 'Hospitals',
+    '/user/appointments': 'My Appointments',
+    '/user/profile': 'My Profile',
+};
+
+const getTitleForPath = (path: string) => {
+    if (pageTitles[path]) {
+        return pageTitles[path];
+    }
+    if (path.startsWith('/user/doctors/')) return 'Doctor Profile';
+    if (path.startsWith('/user/hospitals/')) return 'Hospital Details';
+    if (path.startsWith('/user/book/')) return 'Book Appointment';
+    if (path.startsWith('/user/search')) return 'Search Results';
+    if (path.startsWith('/user/confirmation')) return 'Confirmation';
+    
+    return 'MediVerse';
+};
+
+
 export default function UserLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isHomePage = pathname === '/user';
+  const pageTitle = getTitleForPath(pathname);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
         <div className="container flex h-16 items-center">
-            <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={user.avatarUrl} alt={user.name} />
-                    <AvatarFallback><User /></AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="text-xs text-muted-foreground">Hi, Welcome Back!</p>
-                    <p className="font-semibold text-foreground">{user.name}</p>
+            {isHomePage ? (
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarFallback><User /></AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Hi, Welcome Back!</p>
+                        <p className="font-semibold text-foreground">{user.name}</p>
+                    </div>
                 </div>
-            </div>
-
+            ) : (
+                <div className="flex items-center gap-2">
+                     <Button variant="ghost" size="icon" className="-ml-2" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5 text-secondary hover:text-primary" />
+                        <span className="sr-only">Back</span>
+                    </Button>
+                    <h1 className="font-headline text-xl font-bold text-foreground">{pageTitle}</h1>
+                </div>
+            )}
+            
             <div className="ml-auto">
                  <Button variant="ghost" size="icon" className="relative rounded-full">
                     <Bell className="h-5 w-5" />

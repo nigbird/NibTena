@@ -8,7 +8,6 @@ import {
     CardHeader,
     CardTitle,
   } from '@/components/ui/card'
-  import Header from '@/components/header'
   import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
   import { User } from 'lucide-react'
   import { Button } from '@/components/ui/button'
@@ -24,7 +23,6 @@ import {
   export default function ProfilePage() {
     return (
       <>
-        <Header title="My Profile" />
         <div className="p-4">
           <Card>
             <CardHeader className="items-center text-center">

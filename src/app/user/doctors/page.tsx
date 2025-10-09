@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { placeholderImages } from '@/lib/placeholder-images';
-import Header from '@/components/header';
 import { cn } from '@/lib/utils';
 
 function DoctorCard({ doctor }: { doctor: Doctor }) {
@@ -110,7 +109,6 @@ export default function SearchPage() {
 
   return (
     <>
-      <Header title="Doctors" />
       <div className="p-4 space-y-8">
         <div className="max-w-md mx-auto">
             <Select

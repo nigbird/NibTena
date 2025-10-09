@@ -13,14 +13,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { placeholderImages } from '@/lib/placeholder-images';
-import Header from '@/components/header';
 
 export default async function HospitalsPage() {
   const hospitals = await getHospitals();
 
   return (
     <>
-      <Header title="Hospitals" />
       <div className="p-4">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {hospitals.map((hospital) => {

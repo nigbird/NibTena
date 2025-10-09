@@ -9,7 +9,6 @@ import {
   getDoctors,
   updateAppointment,
 } from '@/lib/data';
-import Header from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, CalendarPlus, FileX } from 'lucide-react';
@@ -171,7 +170,6 @@ export default function MyAppointmentsPage() {
 
   return (
     <>
-      <Header title="My Appointments" />
       <div className="p-4 space-y-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -5,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getDoctors, getHospitals } from '@/lib/data';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import Header from '@/components/header';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -72,7 +72,6 @@ function SearchResults() {
 
   return (
     <>
-      <Header title={`Search Results for "${query}"`} />
       <div className="p-4 space-y-8">
         {hasResults ? (
           <>

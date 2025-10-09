@@ -12,6 +12,7 @@ import {
   import { User } from 'lucide-react'
   import { Button } from '@/components/ui/button'
   import Link from 'next/link';
+import { useRouter } from 'next/navigation';
   
   // Mock user data, in a real app this would come from your auth provider
   const user = {
@@ -21,6 +22,14 @@ import {
   }
   
   export default function ProfilePage() {
+    const router = useRouter();
+
+    const handleLogout = () => {
+      // In a real app, you would handle sign-out logic here.
+      // For this mock, we'll just redirect to the login page.
+      router.push('/login');
+    };
+
     return (
       <>
         <div className="p-4">
@@ -39,8 +48,7 @@ import {
                 <Button variant="outline" asChild>
                   <Link href="/user/profile/setup">Edit Profile</Link>
                 </Button>
-                <Button variant="outline">Change Password</Button>
-                <Button variant="destructive">Logout</Button>
+                <Button variant="destructive" onClick={handleLogout}>Logout</Button>
             </CardContent>
           </Card>
         </div>

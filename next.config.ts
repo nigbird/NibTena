@@ -52,6 +52,12 @@ const nextConfig: NextConfig = {
         hostname: 'img.semafor.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.istockphoto.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

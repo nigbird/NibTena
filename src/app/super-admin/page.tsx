@@ -153,7 +153,7 @@ export default function SuperAdminDashboard() {
                   <PieChartIcon className="h-5 w-5" />
                   Overall Appointment Status
               </CardTitle>
-              <CardDescription>A breakdown of all appointment statuses.</CardDescription>
+              <CardDescription>A platform-wide breakdown of all appointment statuses. "Confirmed" includes rescheduled bookings.</CardDescription>
           </CardHeader>
           <CardContent>
                <ResponsiveContainer width="100%" height={300}>

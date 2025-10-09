@@ -153,7 +153,7 @@ export default function HospitalAdminDashboard() {
                         <PieChartIcon className="h-5 w-5" />
                         Appointment Status
                     </CardTitle>
-                    <CardDescription>A breakdown of all appointment statuses.</CardDescription>
+                    <CardDescription>A breakdown of all appointment statuses. "Confirmed" includes rescheduled appointments.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>

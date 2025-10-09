@@ -20,10 +20,10 @@ import Autoplay from "embla-carousel-autoplay";
 
 
 const quickActions = [
-  { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-blue-600' },
-  { href: '/user/doctors', label: 'Doctors', icon: Stethoscope, color: 'bg-green-100 text-green-600' },
-  { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck, color: 'bg-violet-100 text-violet-600' },
-  { href: '/user/profile', label: 'Profile', icon: UserIcon, color: 'bg-orange-100 text-orange-600' },
+  { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-primary' },
+  { href: '/user/doctors', label: 'Doctors', icon: Stethoscope, color: 'bg-green-100 text-primary' },
+  { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck, color: 'bg-violet-100 text-primary' },
+  { href: '/user/profile', label: 'Profile', icon: UserIcon, color: 'bg-orange-100 text-primary' },
 ];
 
 const specialtyIcons: { [key: string]: React.ElementType } = {
@@ -253,7 +253,7 @@ export default function Home() {
         </div>
       </div>
       
-       <div className="-mt-12 relative pb-4">
+       <div className="-mt-12 relative pb-4 z-20">
           <section className="container mx-auto max-w-md">
               <div className="flex justify-around items-center">
                   {quickActions.map(({ href, label, icon: Icon, color }) => (

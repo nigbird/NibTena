@@ -34,13 +34,13 @@ export default function BottomNavbar() {
               href={href}
               className={cn(
                 'inline-flex flex-col items-center justify-center px-5 hover:bg-muted/50 group transition-colors duration-200',
-                isActive ? 'text-accent-foreground' : 'text-muted-foreground'
+                isActive ? 'text-accent' : 'text-muted-foreground'
               )}
             >
               <div className={cn("flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", isActive ? 'bg-accent/10' : '')}>
-                 <Icon className={cn("w-6 h-6 mb-1 transition-transform duration-300", isActive && 'scale-110')} />
+                 <Icon className={cn("w-6 h-6 mb-1 transition-transform duration-300", isActive && 'scale-110 text-primary')} />
               </div>
-              <span className={cn("text-xs text-center transition-transform", isActive && 'font-semibold')}>{label}</span>
+              <span className={cn("text-xs text-center transition-transform", isActive && 'font-semibold text-accent-foreground')}>{label}</span>
             </Link>
           );
         })}

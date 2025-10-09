@@ -51,7 +51,7 @@ function PhoneVerificationForm() {
                          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
                     </div>
                 )}
-                <CardHeader className="text-center -mt-12">
+                <CardHeader className="text-center -mt-12 relative z-10">
                     <div className="inline-block mx-auto rounded-full bg-primary p-3 ring-4 ring-background">
                         <Phone className="h-6 w-6 text-primary-foreground" />
                     </div>

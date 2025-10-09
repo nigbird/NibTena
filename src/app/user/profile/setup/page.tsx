@@ -48,7 +48,7 @@ export default function ProfileSetupPage() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
       <Card className="max-w-md w-full shadow-lg">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center relative z-10">
             <div className="inline-block mx-auto rounded-full bg-primary p-3 ring-4 ring-background">
                 <User className="h-6 w-6 text-primary-foreground" />
             </div>

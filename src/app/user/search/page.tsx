@@ -4,7 +4,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getDoctors, getHospitals } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,22 @@ import { User, Hospital as HospitalIcon, Search as SearchIcon } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 import { placeholderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
+
+async function getDoctors(): Promise<(Doctor & { hospitalIds: number[] })[]> {
+    const doctors = await prisma.doctor.findMany({ 
+        include: { hospitals: { include: { hospital: true } } }
+    });
+    return doctors.map(d => ({
+        ...d,
+        status: d.status as any,
+        hospitalIds: d.hospitals.map(h => h.hospitalId),
+    }));
+}
+
+async function getHospitals(): Promise<Hospital[]> {
+  const hospitals = await prisma.hospital.findMany();
+  return hospitals.map(h => ({ ...h, status: h.status as 'active' | 'inactive'}));
+}
 
 function SearchResults() {
   const searchParams = useSearchParams();

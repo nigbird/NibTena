@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,6 +29,24 @@ import type { Doctor, Hospital } from '@/lib/definitions';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+
+async function getHospitalById(id: number): Promise<Hospital | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 const specialtyIcons: { [key: string]: React.ElementType } = {
   Cardiology: Heart,

@@ -6,7 +6,7 @@ import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, Calendar, Clock, User, Stethoscope } from 'lucide-react';
-import { getAppointmentById, getDoctorById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import type { Appointment, Doctor } from '@/lib/definitions';
 
@@ -15,6 +15,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+
+async function getAppointmentById(id: string): Promise<Appointment | undefined> {
+    const appointment = await prisma.appointment.findUnique({ where: { id } });
+    if (!appointment) return undefined;
+    return {
+        ...appointment,
+        appointmentDate: format(new Date(appointment.appointmentDate), 'yyyy-MM-dd'),
+        status: appointment.status as any,
+        patientGender: appointment.patientGender as any,
+    };
+}
+
+async function getDoctorById(id: number): Promise<(Doctor & { hospitalIds: number[] }) | null> {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id },
+    include: { hospitals: true }
+  });
+  if (!doctor) return null;
+  return {
+    ...doctor,
+    status: doctor.status as any,
+    hospitalIds: doctor.hospitals.map(h => h.hospitalId),
+  };
+}
 
 export default function ConfirmationPage() {
   const params = useParams();

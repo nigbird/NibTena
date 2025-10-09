@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay } from "lucide-react";
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +16,28 @@ import Link from 'next/link';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+  return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 

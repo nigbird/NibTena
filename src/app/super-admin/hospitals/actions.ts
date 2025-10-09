@@ -2,11 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { 
-  addHospital as addHospitalData, 
-  updateHospital as updateHospitalData,
-  deleteHospital as deleteHospitalData,
-} from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 const HospitalFormSchema = z.object({
@@ -58,9 +54,17 @@ export async function saveHospital(
 
   try {
     if (hospitalId) {
-      await updateHospitalData(hospitalId, validatedFields.data);
+      await prisma.hospital.update({
+        where: { id: hospitalId },
+        data: validatedFields.data,
+      });
     } else {
-      await addHospitalData(validatedFields.data);
+      await prisma.hospital.create({
+        data: {
+          ...validatedFields.data,
+          imageId: `hospital-${Math.floor(Math.random() * 3) + 1}`, // Placeholder
+        },
+      });
     }
     
     revalidatePath('/super-admin/hospitals');
@@ -79,7 +83,8 @@ export async function saveHospital(
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean, message: string }> {
     try {
-        await deleteHospitalData(hospitalId);
+        await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
+        await prisma.hospital.delete({ where: { id: hospitalId } });
         revalidatePath('/super-admin/hospitals');
         return { success: true, message: 'Hospital deleted successfully.' };
     } catch (error) {

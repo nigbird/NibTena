@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useContext } from 'react';
-import { getAppointmentsByHospitalId, getDoctorById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import {
   Card,
@@ -15,9 +15,20 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Users, CalendarCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { format } from 'date-fns';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+  return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
 
 export default function DoctorPortalPage() {
   const { doctor, activeHospitalId } = useContext(DoctorPortalContext);

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { format, parseISO } from 'date-fns';
 import { Clock, Play, User, Users } from 'lucide-react';
@@ -13,6 +13,28 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 
 const MOCK_HOSPITAL_ID = 1;
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+  return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 export default function QueueProjectionPage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);

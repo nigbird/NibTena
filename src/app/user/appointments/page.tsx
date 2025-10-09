@@ -4,11 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import type { Appointment, Doctor } from '@/lib/definitions';
-import {
-  getAppointmentsByDoctorId,
-  getDoctors,
-  updateAppointment,
-} from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, CalendarPlus, FileX } from 'lucide-react';
@@ -17,6 +13,28 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ToastAction } from '@/components/ui/toast';
+import { format } from 'date-fns';
+
+async function getDoctors(): Promise<(Doctor & { hospitalIds: number[] })[]> {
+    const doctors = await prisma.doctor.findMany({ 
+        include: { hospitals: { include: { hospital: true } } }
+    });
+    return doctors.map(d => ({
+        ...d,
+        status: d.status as any,
+        hospitalIds: d.hospitals.map(h => h.hospitalId),
+    }));
+}
+
+async function getAppointmentsByDoctorId(doctorId: number): Promise<Appointment[]> {
+    const appointments = await prisma.appointment.findMany({ where: { doctorId } });
+    return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
 
 // Mocking a single patient 'Hana Worku' to match user layout
 async function getMyAppointments(patientName: string): Promise<Appointment[]> {

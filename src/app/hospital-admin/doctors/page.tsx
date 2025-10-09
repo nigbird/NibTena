@@ -5,12 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import DoctorList from '@/components/hospital-admin/doctor-list';
 import DoctorFormDrawer from '@/components/hospital-admin/doctor-form-drawer';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);

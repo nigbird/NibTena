@@ -2,7 +2,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Hospital as HospitalIcon } from 'lucide-react';
-import { getHospitals } from '@/lib/data';
+import prisma from '@/lib/prisma';
+import type { Hospital } from '@/lib/definitions';
 import {
   Card,
   CardContent,
@@ -13,6 +14,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { placeholderImages } from '@/lib/placeholder-images';
+
+async function getHospitals(): Promise<Hospital[]> {
+  const hospitals = await prisma.hospital.findMany();
+  return hospitals.map(h => ({ ...h, status: h.status as 'active' | 'inactive'}));
+}
+
 
 export default async function HospitalsPage() {
   const hospitals = await getHospitals();

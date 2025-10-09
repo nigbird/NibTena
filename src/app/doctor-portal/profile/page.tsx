@@ -3,9 +3,9 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { getDoctorById, getSpecialties } from '@/lib/data';
 import { updateDoctorProfile, type DoctorProfileState } from './actions';
 import type { Doctor } from '@/lib/definitions';
+import prisma from '@/lib/prisma';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -31,6 +31,27 @@ import { placeholderImages } from '@/lib/placeholder-images';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
+
+async function getDoctorById(id: number): Promise<(Doctor & { hospitalIds: number[] }) | null> {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id },
+    include: { hospitals: true }
+  });
+  if (!doctor) return null;
+  return {
+    ...doctor,
+    status: doctor.status as any,
+    hospitalIds: doctor.hospitals.map(h => h.hospitalId),
+  };
+}
+
+async function getSpecialties(): Promise<string[]> {
+    const specialties = await prisma.doctor.findMany({
+        select: { specialty: true },
+        distinct: ['specialty']
+    });
+    return specialties.map(s => s.specialty);
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus();

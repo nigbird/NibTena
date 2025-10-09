@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { getAppointmentsByHospitalId } from '@/lib/data';
+import { useState, useEffect, useCallback, useContext } from 'react';
+import prisma from '@/lib/prisma';
 import type { Appointment } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,11 +11,23 @@ import { Search, ClipboardList } from 'lucide-react';
 import DoctorAppointmentList from '@/components/doctor-portal/appointment-list';
 import { useToast } from '@/hooks/use-toast';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { format } from 'date-fns';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled', 'rescheduled'] as const;
 type AppointmentStatusFilter = typeof appointmentStatuses[number];
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+  return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
 
 export default function DoctorAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);

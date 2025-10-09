@@ -2,10 +2,29 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { getDoctorById, getHospitalById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
+
+async function getDoctorById(id: number): Promise<(Doctor & { hospitalIds: number[] }) | null> {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id },
+    include: { hospitals: true }
+  });
+  if (!doctor) return null;
+  return {
+    ...doctor,
+    status: doctor.status as any,
+    hospitalIds: doctor.hospitals.map(h => h.hospitalId),
+  };
+}
+
+async function getHospitalById(id: number): Promise<Hospital | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
 
 type DoctorPortalContextType = {
   doctor: Doctor | null;

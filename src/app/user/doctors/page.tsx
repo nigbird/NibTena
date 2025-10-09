@@ -4,11 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import {
-  getDoctors,
-  getSpecialties,
-  getHospitalById,
-} from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +20,31 @@ import {
 } from '@/components/ui/select';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
+
+async function getDoctors(): Promise<(Doctor & { hospitalIds: number[] })[]> {
+    const doctors = await prisma.doctor.findMany({ 
+        include: { hospitals: { include: { hospital: true } } }
+    });
+    return doctors.map(d => ({
+        ...d,
+        status: d.status as any,
+        hospitalIds: d.hospitals.map(h => h.hospitalId),
+    }));
+}
+
+async function getSpecialties(): Promise<string[]> {
+    const specialties = await prisma.doctor.findMany({
+        select: { specialty: true },
+        distinct: ['specialty']
+    });
+    return specialties.map(s => s.specialty);
+}
+
+async function getHospitalById(id: number): Promise<Hospital | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
 
 function DoctorCard({ doctor }: { doctor: Doctor }) {
   const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);

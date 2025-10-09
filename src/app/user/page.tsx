@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Hospital, Stethoscope, CalendarCheck, User as UserIcon, Search, ArrowRight, Star, Building, Heart, Brain, Bone, Baby, Smile, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getHospitals, getDoctors, getSpecialties, getHospitalById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Hospital as HospitalType, Doctor } from '@/lib/definitions';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,12 +18,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useDebounce } from '@/hooks/use-debounce';
 import Autoplay from "embla-carousel-autoplay";
 
+async function getHospitals(): Promise<HospitalType[]> {
+  const hospitals = await prisma.hospital.findMany();
+  return hospitals.map(h => ({ ...h, status: h.status as 'active' | 'inactive'}));
+}
+
+async function getDoctors(): Promise<(Doctor & { hospitalIds: number[] })[]> {
+    const doctors = await prisma.doctor.findMany({ 
+        include: { hospitals: { include: { hospital: true } } }
+    });
+    return doctors.map(d => ({
+        ...d,
+        status: d.status as any,
+        hospitalIds: d.hospitals.map(h => h.hospitalId),
+    }));
+}
+
+async function getSpecialties(): Promise<string[]> {
+    const specialties = await prisma.doctor.findMany({
+        select: { specialty: true },
+        distinct: ['specialty']
+    });
+    return specialties.map(s => s.specialty);
+}
 
 const quickActions = [
-  // { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-secondary' },
-  // { href: '/user/doctors', label: 'Doctors', icon: Stethoscope, color: 'bg-blue-100 text-secondary' },
-  // { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck, color: 'bg-blue-100 text-secondary' },
-  // { href: '/user/profile', label: 'Profile', icon: UserIcon, color: 'bg-blue-100 text-secondary' },
   { href: '/user/hospitals', label: 'Hospitals', icon: Hospital, color: 'bg-blue-100 text-blue-600' },
   { href: '/user/doctors', label: 'Doctors', icon: Stethoscope, color: 'bg-green-100 text-green-600' },
   { href: '/user/appointments', label: 'Bookings', icon: CalendarCheck, color: 'bg-violet-100 text-violet-600' },

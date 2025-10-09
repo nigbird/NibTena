@@ -25,8 +25,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { updateAppointment } from '@/lib/data';
 import RescheduleDrawer from '@/components/doctor-portal/reschedule-drawer';
+import prisma from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+
+async function updateAppointment(id: string, updatedData: Partial<Omit<Appointment, 'id'>>) {
+    const dataToUpdate: any = { ...updatedData };
+    if (updatedData.appointmentDate) {
+        dataToUpdate.appointmentDate = new Date(updatedData.appointmentDate);
+    }
+     if (updatedData.status) {
+        dataToUpdate.status = updatedData.status as any;
+    }
+    const updated = await prisma.appointment.update({
+        where: { id },
+        data: dataToUpdate,
+    });
+
+    revalidatePath('/doctor-portal/appointments');
+    revalidatePath('/hospital-admin/appointments');
+    revalidatePath('/user/appointments');
+    
+    if (!updated) return undefined;
+    return updated;
+}
+
 
 type AppointmentCardProps = {
   appointment: Appointment;

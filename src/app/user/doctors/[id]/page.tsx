@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDoctorById, getHospitalById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +17,25 @@ import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+async function getDoctorById(id: number): Promise<(Doctor & { hospitalIds: number[] }) | null> {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id },
+    include: { hospitals: true }
+  });
+  if (!doctor) return null;
+  return {
+    ...doctor,
+    status: doctor.status as any,
+    hospitalIds: doctor.hospitals.map(h => h.hospitalId),
+  };
+}
+
+async function getHospitalById(id: number): Promise<HospitalType | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
 
 // Mock schedules for different hospitals
 const hospital1Slots = [

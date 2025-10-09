@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
-import { getSpecialties } from '@/lib/data';
+import prisma from '@/lib/prisma';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -30,6 +30,14 @@ type DoctorFormDrawerProps = {
   onDoctorSaved: () => void;
   doctorToEdit?: Doctor | null;
 };
+
+async function getSpecialties(): Promise<string[]> {
+    const specialties = await prisma.doctor.findMany({
+        select: { specialty: true },
+        distinct: ['specialty']
+    });
+    return specialties.map(s => s.specialty);
+}
 
 function SubmitButton({ isEditing }: { isEditing: boolean }) {
   const { pending } = useFormStatus();

@@ -2,11 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { 
-  addAppointment as addAppointmentData, 
-  updateAppointment as updateAppointmentData,
-  deleteAppointment as deleteAppointmentData,
-} from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
 import { format } from 'date-fns';
@@ -66,26 +62,32 @@ export async function saveAppointment(
   
   const dataToSave = {
       ...validatedFields.data,
-      appointmentDate: format(validatedFields.data.appointmentDate, 'yyyy-MM-dd'),
       symptoms: validatedFields.data.symptoms || '',
   }
 
   try {
     if (appointmentId) {
-      await updateAppointmentData(appointmentId, dataToSave);
-      revalidatePath('/hospital-admin/appointments');
-      return {
-        success: true,
-        message: 'Appointment updated successfully.',
-      };
+        await prisma.appointment.update({
+            where: { id: appointmentId },
+            data: {
+                ...dataToSave,
+                appointmentDate: new Date(dataToSave.appointmentDate),
+            }
+        });
     } else {
-      await addAppointmentData(dataToSave);
-      revalidatePath('/hospital-admin/appointments');
-      return {
-        success: true,
-        message: 'Appointment added successfully.',
-      };
+        await prisma.appointment.create({
+            data: {
+                ...dataToSave,
+                appointmentDate: new Date(dataToSave.appointmentDate),
+                status: 'confirmed',
+            }
+        });
     }
+    revalidatePath('/hospital-admin/appointments');
+    return {
+      success: true,
+      message: `Appointment ${appointmentId ? 'updated' : 'added'} successfully.`,
+    };
   } catch (error) {
     console.error(error);
     return {
@@ -97,7 +99,10 @@ export async function saveAppointment(
 
 export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') {
   try {
-    await updateAppointmentData(appointmentId, { status });
+    await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { status }
+    });
     revalidatePath('/hospital-admin/appointments');
     revalidatePath('/doctor-portal/appointments');
     revalidatePath('/user/appointments');
@@ -109,7 +114,7 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'co
 
 export async function deleteAppointment(appointmentId: string) {
     try {
-        await deleteAppointmentData(appointmentId);
+        await prisma.appointment.delete({ where: { id: appointmentId } });
         revalidatePath('/hospital-admin/appointments');
         revalidatePath('/doctor-portal/appointments');
         revalidatePath('/user/appointments');

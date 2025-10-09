@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addAppointment as addAppointmentData } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 const AppointmentFormSchema = z.object({
@@ -50,17 +50,21 @@ export async function bookAppointment(
   }
 
   try {
-    const newAppointment = await addAppointmentData({
-      patientName: validatedFields.data.fullName,
-      patientPhone: validatedFields.data.phone,
-      patientAge: validatedFields.data.age,
-      patientGender: validatedFields.data.gender,
-      symptoms: validatedFields.data.symptoms,
-      doctorId: doctorId,
-      hospitalId: 1, // MOCK: In a real app, this should be dynamic
-      appointmentSlot: slot,
-      appointmentDate: date,
+    const newAppointment = await prisma.appointment.create({
+        data: {
+          patientName: validatedFields.data.fullName,
+          patientPhone: validatedFields.data.phone,
+          patientAge: validatedFields.data.age,
+          patientGender: validatedFields.data.gender,
+          symptoms: validatedFields.data.symptoms,
+          doctorId: doctorId,
+          hospitalId: 1, // MOCK: In a real app, this should be dynamic
+          appointmentSlot: slot,
+          appointmentDate: new Date(date),
+          status: 'confirmed',
+        }
     });
+
 
     if (newAppointment) {
         revalidatePath('/doctor-portal/appointments');

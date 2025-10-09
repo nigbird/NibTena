@@ -5,13 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users, ClipboardPlus, Search } from "lucide-react";
 import type { Appointment, Doctor } from '@/lib/definitions';
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import AppointmentList from '@/components/hospital-admin/appointment-list';
 import AppointmentFormDrawer from '@/components/hospital-admin/appointment-form-drawer';
 import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+  return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);

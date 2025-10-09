@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addAppointment as addAppointmentData } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -65,16 +65,19 @@ export async function startBookingProcess(
 
 export async function completeBooking(bookingData: any) {
   try {
-    const newAppointment = await addAppointmentData({
-      patientName: bookingData.patientName,
-      patientPhone: bookingData.patientPhone,
-      patientAge: bookingData.patientAge,
-      patientGender: bookingData.patientGender,
-      symptoms: bookingData.symptoms,
-      doctorId: bookingData.doctorId,
-      hospitalId: bookingData.hospitalId,
-      appointmentSlot: bookingData.appointmentSlot,
-      appointmentDate: bookingData.appointmentDate,
+    const newAppointment = await prisma.appointment.create({
+        data: {
+          patientName: bookingData.fullName,
+          patientPhone: bookingData.phone,
+          patientAge: bookingData.age,
+          patientGender: bookingData.gender,
+          symptoms: bookingData.symptoms,
+          doctorId: bookingData.doctorId,
+          hospitalId: bookingData.hospitalId,
+          appointmentSlot: bookingData.appointmentSlot,
+          appointmentDate: new Date(bookingData.appointmentDate),
+          status: 'confirmed',
+        }
     });
 
     if (newAppointment) {

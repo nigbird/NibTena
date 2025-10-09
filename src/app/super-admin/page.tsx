@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getHospitals, getDoctors, getAppointmentsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Appointment, Doctor, Hospital } from '@/lib/definitions';
 import {
   Card,
@@ -14,6 +14,34 @@ import {
 import { Hospital as HospitalIcon, Users, BriefcaseMedical, LineChart, PieChart as PieChartIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Link from 'next/link';
+import { format } from 'date-fns';
+
+async function getHospitals(): Promise<Hospital[]> {
+  const hospitals = await prisma.hospital.findMany();
+  return hospitals.map(h => ({ ...h, status: h.status as 'active' | 'inactive'}));
+}
+
+async function getDoctors(): Promise<(Doctor & { hospitalIds: number[] })[]> {
+    const doctors = await prisma.doctor.findMany({ 
+        include: { hospitals: { include: { hospital: true } } }
+    });
+    return doctors.map(d => ({
+        ...d,
+        status: d.status as any,
+        hospitalIds: d.hospitals.map(h => h.hospitalId),
+    }));
+}
+
+async function getAppointmentsByHospitalId(hospitalId: number): Promise<Appointment[]> {
+    const appointments = await prisma.appointment.findMany({ where: { hospitalId } });
+    return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
 
 const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 

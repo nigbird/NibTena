@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, Settings, User } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
@@ -15,6 +15,18 @@ import { useToast } from '@/hooks/use-toast';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
 
 export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);

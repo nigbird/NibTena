@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState }from 'react';
-import { getAppointmentsByDoctorId, getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
+import prisma from '@/lib/prisma';
 import type { Appointment, Doctor, Hospital } from '@/lib/definitions';
 import {
   Card,
@@ -14,10 +14,40 @@ import {
 import { Users, Calendar, BriefcaseMedical, LineChart, PieChart as PieChartIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Link from 'next/link';
+import { format } from 'date-fns';
 
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getHospitalById(id: number): Promise<Hospital | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
+
+async function getDoctorsByHospitalId(hospitalId: number): Promise<Doctor[]> {
+  const doctorsOnHospitals = await prisma.doctorsOnHospitals.findMany({
+    where: { hospitalId },
+    include: { doctor: true }
+  });
+  return doctorsOnHospitals.map(doh => ({
+    ...doh.doctor,
+    hospitalIds: [hospitalId], // context specific
+    status: doh.doctor.status as any,
+  }));
+}
+
+async function getAppointmentsByDoctorId(doctorId: number): Promise<Appointment[]> {
+    const appointments = await prisma.appointment.findMany({ where: { doctorId } });
+    return appointments.map(a => ({
+        ...a,
+        appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
+        status: a.status as any,
+        patientGender: a.patientGender as any,
+    }));
+}
+
 
 const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 

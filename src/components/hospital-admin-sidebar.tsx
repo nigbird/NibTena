@@ -16,8 +16,8 @@ import {
   CircleUser,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { getHospitalById } from '@/lib/data';
 import type { Hospital as HospitalType } from '@/lib/definitions';
+import prisma from '@/lib/prisma';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,12 @@ const bottomNavLinks = [
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
+
+async function getHospitalById(id: number): Promise<HospitalType | null> {
+  const hospital = await prisma.hospital.findUnique({ where: { id } });
+  if (!hospital) return null;
+  return { ...hospital, status: hospital.status as 'active' | 'inactive' };
+}
 
 export default function HospitalAdminSidebar() {
   const pathname = usePathname();

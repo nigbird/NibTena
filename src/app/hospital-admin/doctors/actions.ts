@@ -2,11 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { 
-  addDoctor as addDoctorData, 
-  updateDoctor as updateDoctorData,
-  deleteDoctor as deleteDoctorData,
-} from '@/lib/data';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import type { Doctor } from '@/lib/definitions';
 
@@ -54,9 +50,28 @@ export async function saveDoctor(
 
   try {
     if (doctorId) {
-      await updateDoctorData(doctorId, validatedFields.data);
+        await prisma.doctor.update({
+            where: { id: doctorId },
+            data: validatedFields.data
+        });
     } else {
-      await addDoctorData({ ...validatedFields.data, hospitalId });
+        await prisma.doctor.create({
+            data: {
+                ...validatedFields.data,
+                rating: Math.floor(Math.random() * (50 - 45) + 45) / 10,
+                imageId: `doctor-${Math.floor(Math.random() * 7) + 1}`, // Placeholder
+                status: 'active',
+                hospitals: {
+                    create: [
+                        {
+                            hospital: {
+                                connect: { id: hospitalId }
+                            }
+                        }
+                    ]
+                }
+            }
+        });
     }
     revalidatePath('/hospital-admin/doctors');
     revalidatePath('/user/doctors');
@@ -74,7 +89,10 @@ export async function saveDoctor(
 
 export async function updateDoctorStatus(doctorId: number, status: 'active' | 'inactive') {
   try {
-    await updateDoctorData(doctorId, { status });
+    await prisma.doctor.update({
+        where: { id: doctorId },
+        data: { status }
+    });
     revalidatePath('/hospital-admin/doctors');
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
@@ -84,7 +102,8 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
 
 export async function deleteDoctor(doctorId: number) {
     try {
-        await deleteDoctorData(doctorId);
+        await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId: doctorId } });
+        await prisma.doctor.delete({ where: { id: doctorId } });
         revalidatePath('/hospital-admin/doctors');
         return { success: true, message: 'Doctor deleted successfully.' };
     } catch (error) {

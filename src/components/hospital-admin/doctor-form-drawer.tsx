@@ -13,12 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveDoctor, type DoctorFormState } from "@/app/hospital-admin/doctors/actions";
-import { getSpecialties } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
+import prisma from '@/lib/prisma';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -27,6 +27,14 @@ type DoctorFormDrawerProps = {
   onDoctorSaved: () => void;
   doctorToEdit?: Doctor | null;
 };
+
+async function getSpecialties(): Promise<string[]> {
+    const specialties = await prisma.doctor.findMany({
+        select: { specialty: true },
+        distinct: ['specialty']
+    });
+    return specialties.map(s => s.specialty);
+}
 
 export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoctorSaved, doctorToEdit }: DoctorFormDrawerProps) {
   const isEditing = !!doctorToEdit;

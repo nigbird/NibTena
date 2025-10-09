@@ -55,7 +55,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
                 <Badge 
                   variant="outline" 
                   className="border-0 bg-primary/20 text-secondary font-medium px-3 py-1 text-sm"
-                  style={{ color: '#8B6B4A', backgroundColor: '#F7D48833' }}
+                  style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
                   >
                   {doctor.specialty}
                 </Badge>

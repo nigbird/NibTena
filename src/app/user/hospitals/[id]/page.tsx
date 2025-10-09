@@ -28,6 +28,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const specialtyIcons: { [key: string]: React.ElementType } = {
   Cardiology: Heart,
@@ -105,17 +106,17 @@ export default function HospitalDetailsPage() {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+           <div className="absolute bottom-0 left-0 p-4">
+                <h1 className="font-headline text-3xl font-bold text-foreground shadow-black/50 text-shadow-lg">
+                  {hospital.name}
+                </h1>
+                <p className="text-md font-semibold text-foreground/90 shadow-black/50 text-shadow">
+                  {hospital.city}
+                </p>
+            </div>
         </div>
-        <div className="p-4 -mt-8">
-            <h1 className="font-headline text-2xl font-bold text-foreground">
-              {hospital.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {hospital.city}
-            </p>
-        </div>
-
-      <div className="px-4 pb-4">
+        
+      <div className="px-4 pt-6 pb-4">
         <h2 className="font-headline text-xl font-bold mb-4">Specialties</h2>
          <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
             <CarouselContent className="-ml-4">
@@ -126,9 +127,9 @@ export default function HospitalDetailsPage() {
                         <CarouselItem key={specialty} className="basis-1/4 sm:basis-1/5 md:basis-1/6 pl-4">
                              <button onClick={() => setSelectedSpecialty(specialty)} className="flex flex-col items-center justify-center space-y-2 group w-full">
                                 <div className={cn(
-                                    "flex h-16 w-16 items-center justify-center rounded-full transition-all group-hover:scale-105", 
+                                    "flex h-16 w-16 items-center justify-center rounded-full shadow-md transition-all group-hover:scale-105", 
                                     colorClasses,
-                                    selectedSpecialty === specialty && 'ring-2 ring-primary'
+                                    selectedSpecialty === specialty && 'ring-2 ring-primary ring-offset-2'
                                     )}>
                                     <Icon className="h-8 w-8" />
                                 </div>
@@ -160,7 +161,7 @@ export default function HospitalDetailsPage() {
             return (
               <Card
                 key={doctor.id}
-                className="flex items-center p-3 gap-4 shadow-md"
+                className="flex items-center p-3 gap-4 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
               >
                 <Avatar className="h-20 w-20 border-2 border-primary/20">
                   {doctorImage && (
@@ -174,12 +175,16 @@ export default function HospitalDetailsPage() {
                     <User />
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-bold">{doctor.name}</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex-1 space-y-1">
+                  <h3 className="font-bold text-lg">{doctor.name}</h3>
+                  <Badge 
+                    variant="outline" 
+                    className="border-0 bg-primary/20 font-medium px-2 py-0.5 text-xs"
+                    style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
+                    >
                     {doctor.specialty}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1">
+                  </Badge>
+                  <div className="flex items-center gap-1 pt-1">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                     <span className="text-sm font-bold text-muted-foreground">{doctor.rating}</span>
                   </div>
@@ -187,8 +192,8 @@ export default function HospitalDetailsPage() {
                 <Button
                     asChild
                     size="sm"
-                    variant="accent"
-                    className="rounded-full"
+                    variant="primary"
+                    className="rounded-lg text-primary-foreground font-semibold"
                 >
                     <Link href={`/user/doctors/${doctor.id}?hospitalId=${hospitalId}`}>
                         Book

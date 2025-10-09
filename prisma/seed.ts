@@ -1,3 +1,4 @@
+
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
@@ -74,14 +75,13 @@ async function main() {
   }
 
   const appointmentsData = [
-    { id: 'q1', hospitalId: 1, patientName: 'Hana Worku', patientPhone: '0912-345678', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '09:00 AM', status: 'confirmed' },
-    { id: 'q2', hospitalId: 1, patientName: 'Kebede Alemayehu', patientPhone: '0911-987654', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure.', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '09:30 AM', status: 'confirmed' },
-    { id: 'q3', hospitalId: 1, patientName: 'Marta Gebremedhin', patientPhone: '0913-222333', patientAge: 35, patientGender: 'female', symptoms: 'Skin rash consultation.', doctorId: 2, appointmentDate: new Date(getISODate(0)), appointmentSlot: '10:00 AM', status: 'confirmed' },
-    { id: 'q4', hospitalId: 2, patientName: 'Abel Tesema', patientPhone: '0910-444555', patientAge: 41, patientGender: 'male', symptoms: 'Migraine and fatigue.', doctorId: 3, appointmentDate: new Date(getISODate(0)), appointmentSlot: '10:30 AM', status: 'confirmed' },
-    { id: 'q5', hospitalId: 2, patientName: 'Lulit Fikre', patientPhone: '0919-111222', patientAge: 6, patientGender: 'female', symptoms: 'Child vaccination.', doctorId: 4, appointmentDate: new Date(getISODate(0)), appointmentSlot: '11:00 AM', status: 'confirmed' },
-    { id: 'q6', hospitalId: 2, patientName: 'New Patient', patientPhone: '0912-345678', patientAge: 30, patientGender: 'male', symptoms: 'Check-up', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '02:00 PM', status: 'confirmed' },
+    { hospitalId: 1, patientName: 'Hana Worku', patientPhone: '0912-345678', patientAge: 28, patientGender: 'female', symptoms: 'Annual check-up.', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '09:00 AM', status: 'confirmed' },
+    { hospitalId: 1, patientName: 'Kebede Alemayehu', patientPhone: '0911-987654', patientAge: 52, patientGender: 'male', symptoms: 'Follow-up on blood pressure.', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '09:30 AM', status: 'confirmed' },
+    { hospitalId: 1, patientName: 'Marta Gebremedhin', patientPhone: '0913-222333', patientAge: 35, patientGender: 'female', symptoms: 'Skin rash consultation.', doctorId: 2, appointmentDate: new Date(getISODate(0)), appointmentSlot: '10:00 AM', status: 'confirmed' },
+    { hospitalId: 2, patientName: 'Abel Tesema', patientPhone: '0910-444555', patientAge: 41, patientGender: 'male', symptoms: 'Migraine and fatigue.', doctorId: 3, appointmentDate: new Date(getISODate(0)), appointmentSlot: '10:30 AM', status: 'confirmed' },
+    { hospitalId: 2, patientName: 'Lulit Fikre', patientPhone: '0919-111222', patientAge: 6, patientGender: 'female', symptoms: 'Child vaccination.', doctorId: 4, appointmentDate: new Date(getISODate(0)), appointmentSlot: '11:00 AM', status: 'confirmed' },
+    { hospitalId: 2, patientName: 'New Patient', patientPhone: '0912-345678', patientAge: 30, patientGender: 'male', symptoms: 'Check-up', doctorId: 1, appointmentDate: new Date(getISODate(0)), appointmentSlot: '02:00 PM', status: 'confirmed' },
     ...Array.from({ length: 15 }, (_, i) => ({
-      id: `p_c_${i}`,
       hospitalId: (i % 3) + 1,
       patientName: `Completed Patient ${i + 1}`,
       patientPhone: `0912-00${i.toString().padStart(2, '0')}`,
@@ -94,7 +94,6 @@ async function main() {
       status: 'completed',
     })),
     ...Array.from({ length: 5 }, (_, i) => ({
-      id: `p_x_${i}`,
       hospitalId: (i % 3) + 1,
       patientName: `Cancelled Patient ${i + 1}`,
       patientPhone: `0913-01${i.toString().padStart(2, '0')}`,
@@ -107,7 +106,6 @@ async function main() {
       status: 'cancelled',
     })),
     ...Array.from({ length: 10 }, (_, i) => ({
-      id: `p_c2_${i}`,
       hospitalId: (i % 3) + 1,
       patientName: `Past Patient ${i + 1}`,
       patientPhone: `0914-02${i.toString().padStart(2, '0')}`,
@@ -119,20 +117,17 @@ async function main() {
       appointmentSlot: '02:00 PM',
       status: 'completed',
     })),
-  ];
+  ].map(a => ({
+    ...a,
+    status: a.status as any,
+    patientGender: a.patientGender as any,
+  }));
   
-  for (const a of appointmentsData) {
-    const appointment = await prisma.appointment.upsert({
-        where: { id: a.id },
-        update: {},
-        create: {
-            ...a,
-            status: a.status as any,
-            patientGender: a.patientGender as any
-        },
-    });
-    console.log(`Created appointment with id: ${appointment.id}`)
-  }
+  await prisma.appointment.createMany({
+    data: appointmentsData,
+    skipDuplicates: true,
+  });
+  console.log(`Created ${appointmentsData.length} appointments`);
 
 
   console.log(`Seeding finished.`)
@@ -147,3 +142,5 @@ main()
     await prisma.$disconnect()
     process.exit(1)
   })
+
+    

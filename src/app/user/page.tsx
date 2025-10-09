@@ -263,8 +263,8 @@ export default function Home() {
               <div className="flex justify-around items-center">
                   {quickActions.map(({ href, label, icon: Icon, color }) => (
                       <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-secondary/20 hover:border-secondary/60", color)}>
-                              <Icon className="h-8 w-8 z-10" />
+                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-primary/20 hover:border-primary/60", color)}>
+                              <Icon className="h-8 w-8 z-10 text-primary-foreground" />
                           </div>
                           <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
                       </Link>
@@ -363,7 +363,7 @@ export default function Home() {
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
                                       </div>
-                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="accent">
+                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="primary">
                                           <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
                                       </Button>
                                   </div>

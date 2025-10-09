@@ -154,11 +154,6 @@ export default function DoctorProfilePage() {
                     <span>{selectedHospital.name}</span>
                 </div>
                )}
-
-               <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <span>${doctor.consultationFee} Consultation Fee</span>
-                </div>
             </div>
             <div className="md:col-span-2 p-8">
               <div className="mb-8">
@@ -169,10 +164,19 @@ export default function DoctorProfilePage() {
               </div>
 
               <div className="space-y-6">
-                <h2 className="font-headline text-2xl font-semibold mb-4 flex items-center gap-2">
-                  <Calendar className="h-6 w-6 text-accent-foreground" />
-                  Book an Appointment
-                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                  <h2 className="font-headline text-2xl font-semibold flex items-center gap-2">
+                    <Calendar className="h-6 w-6 text-accent-foreground" />
+                    Book an Appointment
+                  </h2>
+                  <div 
+                    className="flex items-center gap-2 rounded-full px-3 py-1.5 shadow-sm font-medium"
+                    style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
+                  >
+                    <Wallet className="h-4 w-4" />
+                    <span>${doctor.consultationFee} Appointment Fee</span>
+                  </div>
+                </div>
                 
                 {/* Date Picker */}
                 <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">

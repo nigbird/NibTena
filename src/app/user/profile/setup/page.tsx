@@ -66,7 +66,7 @@ export default function ProfileSetupPage() {
             <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="flex items-center">
-                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+                    <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
                     +251
                     </span>
                     <Input

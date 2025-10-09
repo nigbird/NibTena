@@ -51,7 +51,7 @@ function PhoneVerificationForm() {
                          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
                     </div>
                 )}
-                <CardHeader className="text-center -mt-16 relative z-10">
+                <CardHeader className="text-center -mt-16 relative z-20">
                     <div className="inline-block mx-auto rounded-full bg-primary p-3 ring-4 ring-background">
                         <Phone className="h-6 w-6 text-primary-foreground" />
                     </div>
@@ -65,7 +65,7 @@ function PhoneVerificationForm() {
                         <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
                         <div className="flex items-center">
-                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+                            <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
                             +251
                             </span>
                             <Input
@@ -73,7 +73,7 @@ function PhoneVerificationForm() {
                             name="phone"
                             type="tel"
                             placeholder="912 345 678"
-                            defaultValue={bookingData.bookerPhone}
+                            defaultValue={bookingData.phone}
                             required
                             className="rounded-l-none"
                             />

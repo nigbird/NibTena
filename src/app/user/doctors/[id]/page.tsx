@@ -113,10 +113,6 @@ export default function DoctorProfilePage() {
   return (
     <div className="bg-muted/20">
       <div className="container py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4 text-secondary hover:text-secondary/80">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-        </Button>
         <Card className="overflow-hidden shadow-2xl">
           <div className="grid md:grid-cols-3">
             <div className="md:col-span-1 p-8 bg-primary/10 flex flex-col items-center justify-center text-center">

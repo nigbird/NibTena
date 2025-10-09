@@ -116,14 +116,6 @@ export default function BookingPage() {
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
-        <div className="mb-4">
-            <Button variant="ghost" asChild>
-                <Link href={`/user/doctors/${doctorId}?hospitalId=${hospitalId}`}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Profile
-                </Link>
-            </Button>
-        </div>
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Book Your Appointment</CardTitle>

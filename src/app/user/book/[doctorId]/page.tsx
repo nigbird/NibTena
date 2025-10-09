@@ -4,7 +4,7 @@
 import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, User, Users } from 'lucide-react';
+import { Loader2, User, Users } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';

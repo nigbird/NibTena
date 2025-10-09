@@ -15,7 +15,7 @@ import { Hospital as HospitalIcon, Users, BriefcaseMedical, LineChart, PieChart 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Link from 'next/link';
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--destructive))'];
+const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 
 export default function SuperAdminDashboard() {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -46,8 +46,8 @@ export default function SuperAdminDashboard() {
       const cancelled = flattenedAppointments.filter(a => a.status === 'cancelled').length;
       
       setAppointmentStatusData([
-        { name: 'Completed', value: completed },
         { name: 'Confirmed', value: confirmed },
+        { name: 'Completed', value: completed },
         { name: 'Cancelled', value: cancelled },
       ]);
 

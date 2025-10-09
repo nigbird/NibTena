@@ -19,7 +19,7 @@ import Link from 'next/link';
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--destructive))'];
+const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 
 
 export default function HospitalAdminDashboard() {
@@ -49,8 +49,8 @@ export default function HospitalAdminDashboard() {
         const cancelled = flatAppointments.filter(a => a.status === 'cancelled').length;
         
         setAppointmentStatusData([
-          { name: 'Completed', value: completed },
           { name: 'Confirmed', value: confirmed },
+          { name: 'Completed', value: completed },
           { name: 'Cancelled', value: cancelled },
         ]);
       }

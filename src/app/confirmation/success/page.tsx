@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -81,9 +82,16 @@ export default function BookingPage() {
   return (
     <div className="container mx-auto max-w-2xl py-12">
         <div className="mb-4">
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" asChild className="group">
                 <Link href={`/user/doctors/${doctorId}`}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      className="mr-2 h-5 w-5 fill-secondary transition-colors duration-200 group-hover:fill-primary"
+                      aria-hidden="true"
+                    >
+                      <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
+                    </svg>
                     Back to Profile
                 </Link>
             </Button>

@@ -65,7 +65,7 @@ export default function UserLayout({
                 </div>
             ) : (
                 <div className="flex items-center gap-2">
-                     <Button variant="ghost" size="icon" className="-ml-2" onClick={() => router.back()}>
+                     <Button variant="ghost" size="icon" className="-ml-2 group" onClick={() => router.back()}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"

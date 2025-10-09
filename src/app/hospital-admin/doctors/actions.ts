@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -27,10 +28,9 @@ export type DoctorFormState = {
   };
   message?: string | null;
   success?: boolean;
-  newDoctor?: Doctor;
 };
 
-export async function addDoctor(
+export async function saveDoctor(
   hospitalId: number, 
   doctorId: number | null, // null for add, number for edit
   prevState: DoctorFormState, 
@@ -54,24 +54,16 @@ export async function addDoctor(
 
   try {
     if (doctorId) {
-      // Editing existing doctor
-      const updatedDoctor = await updateDoctorData(doctorId, validatedFields.data);
-      revalidatePath('/hospital-admin/doctors');
-      return {
-        success: true,
-        message: 'Doctor updated successfully.',
-        newDoctor: updatedDoctor
-      };
+      await updateDoctorData(doctorId, validatedFields.data);
     } else {
-      // Adding new doctor
-      const newDoctor = await addDoctorData({ ...validatedFields.data, hospitalId });
-      revalidatePath('/hospital-admin/doctors');
-      return {
-        success: true,
-        message: 'Doctor added successfully.',
-        newDoctor,
-      };
+      await addDoctorData({ ...validatedFields.data, hospitalId });
     }
+    revalidatePath('/hospital-admin/doctors');
+    revalidatePath('/user/doctors');
+    return {
+      success: true,
+      message: `Doctor ${doctorId ? 'updated' : 'added'} successfully.`,
+    };
   } catch (error) {
     return {
       message: 'Database Error: Failed to save doctor.',

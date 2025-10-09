@@ -26,6 +26,7 @@ export type State = {
   };
   message?: string | null;
   success?: boolean;
+  data?: z.infer<typeof AppointmentFormSchema>;
 };
 
 export async function startBookingProcess(
@@ -54,37 +55,19 @@ export async function startBookingProcess(
       success: false,
     };
   }
-
-  const bookingDetails = {
-    ...validatedFields.data,
-    bookerPhone: validatedFields.data.phone,
-    patientName: validatedFields.data.fullName,
-    patientAge: validatedFields.data.age,
-    patientGender: validatedFields.data.gender,
-    doctorId,
-    hospitalId,
-    appointmentSlot,
-    appointmentDate,
-  };
-
-  // ✅ Explicit success before redirect
-  const params = new URLSearchParams({
-    bookingData: JSON.stringify(bookingDetails),
-  });
-
+  
   return {
     success: true,
     message: 'Booking validated successfully.',
+    data: validatedFields.data,
   } as State;
-
-  // redirect(`/user/verify/phone?${params.toString()}`);
 }
 
 export async function completeBooking(bookingData: any) {
   try {
     const newAppointment = await addAppointmentData({
       patientName: bookingData.patientName,
-      patientPhone: bookingData.bookerPhone,
+      patientPhone: bookingData.patientPhone,
       patientAge: bookingData.patientAge,
       patientGender: bookingData.patientGender,
       symptoms: bookingData.symptoms,
@@ -92,24 +75,20 @@ export async function completeBooking(bookingData: any) {
       hospitalId: bookingData.hospitalId,
       appointmentSlot: bookingData.appointmentSlot,
       appointmentDate: bookingData.appointmentDate,
-      bookedBy:
-        bookingData.bookingFor === 'myself'
-          ? bookingData.patientName
-          : 'Someone Else',
-      relationship: '', // Set to empty or remove if not needed in DB
     });
 
     if (newAppointment) {
       revalidatePath('/doctor-portal/appointments');
       revalidatePath('/hospital-admin/appointments');
+      revalidatePath('/user/appointments');
+      redirect(`/user/appointments?success=true`);
+    } else {
+        throw new Error('Appointment creation failed.');
     }
   } catch (error) {
     console.error('Data saving failed:', error);
-    return {
-      success: false,
-      message: 'An error occurred while processing your appointment.',
-    };
+    // In a real app, you might redirect to an error page
+    // For now, we redirect to home with an error flag, though this is not handled
+    redirect(`/user?error=booking_failed`);
   }
-
-  redirect(`/user/appointments?success=true`);
 }

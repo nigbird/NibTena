@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -16,6 +17,7 @@ const AppointmentFormSchema = z.object({
   patientAge: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   patientGender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   doctorId: z.coerce.number({required_error: 'Please select a doctor.'}),
+  hospitalId: z.coerce.number({required_error: 'Hospital ID is missing.'}),
   appointmentDate: z.coerce.date({ required_error: 'Please select a date.' }),
   appointmentSlot: z.string({ required_error: 'Please select a time slot.' }),
   symptoms: z.string().optional(),
@@ -28,6 +30,7 @@ export type AppointmentFormState = {
     patientAge?: string[];
     patientGender?: string[];
     doctorId?: string[];
+    hospitalId?: string[];
     appointmentDate?: string[];
     appointmentSlot?: string[];
     symptoms?: string[];
@@ -47,6 +50,7 @@ export async function saveAppointment(
     patientAge: formData.get('patientAge'),
     patientGender: formData.get('patientGender'),
     doctorId: formData.get('doctorId'),
+    hospitalId: formData.get('hospitalId'),
     appointmentDate: formData.get('appointmentDate'),
     appointmentSlot: formData.get('appointmentSlot'),
     symptoms: formData.get('symptoms'),
@@ -68,7 +72,6 @@ export async function saveAppointment(
 
   try {
     if (appointmentId) {
-      // Editing existing appointment
       await updateAppointmentData(appointmentId, dataToSave);
       revalidatePath('/hospital-admin/appointments');
       return {
@@ -76,7 +79,6 @@ export async function saveAppointment(
         message: 'Appointment updated successfully.',
       };
     } else {
-      // Adding new appointment
       await addAppointmentData(dataToSave);
       revalidatePath('/hospital-admin/appointments');
       return {
@@ -85,6 +87,7 @@ export async function saveAppointment(
       };
     }
   } catch (error) {
+    console.error(error);
     return {
       message: 'Database Error: Failed to save appointment.',
       success: false,
@@ -92,10 +95,12 @@ export async function saveAppointment(
   }
 }
 
-export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled') {
+export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') {
   try {
     await updateAppointmentData(appointmentId, { status });
     revalidatePath('/hospital-admin/appointments');
+    revalidatePath('/doctor-portal/appointments');
+    revalidatePath('/user/appointments');
     return { success: true, message: `Appointment status updated to ${status}.` };
   } catch (error) {
     return { success: false, message: 'Database Error: Failed to update appointment status.' };
@@ -106,6 +111,8 @@ export async function deleteAppointment(appointmentId: string) {
     try {
         await deleteAppointmentData(appointmentId);
         revalidatePath('/hospital-admin/appointments');
+        revalidatePath('/doctor-portal/appointments');
+        revalidatePath('/user/appointments');
         return { success: true, message: 'Appointment deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete appointment.' };

@@ -50,7 +50,7 @@ export async function updateDoctorProfile(
     const updatedDoctor = await updateDoctor(doctorId, validatedFields.data);
     if (updatedDoctor) {
       revalidatePath('/doctor-portal/profile');
-      revalidatePath(`/doctors/${doctorId}`); // Revalidate public profile
+      revalidatePath(`/user/doctors/${doctorId}`); // Revalidate public profile
       return {
         success: true,
         message: 'Your profile has been updated successfully.',

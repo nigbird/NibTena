@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -7,7 +8,6 @@ import {
   deleteHospital as deleteHospitalData,
 } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
-import type { Hospital } from '@/lib/definitions';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -58,14 +58,13 @@ export async function saveHospital(
 
   try {
     if (hospitalId) {
-      // Editing existing hospital
       await updateHospitalData(hospitalId, validatedFields.data);
     } else {
-      // Adding new hospital
       await addHospitalData(validatedFields.data);
     }
     
     revalidatePath('/super-admin/hospitals');
+    revalidatePath('/user/hospitals');
     return {
       success: true,
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,

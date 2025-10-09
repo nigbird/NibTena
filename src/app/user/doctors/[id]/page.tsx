@@ -135,13 +135,24 @@ export default function DoctorProfilePage() {
                 <Stethoscope className="mr-2 h-4 w-4" />
                 {doctor.specialty}
               </Badge>
+              
+               <div className="w-full max-w-xs mx-auto mt-6">
+                <div 
+                    className="flex items-center justify-center gap-3 rounded-lg px-4 py-3 shadow-sm border"
+                    style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)', borderColor: 'hsl(var(--primary))' }}
+                >
+                    <Wallet className="h-5 w-5" />
+                    <span className="font-bold text-lg">${doctor.consultationFee} Appointment Fee</span>
+                </div>
+              </div>
+
 
                {doctorHospitals.length > 1 ? (
                 <Select 
                     value={selectedHospitalId?.toString()}
                     onValueChange={(val) => setSelectedHospitalId(Number(val))}
                 >
-                    <SelectTrigger className="w-[200px] mt-4">
+                    <SelectTrigger className="w-full max-w-xs mx-auto mt-4">
                         <SelectValue placeholder="Select Hospital" />
                     </SelectTrigger>
                     <SelectContent>
@@ -149,7 +160,7 @@ export default function DoctorProfilePage() {
                     </SelectContent>
                 </Select>
                ) : selectedHospital && (
-                 <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+                 <div className="mt-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
                     <Hospital className="h-4 w-4" />
                     <span>{selectedHospital.name}</span>
                 </div>
@@ -169,13 +180,6 @@ export default function DoctorProfilePage() {
                     <Calendar className="h-6 w-6 text-accent-foreground" />
                     Book an Appointment
                   </h2>
-                  <div 
-                    className="flex items-center gap-2 rounded-full px-3 py-1.5 shadow-sm font-medium"
-                    style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
-                  >
-                    <Wallet className="h-4 w-4" />
-                    <span>${doctor.consultationFee} Appointment Fee</span>
-                  </div>
                 </div>
                 
                 {/* Date Picker */}

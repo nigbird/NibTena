@@ -175,19 +175,15 @@ export default function HospitalDetailsPage() {
                     <User />
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-1">
+                <div className="flex-1 space-y-1.5">
                   <h3 className="font-bold text-lg">{doctor.name}</h3>
                   <Badge 
                     variant="outline" 
-                    className="border-0 bg-primary/20 font-medium px-2 py-0.5 text-xs"
+                    className="border-0 bg-primary/20 text-secondary font-medium px-3 py-1 text-sm"
                     style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
                     >
                     {doctor.specialty}
                   </Badge>
-                  <div className="flex items-center gap-1 pt-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-bold text-muted-foreground">{doctor.rating}</span>
-                  </div>
                 </div>
                 <Button
                     asChild

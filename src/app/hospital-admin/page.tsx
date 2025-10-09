@@ -21,6 +21,19 @@ const MOCK_HOSPITAL_ID = 1;
 
 const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
+
 
 export default function HospitalAdminDashboard() {
   const [hospital, setHospital] = useState<Hospital | null>(null);
@@ -44,14 +57,16 @@ export default function HospitalAdminDashboard() {
         const flatAppointments = allAppointments.flat();
         setAppointments(flatAppointments);
 
-        const completed = flatAppointments.filter(a => a.status === 'completed').length;
-        const confirmed = flatAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length;
-        const cancelled = flatAppointments.filter(a => a.status === 'cancelled').length;
+        const statusCounts = {
+          'Confirmed': flatAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
+          'Completed': flatAppointments.filter(a => a.status === 'completed').length,
+          'Cancelled': flatAppointments.filter(a => a.status === 'cancelled').length,
+        };
         
         setAppointmentStatusData([
-          { name: 'Confirmed', value: confirmed },
-          { name: 'Completed', value: completed },
-          { name: 'Cancelled', value: cancelled },
+          { name: 'Confirmed', value: statusCounts['Confirmed'] },
+          { name: 'Completed', value: statusCounts['Completed'] },
+          { name: 'Cancelled', value: statusCounts['Cancelled'] },
         ]);
       }
     }
@@ -163,10 +178,11 @@ export default function HospitalAdminDashboard() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
+                                label={renderCustomizedLabel}
                                 outerRadius={100}
                                 fill="#8884d8"
                                 dataKey="value"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                nameKey="name"
                             >
                                 {appointmentStatusData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

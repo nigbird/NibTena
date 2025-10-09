@@ -1,9 +1,4 @@
 
-'use client';
-
-import { useEffect, useState, useContext } from 'react';
-import { getAppointmentsByHospitalId, getDoctorById } from '@/lib/data';
-import type { Appointment, Doctor } from '@/lib/definitions';
 import {
   Card,
   CardContent,
@@ -14,45 +9,46 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Users, CalendarCheck2 } from 'lucide-react';
 import Link from 'next/link';
-import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { prisma } from '@/lib/prisma';
+import { format } from 'date-fns';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
 
-export default function DoctorPortalPage() {
-  const { doctor, activeHospitalId } = useContext(DoctorPortalContext);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [stats, setStats] = useState({
-    upcoming: 0,
-    todays: 0,
-    totalPatients: 0,
+export default async function DoctorPortalPage() {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: MOCK_DOCTOR_ID },
   });
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!activeHospitalId) return;
-
-      const allAppointments = await getAppointmentsByHospitalId(activeHospitalId);
-      const doctorAppointments = allAppointments.filter(a => a.doctorId === MOCK_DOCTOR_ID);
-      
-      setAppointments(doctorAppointments);
-
-      const upcomingAppointments = doctorAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
-      const today = new Date().toISOString().split('T')[0];
-      const todaysAppointments = upcomingAppointments.filter(a => a.appointmentDate === today);
-      const uniquePatients = new Set(doctorAppointments.map(a => a.patientName));
-
-      setStats({
-          upcoming: upcomingAppointments.length,
-          todays: todaysAppointments.length,
-          totalPatients: uniquePatients.size
-      });
+  const allAppointments = doctor ? await prisma.appointment.findMany({
+    where: { doctorId: MOCK_DOCTOR_ID },
+    orderBy: {
+      appointmentDate: 'asc',
     }
-    fetchData();
-  }, [activeHospitalId]);
+  }) : [];
 
-  const todaysUpcomingAppointments = appointments
-    .filter(a => a.appointmentDate === new Date().toISOString().split('T')[0] && (a.status === 'confirmed' || a.status === 'rescheduled'))
+  const upcomingAppointments = allAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  
+  const todaysAppointments = upcomingAppointments.filter(a => {
+    const appointmentDate = new Date(a.appointmentDate);
+    // Adjust for timezone differences by comparing formatted strings
+    return format(appointmentDate, 'yyyy-MM-dd') === todayStr;
+  });
+
+  const uniquePatients = new Set(allAppointments.map(a => a.patientName));
+
+  const stats = {
+    upcoming: upcomingAppointments.length,
+    todays: todaysAppointments.length,
+    totalPatients: uniquePatients.size
+  };
+  
+  const todaysUpcomingAppointments = allAppointments
+    .filter(a => {
+        const appointmentDate = new Date(a.appointmentDate);
+        return format(appointmentDate, 'yyyy-MM-dd') === todayStr && (a.status === 'confirmed' || a.status === 'rescheduled');
+    })
     .sort((a,b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
   return (

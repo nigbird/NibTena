@@ -1,9 +1,4 @@
 
-'use client';
-
-import { useEffect, useState } from 'react';
-import { getHospitals, getDoctors, getAppointmentsByHospitalId } from '@/lib/data';
-import type { Appointment, Doctor, Hospital } from '@/lib/definitions';
 import {
   Card,
   CardContent,
@@ -11,70 +6,52 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Hospital as HospitalIcon, Users, BriefcaseMedical, LineChart, PieChart as PieChartIcon } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Hospital as HospitalIcon, Users, BriefcaseMedical } from 'lucide-react';
 import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+import SuperAdminDashboardClient from './SuperAdminDashboardClient';
 
-const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
+export default async function SuperAdminDashboard() {
+  const [hospitals, doctors, appointments] = await Promise.all([
+    prisma.hospital.findMany({
+      include: {
+        doctors: {
+          include: {
+            doctor: true
+          }
+        }
+      }
+    }),
+    prisma.doctor.findMany(),
+    prisma.appointment.findMany(),
+  ]);
 
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const uniquePatients = new Set(appointments.map(a => a.patientName));
+  // A simple user count: patients + doctors + hospital admins (assuming 1 per hospital)
+  const totalUsers = uniquePatients.size + doctors.length + hospitals.length;
 
-  return (
-    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
+  const chartData = hospitals.map(hospital => {
+    const hospitalDoctorIds = hospital.doctors.map(d => d.doctorId);
+    const hospitalAppointments = appointments.filter(a => hospitalDoctorIds.includes(a.doctorId));
 
-export default function SuperAdminDashboard() {
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [appointmentStatusData, setAppointmentStatusData] = useState<{name: string, value: number}[]>([]);
+    return {
+      name: hospital.name.split(' ')[0],
+      doctors: hospital.doctors.length,
+      appointments: hospitalAppointments.length
+    };
+  });
 
-  useEffect(() => {
-    async function fetchData() {
-      const hospitalsData = await getHospitals();
-      setHospitals(hospitalsData);
-
-      const doctorsData = await getDoctors();
-      setDoctors(doctorsData);
-      
-      const allAppointments = await Promise.all(
-          hospitalsData.map(async (hospital) => getAppointmentsByHospitalId(hospital.id))
-      );
-      const flattenedAppointments = allAppointments.flat();
-      setAppointments(flattenedAppointments);
-
-      const uniquePatients = new Set(flattenedAppointments.map(a => a.patientName));
-      setTotalUsers(uniquePatients.size + doctorsData.length + hospitalsData.length);
-
-      const statusCounts = {
-        'Confirmed': flattenedAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
-        'Completed': flattenedAppointments.filter(a => a.status === 'completed').length,
-        'Cancelled': flattenedAppointments.filter(a => a.status === 'cancelled').length,
-      };
-      
-      setAppointmentStatusData([
-          { name: 'Confirmed', value: statusCounts['Confirmed'] },
-          { name: 'Completed', value: statusCounts['Completed'] },
-          { name: 'Cancelled', value: statusCounts['Cancelled'] },
-      ]);
-
-    }
-    fetchData();
-  }, []);
-
-  const chartData = hospitals.map(hospital => ({
-    name: hospital.name.split(' ')[0],
-    doctors: doctors.filter(d => d.hospitalIds.includes(hospital.id)).length,
-    appointments: appointments.filter(a => doctors.some(d => d.id === a.doctorId && d.hospitalIds.includes(hospital.id))).length
-  }));
+  const statusCounts = {
+    'Confirmed': appointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
+    'Completed': appointments.filter(a => a.status === 'completed').length,
+    'Cancelled': appointments.filter(a => a.status === 'cancelled').length,
+  };
+  
+  const appointmentStatusData = [
+      { name: 'Confirmed', value: statusCounts['Confirmed'] },
+      { name: 'Completed', value: statusCounts['Completed'] },
+      { name: 'Cancelled', value: statusCounts['Cancelled'] },
+  ];
 
   return (
     <>
@@ -133,73 +110,7 @@ export default function SuperAdminDashboard() {
         </Card>
       </div>
       
-      {/* Chart Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="shadow-lg">
-          <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
-                  <LineChart className="h-5 w-5" />
-                  Hospital Activity
-              </CardTitle>
-              <CardDescription>A summary of doctors and appointments per hospital.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
-                          borderColor: 'hsl(var(--border))'
-                        }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: '14px' }} />
-                      <Bar dataKey="doctors" fill="hsl(var(--secondary))" name="Doctors" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="appointments" fill="hsl(var(--primary))" name="Appointments" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-              </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg">
-          <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  Overall Appointment Status
-              </CardTitle>
-              <CardDescription>A platform-wide breakdown of all appointment statuses. "Confirmed" includes rescheduled bookings.</CardDescription>
-          </CardHeader>
-          <CardContent>
-               <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                        <Pie
-                            data={appointmentStatusData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={renderCustomizedLabel}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="name"
-                        >
-                            {appointmentStatusData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Pie>
-                          <Tooltip
-                            contentStyle={{ 
-                                backgroundColor: 'hsl(var(--background))',
-                                borderColor: 'hsl(var(--border))'
-                            }}
-                            />
-                        <Legend wrapperStyle={{ fontSize: '14px' }} />
-                    </PieChart>
-                </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <SuperAdminDashboardClient chartData={chartData} appointmentStatusData={appointmentStatusData} />
     </>
   );
 }

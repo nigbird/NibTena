@@ -1,21 +1,43 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
-}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  patient
+  doctor
+  hospital_admin
+  super_admin
+}
+
+enum Status {
+  active
+  inactive
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum AppointmentStatus {
+  confirmed
+  cancelled
+  completed
+  rescheduled
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   fullName  String
   email     String   @unique
-  phone     String
-  role      Role     @default(patient)
+  phone     String   @unique
+  role      Role
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -31,7 +53,6 @@ model Hospital {
   accountNumber String
   status        Status               @default(active)
   doctors       DoctorsOnHospitals[]
-  appointments  Appointment[]
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 }
@@ -44,8 +65,7 @@ model Doctor {
   bio             String
   consultationFee Float
   rating          Float
-  experience      Int?
-  contact         String?
+  experience      Int
   status          Status               @default(active)
   hospitals       DoctorsOnHospitals[]
   appointments    Appointment[]
@@ -54,14 +74,14 @@ model Doctor {
 }
 
 model DoctorsOnHospitals {
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  doctorId   Int
   hospital   Hospital @relation(fields: [hospitalId], references: [id])
   hospitalId Int
+  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  doctorId   Int
   assignedAt DateTime @default(now())
-  assignedBy String? // Could be an admin's ID or name
+  assignedBy String?
 
-  @@id([doctorId, hospitalId])
+  @@id([hospitalId, doctorId])
 }
 
 model Appointment {
@@ -71,39 +91,13 @@ model Appointment {
   patientGender   Gender
   patientAge      Int
   symptoms        String
-  appointmentSlot String
-  appointmentDate DateTime
-  status          AppointmentStatus @default(confirmed)
-  bookedBy        String?
-  relationship    String?
   doctor          Doctor            @relation(fields: [doctorId], references: [id])
   doctorId        Int
-  hospital        Hospital          @relation(fields: [hospitalId], references: [id])
-  hospitalId      Int
+  appointmentSlot String
+  appointmentDate DateTime
+  status          AppointmentStatus
+  bookedBy        String?
+  relationship    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-}
-
-enum Role {
-  patient
-  doctor
-  hospital_admin
-  super_admin
-}
-
-enum Gender {
-  male
-  female
-}
-
-enum Status {
-  active
-  inactive
-}
-
-enum AppointmentStatus {
-  confirmed
-  cancelled
-  completed
-  rescheduled
 }

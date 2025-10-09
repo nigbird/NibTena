@@ -1,39 +1,42 @@
 
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import {
-  getDoctors,
-  getSpecialties,
-  getHospitalById,
-} from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { User, Search as SearchIcon, Hospital as HospitalIcon } from 'lucide-react';
+import { User, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { placeholderImages } from '@/lib/placeholder-images';
-import { cn } from '@/lib/utils';
+import DoctorSearch from './DoctorSearch';
 
-function DoctorCard({ doctor }: { doctor: Doctor }) {
+async function getDoctorsWithHospitals() {
+  const doctors = await prisma.doctor.findMany({
+    include: {
+      hospitals: {
+        include: {
+          hospital: true,
+        },
+        take: 1, // Only take the first hospital for the list view
+      },
+    },
+  });
+  return doctors;
+}
+
+async function getSpecialties() {
+    const distinctSpecialties = await prisma.doctor.findMany({
+        select: {
+            specialty: true,
+        },
+        distinct: ['specialty'],
+    });
+    return distinctSpecialties.map(d => d.specialty);
+}
+
+function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {
   const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
-  const [hospital, setHospital] = useState<Hospital | undefined>();
-
-  useEffect(() => {
-    if (doctor.hospitalIds.length > 0) {
-      getHospitalById(doctor.hospitalIds[0]).then(setHospital);
-    }
-  }, [doctor.hospitalIds]);
+  const hospital = doctor.hospitals[0]?.hospital;
 
   return (
     <Card className="flex items-start p-4 gap-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
@@ -52,8 +55,8 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
         <div className="flex-1 space-y-1.5">
             <h3 className="font-bold text-lg">{doctor.name}</h3>
             <div className="flex items-center gap-2">
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className="border-0 bg-primary/20 text-secondary font-medium px-3 py-1 text-sm"
                   style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
                   >
@@ -74,61 +77,29 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   );
 }
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const specialtyQuery = searchParams.get('specialty');
 
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [specialties, setSpecialties] = useState<string[]>([]);
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>(specialtyQuery || 'all');
-  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams?: {
+    specialty?: string;
+  };
+}) {
+  const specialtyQuery = searchParams?.specialty;
 
-  useEffect(() => {
-    getDoctors().then((data) => {
-      setDoctors(data);
-    });
-    getSpecialties().then(setSpecialties);
-  }, []);
-  
-  useEffect(() => {
-    // If a specialty is in the URL, set it as the selected filter
-    const initialSpecialty = specialtyQuery || 'all';
-    setSelectedSpecialty(initialSpecialty);
-  }, [specialtyQuery]);
+  const [allDoctors, specialties] = await Promise.all([
+    getDoctorsWithHospitals(),
+    getSpecialties()
+  ]);
 
-
-  useEffect(() => {
-    if (selectedSpecialty === 'all') {
-      setFilteredDoctors(doctors);
-    } else {
-      setFilteredDoctors(
-        doctors.filter((doc) => doc.specialty === selectedSpecialty)
-      );
-    }
-  }, [selectedSpecialty, doctors]);
+  const filteredDoctors = specialtyQuery
+    ? allDoctors.filter((doc) => doc.specialty === specialtyQuery)
+    : allDoctors;
 
   return (
     <>
       <div className="p-4 space-y-8">
-        <div className="max-w-md mx-auto">
-            <Select
-            value={selectedSpecialty}
-            onValueChange={setSelectedSpecialty}
-            >
-            <SelectTrigger className="w-full h-12 text-base rounded-full">
-                <SearchIcon className="mr-3 h-5 w-5 text-muted-foreground" />
-                <SelectValue placeholder="Filter by specialty..." />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">All Specialties</SelectItem>
-                {specialties.map((specialty) => (
-                <SelectItem key={specialty} value={specialty}>
-                    {specialty}
-                </SelectItem>
-                ))}
-            </SelectContent>
-            </Select>
-        </div>
+        <DoctorSearch specialties={specialties} initialSpecialty={specialtyQuery} />
 
         {filteredDoctors.length > 0 ? (
             <div className="space-y-4">
@@ -138,7 +109,7 @@ export default function SearchPage() {
             </div>
         ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
-            <SearchIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+            <User className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-xl font-semibold font-headline">
                 No Doctors Found
             </h3>

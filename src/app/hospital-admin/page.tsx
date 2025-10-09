@@ -1,9 +1,4 @@
 
-'use client';
-
-import { useEffect, useState }from 'react';
-import { getAppointmentsByDoctorId, getDoctorsByHospitalId, getHospitalById } from '@/lib/data';
-import type { Appointment, Doctor, Hospital } from '@/lib/definitions';
 import {
   Card,
   CardContent,
@@ -11,77 +6,63 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Users, Calendar, BriefcaseMedical, LineChart, PieChart as PieChartIcon } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Users, Calendar, BriefcaseMedical } from 'lucide-react';
 import Link from 'next/link';
-
+import { prisma } from '@/lib/prisma';
+import { format } from 'date-fns';
+import { HospitalAdminDashboardClient } from '@/components/hospital-admin/HospitalAdminDashboardClient';
 
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
-const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
+export default async function HospitalAdminDashboard() {
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: MOCK_HOSPITAL_ID },
+  });
 
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (!hospital) {
+    return <div>Hospital not found</div>;
+  }
 
-  return (
-    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
-
-
-export default function HospitalAdminDashboard() {
-  const [hospital, setHospital] = useState<Hospital | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [appointmentStatusData, setAppointmentStatusData] = useState<{name: string, value: number}[]>([]);
-
-
-  useEffect(() => {
-    async function fetchData() {
-      const hospitalData = await getHospitalById(MOCK_HOSPITAL_ID);
-      setHospital(hospitalData || null);
-
-      if (hospitalData) {
-        const doctorsData = await getDoctorsByHospitalId(hospitalData.id);
-        setDoctors(doctorsData);
-
-        const allAppointments = await Promise.all(
-          doctorsData.map(doctor => getAppointmentsByDoctorId(doctor.id))
-        );
-        const flatAppointments = allAppointments.flat();
-        setAppointments(flatAppointments);
-
-        const statusCounts = {
-          'Confirmed': flatAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
-          'Completed': flatAppointments.filter(a => a.status === 'completed').length,
-          'Cancelled': flatAppointments.filter(a => a.status === 'cancelled').length,
-        };
-        
-        setAppointmentStatusData([
-          { name: 'Confirmed', value: statusCounts['Confirmed'] },
-          { name: 'Completed', value: statusCounts['Completed'] },
-          { name: 'Cancelled', value: statusCounts['Cancelled'] },
-        ]);
+  const doctors = await prisma.doctor.findMany({
+    where: {
+      hospitals: {
+        some: { hospitalId: MOCK_HOSPITAL_ID }
       }
     }
-    fetchData();
-  }, []);
+  });
 
-  const today = new Date().toLocaleDateString();
+  const doctorIds = doctors.map(d => d.id);
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      doctorId: {
+        in: doctorIds,
+      }
+    }
+  });
+
+  const today = new Date();
   const todaysAppointments = appointments.filter(
-    (appointment) => new Date(appointment.appointmentDate).toLocaleDateString() === today
+    (appointment) => format(new Date(appointment.appointmentDate), 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
   );
 
   const chartData = doctors.map(doctor => ({
     name: doctor.name.replace('Dr. ', ''),
     appointments: appointments.filter(a => a.doctorId === doctor.id).length
   }));
+
+  const statusCounts = {
+    'Confirmed': appointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
+    'Completed': appointments.filter(a => a.status === 'completed').length,
+    'Cancelled': appointments.filter(a => a.status === 'cancelled').length,
+  };
+  
+  const appointmentStatusData = [
+    { name: 'Confirmed', value: statusCounts['Confirmed'] },
+    { name: 'Completed', value: statusCounts['Completed'] },
+    { name: 'Cancelled', value: statusCounts['Cancelled'] },
+  ];
 
   return (
     <>
@@ -134,73 +115,10 @@ export default function HospitalAdminDashboard() {
         </Link>
       </div>
       
-      {/* Chart Section */}
-       <div className="grid gap-4 md:grid-cols-2">
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2">
-                        <LineChart className="h-5 w-5" />
-                        Appointments per Doctor
-                    </CardTitle>
-                    <CardDescription>A summary of total appointments for each doctor.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                            <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip
-                            contentStyle={{ 
-                                backgroundColor: 'hsl(var(--background))',
-                                borderColor: 'hsl(var(--border))'
-                            }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '14px' }} />
-                            <Bar dataKey="appointments" fill="hsl(var(--primary))" name="Total Appointments" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-             <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2">
-                        <PieChartIcon className="h-5 w-5" />
-                        Appointment Status
-                    </CardTitle>
-                    <CardDescription>A breakdown of all appointment statuses. "Confirmed" includes rescheduled appointments.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                       <PieChart>
-                            <Pie
-                                data={appointmentStatusData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
-                                outerRadius={100}
-                                fill="#8884d8"
-                                dataKey="value"
-                                nameKey="name"
-                            >
-                                {appointmentStatusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                             <Tooltip
-                                contentStyle={{ 
-                                    backgroundColor: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))'
-                                }}
-                                />
-                            <Legend wrapperStyle={{ fontSize: '14px' }} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-        </div>
-
+      <HospitalAdminDashboardClient
+        chartData={chartData}
+        appointmentStatusData={appointmentStatusData}
+      />
     </>
   );
 }

@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
-import { Clock, Stethoscope, User, Hospital, Wallet, Calendar, ArrowLeft } from 'lucide-react';
+import { Stethoscope, Wallet } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -69,7 +68,7 @@ export default async function DoctorProfilePage({
                   />
                 )}
                 <AvatarFallback>
-                  <User />
+                  {doctor.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <h1 className="font-headline text-3xl font-bold text-primary-foreground">
@@ -86,7 +85,7 @@ export default async function DoctorProfilePage({
                     style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)', borderColor: 'hsl(var(--primary))' }}
                 >
                     <Wallet className="h-5 w-5" />
-                    <span className="font-bold text-lg">${doctor.consultationFee} Appointment Fee</span>
+                    <span className="font-bold text-lg">${doctor.consultationFee} Fee</span>
                 </div>
               </div>
             </div>

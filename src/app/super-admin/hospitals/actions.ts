@@ -1,10 +1,10 @@
 
 'use server';
 
-import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { placeholderImages } from '@/lib/placeholder-images';
+import { z } from 'zod';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -33,10 +33,7 @@ export async function saveHospital(
   hospitalId: number | null,
   formData: FormData
 ): Promise<HospitalFormState> {
-
-  const validatedFields = HospitalFormSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
+  const validatedFields = HospitalFormSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
     return {
@@ -45,6 +42,7 @@ export async function saveHospital(
       success: false,
     };
   }
+
   const data = {
     ...validatedFields.data,
     status: formData.get('status') === 'on' ? 'active' : ('inactive' as 'active' | 'inactive'),
@@ -57,9 +55,9 @@ export async function saveHospital(
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
       await prisma.hospital.create({ data: { ...data, imageId } });
     }
-    
+
     revalidatePath('/super-admin/hospitals');
-    
+
     return {
       success: true,
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,
@@ -79,20 +77,30 @@ export async function saveHospital(
   }
 }
 
-export async function deleteHospital(hospitalId: number): Promise<{ success: boolean, message: string }> {
-    try {
-        await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
-        await prisma.appointment.deleteMany({ where: { hospitalId } });
-        await prisma.hospital.delete({ where: { id: hospitalId } });
-        revalidatePath('/super-admin/hospitals');
-        return { success: true, message: 'Hospital deleted successfully.' };
-    } catch (error) {
-        return { success: false, message: 'Database Error: Failed to delete hospital.' };
-    }
+export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
+  try {
+    await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
+    await prisma.appointment.deleteMany({ where: { hospitalId } });
+    await prisma.hospital.delete({ where: { id: hospitalId } });
+    revalidatePath('/super-admin/hospitals');
+    return { success: true, message: 'Hospital deleted successfully.' };
+  } catch (error) {
+    return { success: false, message: 'Database Error: Failed to delete hospital.' };
+  }
 }
 
-export async function getHospitals(page: number, limit: number) {
+export async function getHospitals(page: number, limit: number, query: string) {
+  const where = query
+    ? {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { city: { contains: query, mode: 'insensitive' } },
+        ],
+      }
+    : {};
+
   const results = await prisma.hospital.findMany({
+    where,
     orderBy: { name: 'asc' },
     skip: (page - 1) * limit,
     take: limit,
@@ -100,6 +108,14 @@ export async function getHospitals(page: number, limit: number) {
   return results;
 }
 
-export async function getHospitalsCount() {
-    return await prisma.hospital.count();
+export async function getHospitalsCount(query: string) {
+  const where = query
+    ? {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { city: { contains: query, mode: 'insensitive' } },
+        ],
+      }
+    : {};
+  return await prisma.hospital.count({ where });
 }

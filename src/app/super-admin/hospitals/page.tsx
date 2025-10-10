@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Hospital as HospitalIcon, Search } from "lucide-react";
 import { Input } from '@/components/ui/input';
-import { getHospitals } from './actions';
+import { getHospitals, getHospitalsCount } from './actions';
 import type { Hospital } from '@/lib/definitions';
 import HospitalList from '@/components/super-admin/hospital-list';
 import HospitalFormDrawer from '@/components/super-admin/hospital-form-drawer';
@@ -16,37 +16,41 @@ import PaginationControls from '@/components/PaginationControls';
 const ITEMS_PER_PAGE = 10;
 
 export default function SuperAdminHospitalsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const page = searchParams.get('page') ?? '1';
   const perPage = searchParams.get('per_page') ?? ITEMS_PER_PAGE.toString();
-
+  const query = searchParams.get('query') ?? '';
+  
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [totalHospitals, setTotalHospitals] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredHospitals, setFilteredHospitals] = useState<Hospital[]>([]);
+  const [searchTerm, setSearchTerm] = useState(query);
 
-  const fetchHospitals = useCallback(async () => {
-    const data = await getHospitals();
+
+  const fetchHospitalsAndCount = useCallback(async () => {
+    const pageAsNumber = Number(page);
+    const perPageAsNumber = Number(perPage);
+    const [data, count] = await Promise.all([
+      getHospitals(pageAsNumber, perPageAsNumber, query),
+      getHospitalsCount(query),
+    ]);
     setHospitals(data);
-    setTotalHospitals(data.length);
-  }, []);
-
+    setTotalHospitals(count);
+  }, [page, perPage, query]);
+  
   useEffect(() => {
-    fetchHospitals();
-  }, [fetchHospitals]);
+    fetchHospitalsAndCount();
+  }, [fetchHospitalsAndCount]);
 
-  useEffect(() => {
-    const lowercasedFilter = searchTerm.toLowerCase();
-    const filtered = hospitals.filter(hospital =>
-      hospital.name.toLowerCase().includes(lowercasedFilter) ||
-      hospital.city.toLowerCase().includes(lowercasedFilter)
-    );
-    setFilteredHospitals(filtered);
-    // Since we're filtering on the client, we also update the total count
-    setTotalHospitals(filtered.length);
-  }, [searchTerm, hospitals]);
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
+    params.set('page', '1');
+    params.set('query', searchTerm);
+    router.push(`/super-admin/hospitals?${params.toString()}`);
+  }
 
   const handleAddClick = () => {
     setEditingHospital(null);
@@ -57,18 +61,16 @@ export default function SuperAdminHospitalsPage() {
     setEditingHospital(hospital);
     setIsDrawerOpen(true);
   };
-  
+
   const handleActionSuccess = () => {
-    fetchHospitals();
+    fetchHospitalsAndCount();
     setIsDrawerOpen(false);
   }
 
-  // Paginate the client-side filtered data
   const pageAsNumber = Number(page);
   const perPageAsNumber = Number(perPage);
   const start = (pageAsNumber - 1) * perPageAsNumber;
   const end = start + perPageAsNumber;
-  const paginatedHospitals = filteredHospitals.slice(start, end);
 
   return (
     <div className="space-y-6">
@@ -82,20 +84,19 @@ export default function SuperAdminHospitalsPage() {
           Add Hospital
         </Button>
       </div>
-      
-       <HospitalFormDrawer
+
+      <HospitalFormDrawer
         isOpen={isDrawerOpen}
         setIsOpen={setIsDrawerOpen}
         onActionSuccess={handleActionSuccess}
         hospitalToEdit={editingHospital}
       />
 
-
       <Card>
         <CardHeader>
           <CardTitle>All Hospitals</CardTitle>
           <CardDescription>A list of all hospitals registered in Mediverse.</CardDescription>
-          <div className="relative pt-2">
+          <form onSubmit={handleSearch} className="relative pt-2">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -104,12 +105,12 @@ export default function SuperAdminHospitalsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+          </form>
         </CardHeader>
         <CardContent>
-          {paginatedHospitals.length > 0 ? (
-            <HospitalList 
-              hospitals={paginatedHospitals}
+          {hospitals.length > 0 ? (
+            <HospitalList
+              hospitals={hospitals}
               onEdit={handleEditClick}
               onActionSuccess={handleActionSuccess}
             />
@@ -121,14 +122,16 @@ export default function SuperAdminHospitalsPage() {
             </div>
           )}
         </CardContent>
-         <div className="flex justify-center p-4">
+        {totalHospitals > ITEMS_PER_PAGE && (
+          <div className="flex justify-center p-4">
             <PaginationControls
-                hasNextPage={end < totalHospitals}
-                hasPrevPage={start > 0}
-                totalCount={totalHospitals}
-                itemsPerPage={perPageAsNumber}
+              hasNextPage={end < totalHospitals}
+              hasPrevPage={start > 0}
+              totalCount={totalHospitals}
+              itemsPerPage={perPageAsNumber}
             />
-        </div>
+          </div>
+        )}
       </Card>
     </div>
   );

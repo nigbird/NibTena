@@ -29,11 +29,11 @@ const PaginationControls: FC<PaginationControlsProps> = (
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  const handlePrev = () => {
-    router.push(`/super-admin/hospitals?page=${Number(page) - 1}&per_page=${perPage}`)
-  }
-  const handleNext = () => {
-    router.push(`/super-admin/hospitals?page=${Number(page) + 1}&per_page=${perPage}`)
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', newPage.toString());
+    params.set('per_page', perPage);
+    router.push(`/super-admin/hospitals?${params.toString()}`);
   }
 
   return (
@@ -41,7 +41,7 @@ const PaginationControls: FC<PaginationControlsProps> = (
       <Button
         variant="outline"
         disabled={!hasPrevPage}
-        onClick={handlePrev}>
+        onClick={() => handlePageChange(Number(page) - 1)}>
         <ChevronLeft className="mr-2 h-4 w-4" /> Previous
       </Button>
       
@@ -52,7 +52,7 @@ const PaginationControls: FC<PaginationControlsProps> = (
       <Button
         variant="outline"
         disabled={!hasNextPage}
-        onClick={handleNext}>
+        onClick={() => handlePageChange(Number(page) + 1)}>
         Next <ChevronRight className="ml-2 h-4 w-4" />
       </Button>
     </div>

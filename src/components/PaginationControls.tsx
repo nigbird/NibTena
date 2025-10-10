@@ -66,7 +66,7 @@ const PaginationControls = ({ totalCount }: PaginationControlsProps) => {
 
   if (totalPages <= 1) {
     return (
-       <div className="flex items-center justify-between text-sm text-muted-foreground">
+       <div className="flex items-center justify-start text-sm text-muted-foreground">
         <p>
           {totalCount} hospital(s) found.
         </p>

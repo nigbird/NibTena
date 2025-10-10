@@ -41,25 +41,32 @@ export default function MyAppointmentsPage() {
         description: 'Your appointment has been successfully booked.',
       });
 
-      const profileComplete = localStorage.getItem('profileComplete') === 'true';
+      const profileComplete = typeof window !== 'undefined' ? localStorage.getItem('profileComplete') === 'true' : false;
       if (!profileComplete) {
          setTimeout(() => {
             toast({
                 title: 'Complete Your Profile',
                 description: 'Let’s make your next booking faster.',
-                duration: 10000,
+                duration: 10000, // Keep toast visible longer
                 action: (
-                  <div className="flex flex-col gap-2">
-                    <ToastAction altText="Complete now" onClick={() => router.push('/user/profile/setup')}>
-                        Yes, complete now
+                  <div className="flex flex-col gap-2 w-full">
+                    <ToastAction asChild altText="Complete now" className="w-full">
+                        <Button onClick={() => router.push('/user/profile/setup')} variant="accent" size="sm">
+                            Yes, complete now
+                        </Button>
                     </ToastAction>
-                     <ToastAction altText="Maybe later" onClick={() => {}}>Maybe later</ToastAction>
+                    <ToastAction asChild altText="Maybe later" className="w-full">
+                         <Button onClick={() => {}} variant="outline" size="sm">
+                            Maybe later
+                        </Button>
+                    </ToastAction>
                   </div>
                 ),
             });
         }, 1500);
       }
       
+      // Clean up the URL
       window.history.replaceState(null, '', '/user/appointments');
     }
   }, [searchParams, toast, router]);

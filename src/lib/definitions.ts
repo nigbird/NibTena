@@ -47,4 +47,5 @@ export type Appointment = {
   status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
   bookedBy?: string;
   relationship?: string;
+  createdAt: string;
 };

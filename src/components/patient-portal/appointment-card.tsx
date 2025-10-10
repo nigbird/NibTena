@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +13,8 @@ import {
   User,
   RefreshCw,
   X,
+  MessageSquare,
+  Bookmark,
 } from 'lucide-react';
 import { placeholderImages } from '@/lib/placeholder-images';
 import {
@@ -85,7 +88,7 @@ export default function AppointmentCard({
             <Badge variant={status.variant as any}>{status.label}</Badge>
         </div>
 
-        <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
+        <div className="text-sm text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3">
              <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>{format(new Date(appointment.appointmentDate), 'PPP')}</span>
@@ -93,6 +96,16 @@ export default function AppointmentCard({
             <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span>{appointment.appointmentSlot}</span>
+            </div>
+             <div className="flex items-center gap-2 col-span-2">
+                <Bookmark className="h-4 w-4" />
+                <span>Booked on: {format(new Date(appointment.createdAt), 'PP p')}</span>
+            </div>
+            <div className="flex items-start gap-2 col-span-2">
+                <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p className="truncate">
+                  <span className="font-medium text-foreground/80">Concerns:</span> {appointment.symptoms}
+                </p>
             </div>
         </div>
         

@@ -10,7 +10,7 @@ export async function getMyAppointments(patientName: string) {
         patientName: patientName,
       },
       orderBy: {
-        appointmentDate: 'desc',
+        createdAt: 'desc',
       },
     });
     return appointments;

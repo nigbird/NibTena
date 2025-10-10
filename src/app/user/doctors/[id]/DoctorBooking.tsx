@@ -48,17 +48,25 @@ const generateDates = () => {
 type DoctorBookingProps = {
   doctor: Doctor;
   doctorHospitals: Hospital[];
-  initialHospitalId: number | null;
+  searchParams?: { [key: string]: string | string[] | undefined };
 };
 
 export default function DoctorBooking({
   doctor,
   doctorHospitals,
-  initialHospitalId,
+  searchParams,
 }: DoctorBookingProps) {
   const router = useRouter();
+
+  const getInitialHospitalId = () => {
+    const hospitalIdParam = searchParams?.hospitalId;
+    return hospitalIdParam 
+      ? hospitalIdParam.toString() 
+      : (doctorHospitals[0]?.id.toString() || undefined);
+  }
+
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | undefined>(
-    initialHospitalId?.toString()
+    getInitialHospitalId()
   );
   const [dates, setDates] = useState(generateDates());
   const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
@@ -170,4 +178,3 @@ export default function DoctorBooking({
     </div>
   );
 }
-

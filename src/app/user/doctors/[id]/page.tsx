@@ -108,7 +108,7 @@ export default async function DoctorProfilePage({
                <DoctorBooking 
                   doctor={doctor} 
                   doctorHospitals={doctorHospitals as HospitalType[]} 
-                  initialHospitalId={initialHospitalId}
+                  searchParams={searchParams}
                 />
             </Card>
           </div>

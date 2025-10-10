@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
@@ -129,24 +128,13 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
             </div>
 
             <div className="flex items-center space-x-2">
-              <input 
-                type="hidden" 
-                name="status" 
+              <Switch
+                id="status-switch"
+                name="status"
                 value={isEditing && hospitalToEdit?.status === 'inactive' ? 'inactive' : 'active'}
-              />
-              <Switch 
-                id="status"
                 defaultChecked={!isEditing || hospitalToEdit?.status === 'active'}
-                onCheckedChange={(checked) => {
-                  const input = document.querySelector('input[name="status"]') as HTMLInputElement;
-                  if (input) {
-                    input.value = checked ? 'active' : 'inactive';
-                  }
-                }}
               />
-              <Label htmlFor="status" className="cursor-pointer">
-                {isEditing && hospitalToEdit?.status === 'inactive' ? 'Inactive' : 'Active'}
-              </Label>
+              <Label htmlFor="status-switch">Active</Label>
             </div>
           </form>
         </ScrollArea>

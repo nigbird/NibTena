@@ -13,7 +13,7 @@ const HospitalFormSchema = z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   accountNumber: z.string().min(10, { message: 'Please enter a valid account number.' }),
-  status: z.enum(['active', 'inactive']),
+  status: z.enum(['active', 'inactive']).optional().default('active'),
 });
 
 export type HospitalFormState = {
@@ -35,6 +35,9 @@ export async function saveHospital(
   prevState: HospitalFormState, 
   formData: FormData
 ): Promise<HospitalFormState> {
+  
+  const statusValue = formData.get('status') === 'active' ? 'active' : 'inactive';
+
   const validatedFields = HospitalFormSchema.safeParse({
     name: formData.get('name'),
     description: formData.get('description'),
@@ -42,7 +45,7 @@ export async function saveHospital(
     contactEmail: formData.get('contactEmail'),
     contactPhone: formData.get('contactPhone'),
     accountNumber: formData.get('accountNumber'),
-    status: formData.get('status'),
+    status: statusValue,
   });
 
   if (!validatedFields.success) {
@@ -70,6 +73,7 @@ export async function saveHospital(
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,
     };
   } catch (error) {
+    console.error("Save hospital error:", error)
     return {
       message: 'Database Error: Failed to save hospital.',
       success: false,

@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -29,22 +28,6 @@ type HospitalFormDrawerProps = {
   hospitalToEdit?: Hospital | null;
 };
 
-function SubmitButton({ isEditing }: { isEditing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" form="hospital-form" disabled={pending} variant="accent">
-      {pending ? (
-        <>
-          <Loader2 className="animate-spin mr-2" />
-          {isEditing ? 'Saving...' : 'Adding...'}
-        </>
-      ) : (
-        isEditing ? 'Save Changes' : 'Add Hospital'
-      )}
-    </Button>
-  );
-}
-
 export default function HospitalFormDrawer({
   isOpen,
   setIsOpen,
@@ -52,48 +35,42 @@ export default function HospitalFormDrawer({
   hospitalToEdit,
 }: HospitalFormDrawerProps) {
   const isEditing = !!hospitalToEdit;
-  const initialState: HospitalFormState = { message: null, errors: {} };
-
-  const action = isEditing
-    ? saveHospital.bind(null, hospitalToEdit.id)
-    : saveHospital.bind(null, null);
-
-  const [state, formAction] = useActionState<HospitalFormState, FormData>(action, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-
-  // ✅ Added local state for switch control
+  const [isPending, startTransition] = useTransition();
   const [isActive, setIsActive] = useState(
-    !isEditing || hospitalToEdit?.status === 'active'
+    isEditing ? hospitalToEdit.status === 'active' : true
   );
 
   useEffect(() => {
-    if (state.success) {
-      toast({
-        title: "Success",
-        description: state.message,
-      });
-      onActionSuccess();
-    } else if (state.message && state.errors) {
-      toast({
-        variant: "destructive",
-        title: "Error saving hospital",
-        description: Object.values(state.errors).flat().join('\n') || state.message,
-      });
-    } else if (state.message) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: state.message,
-      });
-    }
-  }, [state, onActionSuccess, toast]);
-
-  useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setIsActive(isEditing ? hospitalToEdit.status === 'active' : true);
       formRef.current?.reset();
     }
-  }, [isOpen]);
+  }, [isOpen, isEditing, hospitalToEdit]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    formData.set('status', isActive ? 'active' : 'inactive');
+
+    startTransition(async () => {
+      const result = await saveHospital(hospitalToEdit?.id ?? null, formData);
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+        onActionSuccess();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error saving hospital",
+          description: Object.values(result.errors || {}).flat().join('\n') || result.message,
+        });
+      }
+    });
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -109,16 +86,13 @@ export default function HospitalFormDrawer({
         <ScrollArea className="flex-1 -mx-6 px-6">
           <form
             ref={formRef}
-            action={formAction}
+            onSubmit={handleSubmit}
             id="hospital-form"
             className="grid gap-6 py-4"
           >
             <div className="space-y-2">
               <Label htmlFor="name">Hospital Name</Label>
               <Input id="name" name="name" defaultValue={hospitalToEdit?.name} required />
-              {state.errors?.name && (
-                <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -129,32 +103,21 @@ export default function HospitalFormDrawer({
                 defaultValue={hospitalToEdit?.description}
                 required
               />
-              {state.errors?.description && (
-                <p className="text-sm font-medium text-destructive">{state.errors.description[0]}</p>
-              )}
             </div>
-
+            
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
-                {state.errors?.city && (
-                  <p className="text-sm font-medium text-destructive">{state.errors.city[0]}</p>
-                )}
+                  <Label htmlFor="city">City</Label>
+                  <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  name="accountNumber"
-                  defaultValue={hospitalToEdit?.accountNumber}
-                  required
-                />
-                {state.errors?.accountNumber && (
-                  <p className="text-sm font-medium text-destructive">
-                    {state.errors.accountNumber[0]}
-                  </p>
-                )}
+                  <Label htmlFor="accountNumber">Account Number</Label>
+                  <Input
+                    id="accountNumber"
+                    name="accountNumber"
+                    defaultValue={hospitalToEdit?.accountNumber}
+                    required
+                  />
               </div>
             </div>
 
@@ -168,11 +131,6 @@ export default function HospitalFormDrawer({
                   defaultValue={hospitalToEdit?.contactEmail}
                   required
                 />
-                {state.errors?.contactEmail && (
-                  <p className="text-sm font-medium text-destructive">
-                    {state.errors.contactEmail[0]}
-                  </p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="contactPhone">Contact Phone</Label>
@@ -183,11 +141,6 @@ export default function HospitalFormDrawer({
                   defaultValue={hospitalToEdit?.contactPhone}
                   required
                 />
-                {state.errors?.contactPhone && (
-                  <p className="text-sm font-medium text-destructive">
-                    {state.errors.contactPhone[0]}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -195,8 +148,7 @@ export default function HospitalFormDrawer({
               <Label htmlFor="photo">Hospital Photo</Label>
               <Input id="photo" name="photo" type="file" />
             </div>
-
-            {/* ✅ Fixed Switch and Status Handling */}
+            
             <div className="flex items-center space-x-2">
               <Switch
                 id="status-switch"
@@ -204,7 +156,6 @@ export default function HospitalFormDrawer({
                 onCheckedChange={setIsActive}
               />
               <Label htmlFor="status-switch">Active</Label>
-              <input type="hidden" name="status" value={isActive ? 'active' : 'inactive'} />
             </div>
           </form>
         </ScrollArea>
@@ -214,7 +165,16 @@ export default function HospitalFormDrawer({
               Cancel
             </Button>
           </SheetClose>
-          <SubmitButton isEditing={isEditing} />
+           <Button type="submit" form="hospital-form" disabled={isPending} variant="accent">
+              {isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" />
+                  {isEditing ? 'Saving...' : 'Adding...'}
+                </>
+              ) : (
+                isEditing ? 'Save Changes' : 'Add Hospital'
+              )}
+            </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

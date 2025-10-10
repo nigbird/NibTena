@@ -15,9 +15,14 @@ export async function getSpecialties() {
 
 export async function updateAppointment(appointmentId: string, data: { status?: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled', appointmentDate?: string, appointmentSlot?: string }) {
   try {
+    const dataToUpdate: any = { ...data };
+    if (data.appointmentDate) {
+      dataToUpdate.appointmentDate = new Date(data.appointmentDate);
+    }
+    
     const updatedAppointment = await prisma.appointment.update({
       where: { id: appointmentId },
-      data: data,
+      data: dataToUpdate,
     });
     return updatedAppointment;
   } catch (error) {

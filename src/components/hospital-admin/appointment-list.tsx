@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit, Calendar, Clock, User, X, Check, ClipboardCheck } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, Calendar, Clock, User, X, Check, ClipboardCheck, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -70,7 +70,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     setSelectedAppointment(null);
   };
 
-  const handleStatusChange = async (appointment: Appointment, status: 'confirmed' | 'completed' | 'cancelled') => {
+  const handleStatusChange = async (appointment: Appointment, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') => {
     const result = await updateAppointmentStatus(appointment.id, status);
      if (result.success) {
       toast({ title: "Success", description: result.message });
@@ -88,6 +88,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     confirmed: 'default',
     completed: 'accent',
     cancelled: 'destructive',
+    rescheduled: 'secondary',
   } as const;
 
   return (
@@ -137,7 +138,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => onEdit(appointment)}>
-                        <Edit className="mr-2 h-4 w-4" /> Reschedule
+                        <Edit className="mr-2 h-4 w-4" /> Reschedule/Edit
                       </DropdownMenuItem>
                        <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
@@ -148,6 +149,9 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
                             <DropdownMenuSubContent>
                               <DropdownMenuItem onClick={() => handleStatusChange(appointment, 'confirmed')}>
                                 <Check className="mr-2 h-4 w-4" /> Confirmed
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(appointment, 'rescheduled')}>
+                                <RefreshCw className="mr-2 h-4 w-4" /> Rescheduled
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleStatusChange(appointment, 'completed')}>
                                 <ClipboardCheck className="mr-2 h-4 w-4" /> Completed
@@ -188,8 +192,8 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
                     {format(new Date(appointment.appointmentDate), 'PPP')} at {appointment.appointmentSlot}
                   </p>
               </div>
-              <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onEdit(appointment)}>Reschedule</Button>
+              <div className="flex justify-end gap-2 border-t pt-2">
+                  <Button variant="outline" size="sm" onClick={() => onEdit(appointment)}>Edit</Button>
                   <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(appointment)}>Delete</Button>
               </div>
           </div>

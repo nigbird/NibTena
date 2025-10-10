@@ -3,12 +3,9 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Loader2, User, Users } from 'lucide-react';
-import Link from 'next/link';
 import { format } from 'date-fns';
-import { useRouter } from 'next/navigation';
-
 
 import { Button } from '@/components/ui/button';
 import {
@@ -44,14 +41,14 @@ function SubmitButton() {
           Processing...
         </>
       ) : (
-        'Confirm & Book'
+        'Proceed to Verification'
       )}
     </Button>
   );
 }
 
-// Mock data for the logged-in user
-const loggedInPatient = {
+// In a real app, this would come from an authentication session
+const LOGGED_IN_PATIENT_INFO = {
     name: 'Hana Worku',
     age: 28,
     gender: 'female' as 'male' | 'female',
@@ -82,24 +79,22 @@ export default function BookingPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (state?.success === true) {
-      const bookingData = {
-        bookingFor,
-        fullName: state.data?.fullName,
-        phone: state.data?.phone,
-        age: state.data?.age,
-        gender: state.data?.gender,
-        symptoms: state.data?.symptoms,
+    if (state?.success === true && state.data) {
+      const bookingDetails = {
+        patientName: state.data.fullName,
+        patientAge: state.data.age,
+        patientGender: state.data.gender,
+        phone: state.data.phone,
+        symptoms: state.data.symptoms,
+        bookingFor: state.data.bookingFor,
+        doctorId,
+        hospitalId,
+        appointmentSlot: slot,
+        appointmentDate: date,
       };
       
       const params = new URLSearchParams({
-        bookingData: JSON.stringify({
-          ...bookingData,
-          doctorId,
-          hospitalId,
-          appointmentSlot: slot,
-          appointmentDate: date,
-        }),
+        bookingData: JSON.stringify(bookingDetails),
       });
       router.push(`/user/verify/phone?${params.toString()}`);
 
@@ -110,7 +105,7 @@ export default function BookingPage() {
         description: state.message,
       });
     }
-  }, [state, toast, router, bookingFor, doctorId, hospitalId, slot, date]);
+  }, [state, toast, router, doctorId, hospitalId, slot, date]);
   
   const isBookingForSelf = bookingFor === 'myself';
 
@@ -150,24 +145,24 @@ export default function BookingPage() {
                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Full Name</Label>
-                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? loggedInPatient.name : ''} required />
+                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? LOGGED_IN_PATIENT_INFO.name : ''} required />
                             {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone Number</Label>
-                          <Input id="phone" name="phone" defaultValue={loggedInPatient.phone} placeholder="(123) 456-7890" required />
+                          <Input id="phone" name="phone" defaultValue={LOGGED_IN_PATIENT_INFO.phone} placeholder="(123) 456-7890" required />
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? loggedInPatient.age : ''} required />
+                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? String(LOGGED_IN_PATIENT_INFO.age) : ''} required />
                             {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="gender">Gender</Label>
-                            <Select key={`gender-${bookingFor}`} name="gender" defaultValue={isBookingForSelf ? loggedInPatient.gender : undefined} required>
+                            <Select key={`gender-${bookingFor}`} name="gender" defaultValue={isBookingForSelf ? LOGGED_IN_PATIENT_INFO.gender : undefined} required>
                                 <SelectTrigger id="gender">
                                     <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>

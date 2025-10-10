@@ -2,11 +2,6 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { prisma } from '@/lib/prisma';
-import { getDoctorById } from '@/app/doctor-portal/profile/actions';
-
-// Mocking a logged-in doctor with ID 1
-const MOCK_DOCTOR_ID = 1;
 
 type DoctorPortalContextType = {
   doctor: Doctor | null;
@@ -22,8 +17,6 @@ export const DoctorPortalContext = createContext<DoctorPortalContextType>({
   setActiveHospitalId: () => {},
 });
 
-// This is a client component, but it needs data that should be fetched on the server.
-// The data fetching logic is now removed from here. The parent layout will fetch it.
 type DoctorPortalProviderProps = {
     children: ReactNode;
     doctor: Doctor | null;
@@ -39,9 +32,19 @@ export const DoctorPortalProvider = ({ children, doctor: initialDoctor, doctorHo
     setDoctor(initialDoctor);
     setDoctorHospitals(initialHospitals);
     if (initialHospitals.length > 0 && !activeHospitalId) {
-        setActiveHospitalId(initialHospitals[0].id);
+        const storedHospitalId = localStorage.getItem('activeHospitalId');
+        if (storedHospitalId && initialHospitals.some(h => h.id === Number(storedHospitalId))) {
+          setActiveHospitalId(Number(storedHospitalId));
+        } else {
+          setActiveHospitalId(initialHospitals[0].id);
+        }
     }
   }, [initialDoctor, initialHospitals, activeHospitalId]);
+
+  const handleSetActiveHospitalId = (id: number) => {
+    localStorage.setItem('activeHospitalId', id.toString());
+    setActiveHospitalId(id);
+  }
 
   return (
     <DoctorPortalContext.Provider
@@ -49,7 +52,7 @@ export const DoctorPortalProvider = ({ children, doctor: initialDoctor, doctorHo
         doctor,
         doctorHospitals,
         activeHospitalId,
-        setActiveHospitalId,
+        setActiveHospitalId: handleSetActiveHospitalId,
       }}
     >
       {children}

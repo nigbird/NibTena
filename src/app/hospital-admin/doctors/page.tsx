@@ -9,8 +9,8 @@ import { getDoctorsByHospitalId } from './actions';
 import DoctorList from '@/components/hospital-admin/doctor-list';
 import DoctorFormDrawer from '@/components/hospital-admin/doctor-form-drawer';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -18,7 +18,7 @@ export default function DoctorsPage() {
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
 
   const fetchDoctors = useCallback(async () => {
-    const doctorsData = await getDoctorsByHospitalId(MOCK_HOSPITAL_ID);
+    const doctorsData = await getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID);
     setDoctors(doctorsData);
   }, []);
 
@@ -59,7 +59,7 @@ export default function DoctorsPage() {
       <DoctorFormDrawer
         isOpen={isDrawerOpen}
         setIsOpen={setIsDrawerOpen}
-        hospitalId={MOCK_HOSPITAL_ID}
+        hospitalId={LOGGED_IN_HOSPITAL_ID}
         onDoctorSaved={handleFormActionSuccess}
         doctorToEdit={editingDoctor}
       />

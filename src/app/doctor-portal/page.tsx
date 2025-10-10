@@ -12,16 +12,16 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 
-// Mocking a logged-in doctor with ID 1
-const MOCK_DOCTOR_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_DOCTOR_ID = 1;
 
 export default async function DoctorPortalPage() {
   const doctor = await prisma.doctor.findUnique({
-    where: { id: MOCK_DOCTOR_ID },
+    where: { id: LOGGED_IN_DOCTOR_ID },
   });
 
   const allAppointments = doctor ? await prisma.appointment.findMany({
-    where: { doctorId: MOCK_DOCTOR_ID },
+    where: { doctorId: LOGGED_IN_DOCTOR_ID },
     orderBy: {
       appointmentDate: 'asc',
     }

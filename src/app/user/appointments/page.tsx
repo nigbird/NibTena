@@ -20,6 +20,9 @@ import { ToastAction } from '@/components/ui/toast';
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
 
+// In a real app, this would come from an authentication session
+const LOGGED_IN_PATIENT_NAME = 'Hana Worku';
+
 export default function MyAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -30,9 +33,6 @@ export default function MyAppointmentsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // In a real app, you'd get this from an auth context
-  const loggedInPatientName = 'Hana Worku';
-
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
     if (isSuccess) {
@@ -67,7 +67,7 @@ export default function MyAppointmentsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     const [appointmentData, doctorData] = await Promise.all([
-      getMyAppointments(loggedInPatientName),
+      getMyAppointments(LOGGED_IN_PATIENT_NAME),
       getDoctors(),
     ]);
     setAppointments(appointmentData as Appointment[]);

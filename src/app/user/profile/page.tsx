@@ -14,8 +14,8 @@ import {
   import Link from 'next/link';
 import { useRouter } from 'next/navigation';
   
-  // Mock user data, in a real app this would come from your auth provider
-  const user = {
+  // In a real app, this would come from an authentication session
+  const LOGGED_IN_USER = {
     name: 'Hana Worku',
     email: 'hana.w@example.com',
     avatarUrl: 'https://picsum.photos/seed/user1/200/200'
@@ -26,7 +26,6 @@ import { useRouter } from 'next/navigation';
 
     const handleLogout = () => {
       // In a real app, you would handle sign-out logic here.
-      // For this mock, we'll just redirect to the login page.
       router.push('/login');
     };
 
@@ -36,13 +35,13 @@ import { useRouter } from 'next/navigation';
           <Card>
             <CardHeader className="items-center text-center">
               <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                <AvatarImage src={LOGGED_IN_USER.avatarUrl} alt={LOGGED_IN_USER.name} />
                 <AvatarFallback>
                   <User />
                 </AvatarFallback>
               </Avatar>
-              <CardTitle className="font-headline text-2xl">{user.name}</CardTitle>
-              <CardDescription>{user.email}</CardDescription>
+              <CardTitle className="font-headline text-2xl">{LOGGED_IN_USER.name}</CardTitle>
+              <CardDescription>{LOGGED_IN_USER.email}</CardDescription>
             </CardHeader>
             <CardContent className="mt-4 flex flex-col gap-2">
                 <Button variant="outline" asChild>

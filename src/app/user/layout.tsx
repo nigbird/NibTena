@@ -10,8 +10,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
 
-// Mock user data for display
-const user = {
+// In a real app, this would come from an authentication session
+const LOGGED_IN_USER = {
     name: 'Hana Worku',
     avatarUrl: 'https://picsum.photos/seed/user1/200/200'
 };
@@ -55,12 +55,12 @@ export default function UserLayout({
             {isHomePage ? (
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border">
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarImage src={LOGGED_IN_USER.avatarUrl} alt={LOGGED_IN_USER.name} />
                         <AvatarFallback><User /></AvatarFallback>
                     </Avatar>
                     <div>
                         <p className="text-xs text-muted-foreground">Hi, Welcome Back!</p>
-                        <p className="font-semibold text-foreground">{user.name}</p>
+                        <p className="font-semibold text-foreground">{LOGGED_IN_USER.name}</p>
                     </div>
                 </div>
             ) : (

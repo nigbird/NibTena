@@ -4,12 +4,12 @@ import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-c
 import { prisma } from '@/lib/prisma';
 import type { Hospital } from '@/lib/definitions';
 
-// Mocking a logged-in doctor with ID 1
-const MOCK_DOCTOR_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_DOCTOR_ID = 1;
 
 async function getDoctorData() {
     const doctor = await prisma.doctor.findUnique({
-        where: { id: MOCK_DOCTOR_ID },
+        where: { id: LOGGED_IN_DOCTOR_ID },
         include: {
             hospitals: {
                 include: {

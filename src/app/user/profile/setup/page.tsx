@@ -17,10 +17,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { User, Loader2 } from 'lucide-react';
 
-// Mock user data for pre-filling
-const mockUser = {
+// In a real app, this user info would come from an authentication session
+const LOGGED_IN_USER_DATA = {
   name: 'Hana Worku',
-  phone: '912345678', // Example phone without country code
+  phone: '912345678',
 };
 
 export default function ProfileSetupPage() {
@@ -61,7 +61,7 @@ export default function ProfileSetupPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" defaultValue={mockUser.name} />
+              <Input id="name" name="name" defaultValue={LOGGED_IN_USER_DATA.name} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
@@ -74,7 +74,7 @@ export default function ProfileSetupPage() {
                     name="phone"
                     type="tel"
                     placeholder="912 345 678"
-                    defaultValue={mockUser.phone}
+                    defaultValue={LOGGED_IN_USER_DATA.phone}
                     className="rounded-l-none"
                     />
                 </div>

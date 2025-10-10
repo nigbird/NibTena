@@ -13,8 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -26,7 +26,7 @@ export default function ScheduleSettingsPage() {
   const { toast } = useToast();
 
   const fetchDoctors = useCallback(async () => {
-    const doctorsData = await getDoctorsByHospitalId(MOCK_HOSPITAL_ID);
+    const doctorsData = await getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID);
     setDoctors(doctorsData);
   }, []);
 

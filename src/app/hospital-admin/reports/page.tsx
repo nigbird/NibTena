@@ -27,8 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#FF8042', '#00C49F'];
 
@@ -48,8 +48,8 @@ export default function ReportsPage() {
     setIsLoading(true);
     try {
       const [appointmentsData, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
-        getDoctorsByHospitalId(MOCK_HOSPITAL_ID)
+        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
       ]);
       setAppointments(appointmentsData);
       setDoctors(doctorsData);

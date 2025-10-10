@@ -2,12 +2,12 @@ import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { prisma } from '@/lib/prisma';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 async function getHospital() {
     const hospital = await prisma.hospital.findUnique({
-        where: { id: MOCK_HOSPITAL_ID },
+        where: { id: LOGGED_IN_HOSPITAL_ID },
     });
     return hospital;
 }

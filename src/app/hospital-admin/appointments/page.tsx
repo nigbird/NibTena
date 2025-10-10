@@ -10,8 +10,8 @@ import AppointmentList from '@/components/hospital-admin/appointment-list';
 import AppointmentFormDrawer from '@/components/hospital-admin/appointment-form-drawer';
 import { Input } from '@/components/ui/input';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -22,8 +22,8 @@ export default function AppointmentsPage() {
 
   const fetchAppointmentsAndDoctors = useCallback(async () => {
     const [appointmentsData, doctorsData] = await Promise.all([
-      getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
-      getDoctorsByHospitalId(MOCK_HOSPITAL_ID)
+      getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+      getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
     ]);
     setAppointments(appointmentsData.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()));
     setDoctors(doctorsData);

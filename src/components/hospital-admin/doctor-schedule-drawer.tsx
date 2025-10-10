@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2, Clock } from 'lucide-react';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
@@ -28,11 +28,13 @@ const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor }: DoctorScheduleDrawerProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
-    // Mock saving the schedule
+    // In a real app, you would save schedule data to the database here
+    console.log("Saving schedule for Dr.", doctor.name);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
     toast({

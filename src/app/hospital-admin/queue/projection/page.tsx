@@ -10,7 +10,8 @@ import { Logo } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function QueueProjectionPage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -22,8 +23,8 @@ export default function QueueProjectionPage() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const [allAppointments, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
-        getDoctorsByHospitalId(MOCK_HOSPITAL_ID),
+        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
       ]);
 
       const todaysAppointments = allAppointments

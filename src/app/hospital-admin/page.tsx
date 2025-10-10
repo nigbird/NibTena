@@ -12,12 +12,12 @@ import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 import { HospitalAdminDashboardClient } from '@/components/hospital-admin/HospitalAdminDashboardClient';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default async function HospitalAdminDashboard() {
   const hospital = await prisma.hospital.findUnique({
-    where: { id: MOCK_HOSPITAL_ID },
+    where: { id: LOGGED_IN_HOSPITAL_ID },
   });
 
   if (!hospital) {
@@ -27,7 +27,7 @@ export default async function HospitalAdminDashboard() {
   const doctors = await prisma.doctor.findMany({
     where: {
       hospitals: {
-        some: { hospitalId: MOCK_HOSPITAL_ID }
+        some: { hospitalId: LOGGED_IN_HOSPITAL_ID }
       }
     }
   });
@@ -36,9 +36,7 @@ export default async function HospitalAdminDashboard() {
 
   const appointments = await prisma.appointment.findMany({
     where: {
-      doctorId: {
-        in: doctorIds,
-      }
+      hospitalId: LOGGED_IN_HOSPITAL_ID,
     }
   });
 

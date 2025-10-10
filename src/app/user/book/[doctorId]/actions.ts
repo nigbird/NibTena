@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addAppointment as addAppointmentData } from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -26,6 +26,7 @@ export type State = {
   };
   message?: string | null;
   success?: boolean;
+  data?: z.infer<typeof AppointmentFormSchema>;
 };
 
 export async function startBookingProcess(
@@ -54,54 +55,38 @@ export async function startBookingProcess(
       success: false,
     };
   }
-
-  const bookingDetails = {
-    ...validatedFields.data,
-    bookerPhone: validatedFields.data.phone,
-    patientName: validatedFields.data.fullName,
-    patientAge: validatedFields.data.age,
-    patientGender: validatedFields.data.gender,
-    doctorId,
-    hospitalId,
-    appointmentSlot,
-    appointmentDate,
-  };
-
-  // ✅ Explicit success before redirect
-  const params = new URLSearchParams({
-    bookingData: JSON.stringify(bookingDetails),
-  });
-
+  
   return {
     success: true,
     message: 'Booking validated successfully.',
-  } as State;
-
-  // redirect(`/user/verify/phone?${params.toString()}`);
+    data: validatedFields.data,
+  };
 }
 
 export async function completeBooking(bookingData: any) {
   try {
-    const newAppointment = await addAppointmentData({
-      patientName: bookingData.patientName,
-      patientPhone: bookingData.bookerPhone,
-      patientAge: bookingData.patientAge,
-      patientGender: bookingData.patientGender,
-      symptoms: bookingData.symptoms,
-      doctorId: bookingData.doctorId,
-      hospitalId: bookingData.hospitalId,
-      appointmentSlot: bookingData.appointmentSlot,
-      appointmentDate: bookingData.appointmentDate,
-      bookedBy:
-        bookingData.bookingFor === 'myself'
-          ? bookingData.patientName
-          : 'Someone Else',
-      relationship: '', // Set to empty or remove if not needed in DB
+    const newAppointment = await prisma.appointment.create({
+      data: {
+        patientName: bookingData.patientName,
+        patientPhone: bookingData.phone,
+        patientAge: bookingData.patientAge,
+        patientGender: bookingData.patientGender,
+        symptoms: bookingData.symptoms,
+        doctorId: bookingData.doctorId,
+        hospitalId: bookingData.hospitalId,
+        appointmentSlot: bookingData.appointmentSlot,
+        appointmentDate: bookingData.appointmentDate,
+        status: 'confirmed',
+      },
     });
 
     if (newAppointment) {
       revalidatePath('/doctor-portal/appointments');
       revalidatePath('/hospital-admin/appointments');
+      revalidatePath('/user/appointments');
+      redirect(`/user/confirmation/${newAppointment.id}?success=true`);
+    } else {
+        throw new Error('Appointment creation failed.');
     }
   } catch (error) {
     console.error('Data saving failed:', error);
@@ -110,6 +95,4 @@ export async function completeBooking(bookingData: any) {
       message: 'An error occurred while processing your appointment.',
     };
   }
-
-  redirect(`/user/appointments?success=true`);
 }

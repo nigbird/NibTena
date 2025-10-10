@@ -13,8 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
+// In a real app, this would come from an authentication session
+const LOGGED_IN_HOSPITAL_ID = 1;
 
 type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 
@@ -43,8 +43,8 @@ export default function QueueManagementPage() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const [allAppointments, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(MOCK_HOSPITAL_ID),
-        getDoctorsByHospitalId(MOCK_HOSPITAL_ID),
+        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
       ]);
 
        const todaysAppointments = allAppointments

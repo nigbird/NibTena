@@ -75,7 +75,7 @@ export async function completeBooking(bookingData: any) {
         doctorId: bookingData.doctorId,
         hospitalId: bookingData.hospitalId,
         appointmentSlot: bookingData.appointmentSlot,
-        appointmentDate: bookingData.appointmentDate,
+        appointmentDate: new Date(bookingData.appointmentDate),
         status: 'confirmed',
       },
     });

@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format } from 'date-fns';
-import { Hospital as HospitalIcon } from 'lucide-react';
+import { Hospital as HospitalIcon, Clock } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const availableSlots = [
   '09:00 AM',
@@ -36,6 +36,15 @@ const availableSlots = [
   '04:30 PM',
 ];
 
+// Generate dates for the next 14 days
+const generateDates = () => {
+  const dates = [];
+  for (let i = 0; i < 14; i++) {
+    dates.push(addDays(new Date(), i));
+  }
+  return dates;
+};
+
 type DoctorBookingProps = {
   doctor: Doctor;
   doctorHospitals: Hospital[];
@@ -51,12 +60,13 @@ export default function DoctorBooking({
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | undefined>(
     initialHospitalId?.toString()
   );
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dates, setDates] = useState(generateDates());
+  const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const handleBookNow = () => {
-    if (selectedHospitalId && date && selectedSlot) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
+    if (selectedHospitalId && selectedDate && selectedSlot) {
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const params = new URLSearchParams({
         hospitalId: selectedHospitalId,
         date: formattedDate,
@@ -65,77 +75,99 @@ export default function DoctorBooking({
       router.push(`/user/book/${doctor.id}?${params.toString()}`);
     }
   };
+  
+  const selectedHospital = doctorHospitals.find(h => h.id === Number(selectedHospitalId));
 
   return (
-    <div className="space-y-6">
-      {doctorHospitals.length > 1 && (
-         <div className="space-y-2">
-            <Label className="font-semibold text-lg flex items-center gap-2">
-                <HospitalIcon className="h-5 w-5" />
-                Select Hospital
-            </Label>
-            <Select
-              value={selectedHospitalId}
-              onValueChange={setSelectedHospitalId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a hospital" />
-              </SelectTrigger>
-              <SelectContent>
-                {doctorHospitals.map((hospital) => (
-                  <SelectItem key={hospital.id} value={String(hospital.id)}>
-                    {hospital.name} - {hospital.city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="space-y-8">
+        <div>
+            {doctorHospitals.length > 1 ? (
+                 <div className="space-y-2">
+                    <Label className="font-semibold text-lg flex items-center gap-2">
+                        <HospitalIcon className="h-5 w-5" />
+                        Select Hospital
+                    </Label>
+                    <Select
+                    value={selectedHospitalId}
+                    onValueChange={setSelectedHospitalId}
+                    >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Choose a hospital" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {doctorHospitals.map((hospital) => (
+                        <SelectItem key={hospital.id} value={String(hospital.id)}>
+                            {hospital.name} - {hospital.city}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+            ) : selectedHospital && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <HospitalIcon className="h-5 w-5" />
+                    <span className="font-medium">{selectedHospital.name}</span>
+                </div>
+            )}
         </div>
-      )}
+
+
+        <div>
+            <h3 className="font-semibold mb-3 text-lg">Select Date</h3>
+            <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex pb-2 space-x-2">
+                    {dates.map((date, index) => (
+                    <button
+                        key={index}
+                        onClick={() => setSelectedDate(date)}
+                        className={cn(
+                        'flex flex-col items-center justify-center p-3 rounded-lg border-2 w-20 h-24 transition-colors',
+                        selectedDate.toDateString() === date.toDateString()
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card hover:bg-muted'
+                        )}
+                    >
+                        <span className="text-sm font-semibold">{format(date, 'EEE')}</span>
+                        <span className="text-2xl font-bold">{format(date, 'd')}</span>
+                        <span className="text-xs">{format(date, 'MMM')}</span>
+                    </button>
+                    ))}
+                </div>
+            </ScrollArea>
+        </div>
       
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label className="font-semibold text-lg">Select Date</Label>
-          <Card>
-            <CardContent className="p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  disabled={(d) => d < addDays(new Date(), -1)}
-                  className="rounded-md"
-                />
-            </CardContent>
-          </Card>
+        <div>
+            <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5"/>
+                Available Slots for {format(selectedDate, 'MMMM d')}
+            </h3>
+             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {availableSlots.map((slot) => (
+                <Button
+                    key={slot}
+                    variant="outline"
+                    className={cn(
+                    'w-full h-12',
+                    selectedSlot === slot && 'bg-accent text-accent-foreground'
+                    )}
+                    onClick={() => setSelectedSlot(slot)}
+                >
+                    {slot}
+                </Button>
+                ))}
+            </div>
         </div>
-        <div className="space-y-2">
-          <Label className="font-semibold text-lg">Select Time</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {availableSlots.map((slot) => (
-              <Button
-                key={slot}
-                variant="outline"
-                className={cn(
-                  'w-full',
-                  selectedSlot === slot && 'bg-accent text-accent-foreground'
-                )}
-                onClick={() => setSelectedSlot(slot)}
-              >
-                {slot}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
       
       <Button
         size="lg"
         className="w-full font-bold text-lg"
         onClick={handleBookNow}
-        disabled={!selectedHospitalId || !date || !selectedSlot}
+        disabled={!selectedHospitalId || !selectedDate || !selectedSlot}
         variant="accent"
       >
-        Book Now
+        Book Appointment
       </Button>
     </div>
   );
 }
+

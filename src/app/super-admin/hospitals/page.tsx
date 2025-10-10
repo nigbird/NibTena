@@ -1,6 +1,8 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Hospital as HospitalIcon, Search } from "lucide-react";
@@ -9,10 +11,17 @@ import { getHospitals } from './actions';
 import type { Hospital } from '@/lib/definitions';
 import HospitalList from '@/components/super-admin/hospital-list';
 import HospitalFormDrawer from '@/components/super-admin/hospital-form-drawer';
+import PaginationControls from '@/components/PaginationControls';
 
+const ITEMS_PER_PAGE = 10;
 
 export default function SuperAdminHospitalsPage() {
+  const searchParams = useSearchParams();
+  const page = searchParams.get('page') ?? '1';
+  const perPage = searchParams.get('per_page') ?? ITEMS_PER_PAGE.toString();
+
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [totalHospitals, setTotalHospitals] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +30,7 @@ export default function SuperAdminHospitalsPage() {
   const fetchHospitals = useCallback(async () => {
     const data = await getHospitals();
     setHospitals(data);
+    setTotalHospitals(data.length);
   }, []);
 
   useEffect(() => {
@@ -34,6 +44,8 @@ export default function SuperAdminHospitalsPage() {
       hospital.city.toLowerCase().includes(lowercasedFilter)
     );
     setFilteredHospitals(filtered);
+    // Since we're filtering on the client, we also update the total count
+    setTotalHospitals(filtered.length);
   }, [searchTerm, hospitals]);
 
   const handleAddClick = () => {
@@ -50,6 +62,13 @@ export default function SuperAdminHospitalsPage() {
     fetchHospitals();
     setIsDrawerOpen(false);
   }
+
+  // Paginate the client-side filtered data
+  const pageAsNumber = Number(page);
+  const perPageAsNumber = Number(perPage);
+  const start = (pageAsNumber - 1) * perPageAsNumber;
+  const end = start + perPageAsNumber;
+  const paginatedHospitals = filteredHospitals.slice(start, end);
 
   return (
     <div className="space-y-6">
@@ -88,9 +107,9 @@ export default function SuperAdminHospitalsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredHospitals.length > 0 ? (
+          {paginatedHospitals.length > 0 ? (
             <HospitalList 
-              hospitals={filteredHospitals}
+              hospitals={paginatedHospitals}
               onEdit={handleEditClick}
               onActionSuccess={handleActionSuccess}
             />
@@ -102,6 +121,14 @@ export default function SuperAdminHospitalsPage() {
             </div>
           )}
         </CardContent>
+         <div className="flex justify-center p-4">
+            <PaginationControls
+                hasNextPage={end < totalHospitals}
+                hasPrevPage={start > 0}
+                totalCount={totalHospitals}
+                itemsPerPage={perPageAsNumber}
+            />
+        </div>
       </Card>
     </div>
   );

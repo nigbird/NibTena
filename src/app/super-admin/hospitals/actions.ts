@@ -13,7 +13,6 @@ const HospitalFormSchema = z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   accountNumber: z.string().min(10, { message: 'Please enter a valid account number.' }),
-  status: z.enum(['active', 'inactive']),
 });
 
 export type HospitalFormState = {
@@ -34,6 +33,7 @@ export async function saveHospital(
   hospitalId: number | null,
   formData: FormData
 ): Promise<HospitalFormState> {
+
   const validatedFields = HospitalFormSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -45,7 +45,10 @@ export async function saveHospital(
       success: false,
     };
   }
-  const data = validatedFields.data;
+  const data = {
+    ...validatedFields.data,
+    status: formData.get('status') === 'on' ? 'active' : ('inactive' as 'active' | 'inactive'),
+  };
 
   try {
     if (hospitalId) {
@@ -54,10 +57,8 @@ export async function saveHospital(
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
       await prisma.hospital.create({ data: { ...data, imageId } });
     }
-
-    // Client-side will refetch, so revalidation is not strictly needed here
-    // and can cause loops in development with some setups.
-    // revalidatePath('/super-admin/hospitals');
+    
+    revalidatePath('/super-admin/hospitals');
     
     return {
       success: true,
@@ -90,9 +91,15 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
     }
 }
 
-export async function getHospitals() {
-  console.debug('[getHospitals] fetching hospitals');
-  const results = await prisma.hospital.findMany({ orderBy: { name: 'asc' } });
-  console.debug('[getHospitals] fetched', results.length, 'hospitals');
+export async function getHospitals(page: number, limit: number) {
+  const results = await prisma.hospital.findMany({
+    orderBy: { name: 'asc' },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
   return results;
+}
+
+export async function getHospitalsCount() {
+    return await prisma.hospital.count();
 }

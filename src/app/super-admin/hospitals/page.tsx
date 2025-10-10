@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,12 @@ import HospitalList from '@/components/super-admin/hospital-list';
 import HospitalFormDrawer from '@/components/super-admin/hospital-form-drawer';
 import PaginationControls from '@/components/PaginationControls';
 
-const ITEMS_PER_PAGE = 10;
-
-export default function SuperAdminHospitalsPage() {
+function HospitalsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const page = searchParams.get('page') ?? '1';
-  const perPage = searchParams.get('per_page') ?? ITEMS_PER_PAGE.toString();
+  const perPage = searchParams.get('per_page') ?? '10';
   const query = searchParams.get('query') ?? '';
   
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -27,17 +26,25 @@ export default function SuperAdminHospitalsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
   const [searchTerm, setSearchTerm] = useState(query);
-
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchHospitalsAndCount = useCallback(async () => {
+    setIsLoading(true);
     const pageAsNumber = Number(page);
     const perPageAsNumber = Number(perPage);
-    const [data, count] = await Promise.all([
-      getHospitals(pageAsNumber, perPageAsNumber, query),
-      getHospitalsCount(query),
-    ]);
-    setHospitals(data);
-    setTotalHospitals(count);
+    try {
+        const [data, count] = await Promise.all([
+          getHospitals(pageAsNumber, perPageAsNumber, query),
+          getHospitalsCount(query),
+        ]);
+        setHospitals(data);
+        setTotalHospitals(count);
+    } catch (error) {
+        console.error("Failed to fetch hospitals:", error);
+        // Handle error, e.g., show a toast notification
+    } finally {
+        setIsLoading(false);
+    }
   }, [page, perPage, query]);
   
   useEffect(() => {
@@ -66,11 +73,6 @@ export default function SuperAdminHospitalsPage() {
     fetchHospitalsAndCount();
     setIsDrawerOpen(false);
   }
-
-  const pageAsNumber = Number(page);
-  const perPageAsNumber = Number(perPage);
-  const start = (pageAsNumber - 1) * perPageAsNumber;
-  const end = start + perPageAsNumber;
 
   return (
     <div className="space-y-6">
@@ -108,7 +110,11 @@ export default function SuperAdminHospitalsPage() {
           </form>
         </CardHeader>
         <CardContent>
-          {hospitals.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center p-12">
+                <p>Loading...</p>
+            </div>
+          ) : hospitals.length > 0 ? (
             <HospitalList
               hospitals={hospitals}
               onEdit={handleEditClick}
@@ -122,17 +128,20 @@ export default function SuperAdminHospitalsPage() {
             </div>
           )}
         </CardContent>
-        {totalHospitals > ITEMS_PER_PAGE && (
-          <div className="flex justify-center p-4">
-            <PaginationControls
-              hasNextPage={end < totalHospitals}
-              hasPrevPage={start > 0}
-              totalCount={totalHospitals}
-              itemsPerPage={perPageAsNumber}
-            />
-          </div>
+        {totalHospitals > 0 && (
+          <CardFooter className="border-t p-4">
+             <PaginationControls totalCount={totalHospitals} />
+          </CardFooter>
         )}
       </Card>
     </div>
   );
+}
+
+export default function SuperAdminHospitalsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <HospitalsPageContent />
+        </Suspense>
+    )
 }

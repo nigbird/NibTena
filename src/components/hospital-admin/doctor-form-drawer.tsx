@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { addDoctor, type DoctorFormState } from "@/app/hospital-admin/doctors/actions";
+import { saveDoctor, type DoctorFormState } from "@/app/hospital-admin/doctors/actions";
 import { getSpecialties } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
@@ -32,7 +32,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const isEditing = !!doctorToEdit;
   const initialState: DoctorFormState = { message: null, errors: {} };
   
-  const action = isEditing ? addDoctor.bind(null, hospitalId, doctorToEdit.id) : addDoctor.bind(null, hospitalId, null);
+  const action = isEditing ? saveDoctor.bind(null, hospitalId, doctorToEdit.id) : saveDoctor.bind(null, hospitalId, null);
   const [state, formAction] = useActionState<DoctorFormState, FormData>(action, initialState);
 
   const { toast } = useToast();

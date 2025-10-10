@@ -64,8 +64,9 @@ export async function startBookingProcess(
 }
 
 export async function completeBooking(bookingData: any) {
+  let newAppointment;
   try {
-    const newAppointment = await prisma.appointment.create({
+    newAppointment = await prisma.appointment.create({
       data: {
         patientName: bookingData.patientName,
         patientPhone: bookingData.phone,
@@ -79,20 +80,24 @@ export async function completeBooking(bookingData: any) {
         status: 'confirmed',
       },
     });
-
-    if (newAppointment) {
-      revalidatePath('/doctor-portal/appointments');
-      revalidatePath('/hospital-admin/appointments');
-      revalidatePath('/user/appointments');
-      redirect(`/user/appointments?success=true`);
-    } else {
-        throw new Error('Appointment creation failed.');
-    }
   } catch (error) {
     console.error('Data saving failed:', error);
     return {
       success: false,
       message: 'An error occurred while processing your appointment.',
+    };
+  }
+
+  if (newAppointment) {
+    revalidatePath('/doctor-portal/appointments');
+    revalidatePath('/hospital-admin/appointments');
+    revalidatePath('/user/appointments');
+    // Redirect must be called outside of try/catch
+    redirect(`/user/appointments?success=true`);
+  } else {
+    return {
+        success: false,
+        message: 'Appointment creation failed.',
     };
   }
 }

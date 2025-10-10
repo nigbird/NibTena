@@ -13,7 +13,7 @@ const HospitalFormSchema = z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   accountNumber: z.string().min(10, { message: 'Please enter a valid account number.' }),
-  status: z.enum(['active', 'inactive']).optional().default('active'),
+  status: z.enum(['active', 'inactive']),
 });
 
 export type HospitalFormState = {
@@ -36,7 +36,7 @@ export async function saveHospital(
   formData: FormData
 ): Promise<HospitalFormState> {
   
-  const statusValue = formData.get('status') === 'active' ? 'active' : 'inactive';
+  const statusValue = formData.get('status') === 'on' ? 'active' : 'inactive';
 
   const validatedFields = HospitalFormSchema.safeParse({
     name: formData.get('name'),

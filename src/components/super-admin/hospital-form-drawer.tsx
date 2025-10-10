@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
@@ -59,12 +60,18 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
         description: state.message,
       });
       onActionSuccess();
-    } else if (state.message) {
+    } else if (state.message && state.errors) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: state.message,
+        title: "Error saving hospital",
+        description: Object.values(state.errors).flat().join('\n') || state.message,
       });
+    } else if (state.message) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: state.message,
+        });
     }
   }, [state, onActionSuccess, toast]);
   
@@ -73,7 +80,7 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
       formRef.current?.reset();
     }
   }, [isOpen]);
-
+  
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-xl w-full flex flex-col">
@@ -131,14 +138,13 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
               <Switch
                 id="status-switch"
                 name="status"
-                value={isEditing && hospitalToEdit?.status === 'inactive' ? 'inactive' : 'active'}
                 defaultChecked={!isEditing || hospitalToEdit?.status === 'active'}
               />
               <Label htmlFor="status-switch">Active</Label>
             </div>
           </form>
         </ScrollArea>
-        <SheetFooter className="mt-auto border-t pt-4">
+        <SheetFooter className="mt-auto border-t pt-4 -mx-6 px-6">
           <SheetClose asChild>
             <Button type="button" variant="outline">Cancel</Button>
           </SheetClose>

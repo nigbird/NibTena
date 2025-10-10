@@ -35,61 +35,68 @@ export async function saveHospital(
   prevState: HospitalFormState, 
   formData: FormData
 ): Promise<HospitalFormState> {
+  console.debug('[saveHospital] start', { hospitalId });
+
+  const validatedFields = HospitalFormSchema.safeParse({
+    name: formData.get('name')?.toString() || '',
+    description: formData.get('description')?.toString() || '',
+    city: formData.get('city')?.toString() || '',
+    contactEmail: formData.get('contactEmail')?.toString() || '',
+    contactPhone: formData.get('contactPhone')?.toString() || '',
+    accountNumber: formData.get('accountNumber')?.toString() || '',
+    status: formData.get('status')?.toString() || 'inactive',
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to save hospital. Please check the fields.',
+      success: false,
+    };
+  }
+  const data = validatedFields.data;
+
   try {
-    const statusValue = formData.get('status') === 'on' ? 'active' : 'inactive';
-
-    const validatedFields = HospitalFormSchema.safeParse({
-      name: formData.get('name')?.toString() || '',
-      description: formData.get('description')?.toString() || '',
-      city: formData.get('city')?.toString() || '',
-      contactEmail: formData.get('contactEmail')?.toString() || '',
-      contactPhone: formData.get('contactPhone')?.toString() || '',
-      accountNumber: formData.get('accountNumber')?.toString() || '',
-      status: statusValue,
-    });
-
-    if (!validatedFields.success) {
-      return {
-        errors: validatedFields.error.flatten().fieldErrors,
-        message: 'Failed to save hospital. Please check the fields.',
-        success: false,
-      };
-    }
-    const data = validatedFields.data;
-
     if (hospitalId) {
       // Editing existing hospital
+      console.debug('[saveHospital] updating hospital', { hospitalId, data });
       await prisma.hospital.update({ where: { id: hospitalId }, data });
+      console.debug('[saveHospital] update complete', { hospitalId });
     } else {
       // Adding new hospital
+      // pick a random placeholder image (use full range of array)
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
+      console.debug('[saveHospital] creating hospital, imageId=', imageId, 'data=', data);
       await prisma.hospital.create({ data: { ...data, imageId } });
+      console.debug('[saveHospital] create complete');
     }
     
-    revalidatePath('/super-admin/hospitals');
+  // Client will refetch hospitals after action success; avoid server-side revalidation here
+  console.debug('[saveHospital] skipping revalidatePath (client will refresh)');
     return {
       success: true,
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,
     };
-  } catch (error) {
-    console.error("Save hospital error:", error)
+  } catch (error: any) {
+    // Log full error so we can see Prisma details (code/meta) in server logs
+    console.error('[saveHospital] caught error', error);
+    if (error?.code === 'P2002') {
+      console.error('[saveHospital] Unique constraint failed:', error.meta);
+    }
     return {
-      message: 'Database Error: Failed to save hospital.',
+      message: `Database Error: Failed to save hospital. ${error?.message ?? ''}`,
       success: false,
     };
   }
 }
-export async function getHospitalById(hospitalId: number) {
-  return await prisma.hospital.findUnique({
-    where: { id: hospitalId },
-  });
-}
+
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean, message: string }> {
     try {
         await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
         await prisma.appointment.deleteMany({ where: { hospitalId } });
-        await prisma.hospital.delete({ where: { id: hospitalId } });
-        revalidatePath('/super-admin/hospitals');
+  await prisma.hospital.delete({ where: { id: hospitalId } });
+  // Client will refresh list; avoid server revalidation which can cause dev loop
+  console.debug('[deleteHospital] skipped revalidatePath');
         return { success: true, message: 'Hospital deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete hospital.' };
@@ -97,7 +104,8 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
 }
 
 export async function getHospitals() {
-    return await prisma.hospital.findMany({
-        orderBy: { name: 'asc' },
-    });
+  console.debug('[getHospitals] fetching hospitals');
+  const results = await prisma.hospital.findMany({ orderBy: { name: 'asc' } });
+  console.debug('[getHospitals] fetched', results.length, 'hospitals');
+  return results;
 }

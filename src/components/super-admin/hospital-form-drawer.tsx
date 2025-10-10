@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Sheet,
@@ -35,7 +34,10 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   return (
     <Button type="submit" form="hospital-form" disabled={pending} variant="accent">
       {pending ? (
-        <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
+        <>
+          <Loader2 className="animate-spin mr-2" />
+          {isEditing ? 'Saving...' : 'Adding...'}
+        </>
       ) : (
         isEditing ? 'Save Changes' : 'Add Hospital'
       )}
@@ -43,15 +45,27 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess, hospitalToEdit }: HospitalFormDrawerProps) {
+export default function HospitalFormDrawer({
+  isOpen,
+  setIsOpen,
+  onActionSuccess,
+  hospitalToEdit,
+}: HospitalFormDrawerProps) {
   const isEditing = !!hospitalToEdit;
   const initialState: HospitalFormState = { message: null, errors: {} };
-  
-  const action = isEditing ? saveHospital.bind(null, hospitalToEdit.id) : saveHospital.bind(null, null);
-  const [state, formAction] = useActionState<HospitalFormState, FormData>(action, initialState);
 
+  const action = isEditing
+    ? saveHospital.bind(null, hospitalToEdit.id)
+    : saveHospital.bind(null, null);
+
+  const [state, formAction] = useActionState<HospitalFormState, FormData>(action, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+
+  // ✅ Added local state for switch control
+  const [isActive, setIsActive] = useState(
+    !isEditing || hospitalToEdit?.status === 'active'
+  );
 
   useEffect(() => {
     if (state.success) {
@@ -67,66 +81,114 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
         description: Object.values(state.errors).flat().join('\n') || state.message,
       });
     } else if (state.message) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: state.message,
-        });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: state.message,
+      });
     }
   }, [state, onActionSuccess, toast]);
-  
+
   useEffect(() => {
     if (!isOpen) {
       formRef.current?.reset();
     }
   }, [isOpen]);
-  
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-xl w-full flex flex-col">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Hospital' : 'Add New Hospital'}</SheetTitle>
           <SheetDescription>
-            {isEditing ? "Update the hospital's details below." : "Enter the details for the new hospital."}
+            {isEditing
+              ? "Update the hospital's details below."
+              : "Enter the details for the new hospital."}
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
-          <form ref={formRef} action={formAction} id="hospital-form" className="grid gap-6 py-4">
+          <form
+            ref={formRef}
+            action={formAction}
+            id="hospital-form"
+            className="grid gap-6 py-4"
+          >
             <div className="space-y-2">
-                <Label htmlFor="name">Hospital Name</Label>
-                <Input id="name" name="name" defaultValue={hospitalToEdit?.name} required />
-                {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>}
+              <Label htmlFor="name">Hospital Name</Label>
+              <Input id="name" name="name" defaultValue={hospitalToEdit?.name} required />
+              {state.errors?.name && (
+                <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>
+              )}
             </div>
-            
+
             <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" defaultValue={hospitalToEdit?.description} required />
-                {state.errors?.description && <p className="text-sm font-medium text-destructive">{state.errors.description[0]}</p>}
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                defaultValue={hospitalToEdit?.description}
+                required
+              />
+              {state.errors?.description && (
+                <p className="text-sm font-medium text-destructive">{state.errors.description[0]}</p>
+              )}
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
-                    {state.errors?.city && <p className="text-sm font-medium text-destructive">{state.errors.city[0]}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="accountNumber">Account Number</Label>
-                    <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
-                    {state.errors?.accountNumber && <p className="text-sm font-medium text-destructive">{state.errors.accountNumber[0]}</p>}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
+                {state.errors?.city && (
+                  <p className="text-sm font-medium text-destructive">{state.errors.city[0]}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="accountNumber">Account Number</Label>
+                <Input
+                  id="accountNumber"
+                  name="accountNumber"
+                  defaultValue={hospitalToEdit?.accountNumber}
+                  required
+                />
+                {state.errors?.accountNumber && (
+                  <p className="text-sm font-medium text-destructive">
+                    {state.errors.accountNumber[0]}
+                  </p>
+                )}
+              </div>
             </div>
-             <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="contactEmail">Contact Email</Label>
-                    <Input id="contactEmail" name="contactEmail" type="email" defaultValue={hospitalToEdit?.contactEmail} required />
-                    {state.errors?.contactEmail && <p className="text-sm font-medium text-destructive">{state.errors.contactEmail[0]}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="contactPhone">Contact Phone</Label>
-                    <Input id="contactPhone" name="contactPhone" type="tel" defaultValue={hospitalToEdit?.contactPhone} required />
-                    {state.errors?.contactPhone && <p className="text-sm font-medium text-destructive">{state.errors.contactPhone[0]}</p>}
-                </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  name="contactEmail"
+                  type="email"
+                  defaultValue={hospitalToEdit?.contactEmail}
+                  required
+                />
+                {state.errors?.contactEmail && (
+                  <p className="text-sm font-medium text-destructive">
+                    {state.errors.contactEmail[0]}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone</Label>
+                <Input
+                  id="contactPhone"
+                  name="contactPhone"
+                  type="tel"
+                  defaultValue={hospitalToEdit?.contactPhone}
+                  required
+                />
+                {state.errors?.contactPhone && (
+                  <p className="text-sm font-medium text-destructive">
+                    {state.errors.contactPhone[0]}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -134,19 +196,23 @@ export default function HospitalFormDrawer({ isOpen, setIsOpen, onActionSuccess,
               <Input id="photo" name="photo" type="file" />
             </div>
 
+            {/* ✅ Fixed Switch and Status Handling */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="status-switch"
-                name="status"
-                defaultChecked={!isEditing || hospitalToEdit?.status === 'active'}
+                checked={isActive}
+                onCheckedChange={setIsActive}
               />
               <Label htmlFor="status-switch">Active</Label>
+              <input type="hidden" name="status" value={isActive ? 'active' : 'inactive'} />
             </div>
           </form>
         </ScrollArea>
         <SheetFooter className="mt-auto border-t pt-4 -mx-6 px-6">
           <SheetClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
           </SheetClose>
           <SubmitButton isEditing={isEditing} />
         </SheetFooter>

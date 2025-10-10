@@ -90,12 +90,12 @@ export default function AppointmentCard({
         </div>
 
         <div className="text-sm text-muted-foreground space-y-2 border-t pt-3">
-             <div className="flex items-center justify-center gap-6 font-semibold text-secondary">
-                <div className="flex items-center gap-2">
+             <div className="flex items-center justify-center gap-6">
+                <div className="flex items-center gap-2 font-semibold text-secondary">
                     <Calendar className="h-4 w-4" />
                     <span>Appointment Date: {format(new Date(appointment.appointmentDate), 'PPP')}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 font-semibold text-secondary">
                     <Clock className="h-4 w-4" />
                     <span>{appointment.appointmentSlot}</span>
                 </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -44,8 +45,11 @@ export default function RescheduleDrawer({ isOpen, setIsOpen, appointment, onRes
     if (!date) return;
     
     setIsLoading(true);
-    await onReschedule(format(date, 'yyyy-MM-dd'), slot);
-    setIsLoading(false);
+    try {
+        await onReschedule(format(date, 'yyyy-MM-dd'), slot);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -37,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteHospital } from '@/app/super-admin/hospitals/actions';
+import { deleteHospital, updateHospitalStatus } from '@/app/super-admin/hospitals/actions';
 import { useToast } from '@/hooks/use-toast';
 
 type HospitalListProps = {
@@ -67,6 +68,17 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
     }
     setIsAlertOpen(false);
     setSelectedHospital(null);
+  };
+
+  const handleToggleStatus = async (hospital: Hospital) => {
+    const newStatus = hospital.status === 'active' ? 'inactive' : 'active';
+    const result = await updateHospitalStatus(hospital.id, newStatus);
+     if (result.success) {
+      toast({ title: "Success", description: result.message });
+      onActionSuccess();
+    } else {
+      toast({ variant: "destructive", title: "Error", description: result.message });
+    }
   };
 
   return (
@@ -120,6 +132,10 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => onEdit(hospital)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleStatus(hospital)}>
+                          {hospital.status === 'active' ? <PowerOff className="mr-2 h-4 w-4 text-orange-500" /> : <Power className="mr-2 h-4 w-4 text-green-500" />}
+                          <span>{hospital.status === 'active' ? 'Deactivate' : 'Activate'}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDeleteClick(hospital)} className="text-destructive">

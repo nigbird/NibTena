@@ -45,7 +45,7 @@ export async function saveHospital(
 
   const data = {
     ...validatedFields.data,
-    status: formData.get('status') === 'on' ? 'active' : ('inactive' as 'active' | 'inactive'),
+    status: formData.get('status') === 'active' ? 'active' : ('inactive' as 'active' | 'inactive'),
   };
 
   try {
@@ -74,6 +74,16 @@ export async function saveHospital(
       message: `Database Error: Failed to save hospital.`,
       success: false,
     };
+  }
+}
+
+export async function updateHospitalStatus(hospitalId: number, status: 'active' | 'inactive') {
+  try {
+    await prisma.hospital.update({ where: { id: hospitalId }, data: { status } });
+    revalidatePath('/super-admin/hospitals');
+    return { success: true, message: `Hospital has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
+  } catch (error) {
+    return { success: false, message: 'Database Error: Failed to update hospital status.' };
   }
 }
 

@@ -84,7 +84,7 @@ export async function completeBooking(bookingData: any) {
       revalidatePath('/doctor-portal/appointments');
       revalidatePath('/hospital-admin/appointments');
       revalidatePath('/user/appointments');
-      redirect(`/user/confirmation/${newAppointment.id}?success=true`);
+      redirect(`/user/appointments?success=true`);
     } else {
         throw new Error('Appointment creation failed.');
     }

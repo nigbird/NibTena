@@ -2,7 +2,7 @@
 'use client';
 
 import { Suspense, useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,6 +19,7 @@ import { completeBooking } from '../../book/[doctorId]/actions';
 
 function OtpForm() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const phone = searchParams.get('phone');
     const bookingDataString = searchParams.get('bookingData');
     const { toast } = useToast();
@@ -78,13 +79,16 @@ function OtpForm() {
             return;
         }
 
+        // The success toast is now shown on the appointments page after redirect.
+        // We can still show a verification success message here briefly.
         toast({
             title: "✅ Phone Verified",
-            description: "Your phone number has been successfully verified.",
+            description: "Finalizing your booking...",
         });
 
         if (bookingDataString) {
             const bookingData = JSON.parse(bookingDataString);
+            // This action will handle the redirect
             await completeBooking(bookingData);
         } else {
              toast({
@@ -93,7 +97,7 @@ function OtpForm() {
                 description: "Could not find booking data. Please try again.",
             });
         }
-        setIsLoading(false);
+        // Don't set loading to false here, as the page will be redirected.
     };
 
     return (
@@ -134,7 +138,7 @@ function OtpForm() {
                         </div>
                         </div>
                         <Button type="submit" className="w-full" variant="accent" disabled={isLoading}>
-                            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Continue'}
+                            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Book Appointment'}
                         </Button>
                     </form>
                     <div className="mt-4 text-center text-sm">

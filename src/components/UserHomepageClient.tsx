@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Stethoscope, ArrowRight, Star, Building, Heart, Brain, Bone, Baby, Smile, Sparkles, Search, Hospital, CalendarCheck, User as UserIcon } from 'lucide-react';
+import { Stethoscope, ArrowRight, Building, Heart, Brain, Bone, Baby, Smile, Sparkles, Search, Hospital, CalendarCheck, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Hospital as HospitalType, Doctor } from '@prisma/client';
@@ -246,7 +245,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                       return (
                       <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
                           <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-primary/20 hover:border-primary/60", color)}>
-                              <Icon className="h-8 w-8 z-10 text-primary-foreground" />
+                              <Icon className="h-8 w-8 z-10" />
                           </div>
                           <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
                       </Link>
@@ -345,7 +344,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
                                       </div>
-                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105 font-medium text-base" variant="primary">
+                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105" variant="accent">
                                           <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
                                       </Button>
                                   </div>

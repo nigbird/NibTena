@@ -1,8 +1,6 @@
-
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { getAppointmentsByHospitalId } from '@/lib/data';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import type { Appointment } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,30 +9,34 @@ import { Search, ClipboardList } from 'lucide-react';
 import DoctorAppointmentList from '@/components/doctor-portal/appointment-list';
 import { useToast } from '@/hooks/use-toast';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { getAppointmentsByDoctorIdForDoctor } from './actions';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Mocking a logged-in doctor with ID 1
-const MOCK_DOCTOR_ID = 1;
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled', 'rescheduled'] as const;
 type AppointmentStatusFilter = typeof appointmentStatuses[number];
 
 export default function DoctorAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
-  const { activeHospitalId } = useContext(DoctorPortalContext);
+  const { doctor, activeHospitalId } = useContext(DoctorPortalContext);
 
-  const fetchAppointments = useCallback(async () => {
-    if (!activeHospitalId) return;
-    const data = await getAppointmentsByHospitalId(activeHospitalId);
-    const doctorAppointments = data.filter(a => a.doctorId === MOCK_DOCTOR_ID);
-    setAppointments(doctorAppointments);
-  }, [activeHospitalId]);
-
+  const fetchAppointments = async () => {
+    if (!doctor || !activeHospitalId) return;
+    setIsLoading(true);
+    const data = await getAppointmentsByDoctorIdForDoctor(doctor.id, activeHospitalId);
+    setAppointments(data);
+    setIsLoading(false);
+  };
+  
   useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
+    if (doctor && activeHospitalId) {
+        fetchAppointments();
+    }
+  }, [doctor, activeHospitalId]);
 
   useEffect(() => {
     let newFiltered = appointments.filter(a => {
@@ -70,6 +72,33 @@ export default function DoctorAppointmentsPage() {
       description: 'Appointment has been updated.',
     });
   };
+
+  const renderContent = () => {
+    if (isLoading) {
+       return (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      );
+    }
+    if (filteredAppointments.length > 0) {
+        return (
+            <DoctorAppointmentList
+              appointments={filteredAppointments}
+              onActionSuccess={handleActionSuccess}
+            />
+        );
+    }
+    return (
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+            <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-xl font-semibold font-headline">No appointments found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">There are no appointments that match your current filters.</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -109,18 +138,7 @@ export default function DoctorAppointmentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredAppointments.length > 0 ? (
-            <DoctorAppointmentList
-              appointments={filteredAppointments}
-              onActionSuccess={handleActionSuccess}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-              <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-xl font-semibold font-headline">No appointments found</h3>
-              <p className="mt-2 text-sm text-muted-foreground">There are no appointments that match your current filters.</p>
-            </div>
-          )}
+          {renderContent()}
         </CardContent>
       </Card>
     </div>

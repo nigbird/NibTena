@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { updateDoctor } from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 const DoctorProfileSchema = z.object({
@@ -47,7 +47,11 @@ export async function updateDoctorProfile(
   }
 
   try {
-    const updatedDoctor = await updateDoctor(doctorId, validatedFields.data);
+    const updatedDoctor = await prisma.doctor.update({
+        where: { id: doctorId },
+        data: validatedFields.data,
+    });
+    
     if (updatedDoctor) {
       revalidatePath('/doctor-portal/profile');
       revalidatePath(`/doctors/${doctorId}`); // Revalidate public profile
@@ -68,4 +72,20 @@ export async function updateDoctorProfile(
       success: false,
     };
   }
+}
+
+export async function getSpecialties() {
+  const distinctSpecialties = await prisma.doctor.findMany({
+      select: {
+          specialty: true,
+      },
+      distinct: ['specialty'],
+  });
+  return distinctSpecialties.map(d => d.specialty);
+}
+
+export async function getDoctorById(id: number) {
+    return await prisma.doctor.findUnique({
+        where: { id },
+    });
 }

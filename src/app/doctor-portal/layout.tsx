@@ -1,14 +1,49 @@
 import DoctorPortalSidebar from '@/components/doctor-portal-sidebar';
 import DoctorPortalHeader from '@/components/doctor-portal-header';
 import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-context';
+import { prisma } from '@/lib/prisma';
+import type { Hospital } from '@/lib/definitions';
 
-export default function DoctorPortalLayout({
+// Mocking a logged-in doctor with ID 1
+const MOCK_DOCTOR_ID = 1;
+
+async function getDoctorData() {
+    const doctor = await prisma.doctor.findUnique({
+        where: { id: MOCK_DOCTOR_ID },
+        include: {
+            hospitals: {
+                include: {
+                    hospital: true
+                }
+            }
+        }
+    });
+
+    if (!doctor) {
+        return { doctor: null, doctorHospitals: [] };
+    }
+
+    const doctorHospitals = doctor.hospitals.map(h => h.hospital);
+    
+    // Create a serializable doctor object
+    const serializableDoctor = {
+        ...doctor,
+        hospitalIds: doctor.hospitals.map(h => h.hospitalId),
+    };
+
+    return { doctor: serializableDoctor, doctorHospitals };
+}
+
+
+export default async function DoctorPortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { doctor, doctorHospitals } = await getDoctorData();
+
   return (
-    <DoctorPortalProvider>
+    <DoctorPortalProvider doctor={doctor} doctorHospitals={doctorHospitals}>
       <div className="flex min-h-screen w-full">
         <DoctorPortalSidebar />
         <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">

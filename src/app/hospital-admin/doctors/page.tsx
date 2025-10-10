@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId } from '@/lib/data';
+import { getDoctorsByHospitalId } from './actions';
 import DoctorList from '@/components/hospital-admin/doctor-list';
 import DoctorFormDrawer from '@/components/hospital-admin/doctor-form-drawer';
 

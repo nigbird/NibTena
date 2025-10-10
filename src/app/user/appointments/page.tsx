@@ -1,33 +1,21 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import {
-  getAppointmentsByDoctorId,
+  getMyAppointments,
   getDoctors,
-  updateAppointment,
-} from '@/lib/data';
+} from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, CalendarPlus, FileX } from 'lucide-react';
+import { Search, FileX } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ToastAction } from '@/components/ui/toast';
-
-// Mocking a single patient 'Hana Worku' to match user layout
-async function getMyAppointments(patientName: string): Promise<Appointment[]> {
-  const allDocs = await getDoctors();
-  const allAppointments = await Promise.all(
-    allDocs.map(doc => getAppointmentsByDoctorId(doc.id))
-  );
-  return allAppointments.flat()
-    .filter(a => a.patientName === patientName)
-    .sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
-}
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
@@ -53,7 +41,6 @@ export default function MyAppointmentsPage() {
         description: 'Your appointment has been successfully booked.',
       });
 
-      // Check if profile is complete (mocked with localStorage)
       const profileComplete = localStorage.getItem('profileComplete') === 'true';
       if (!profileComplete) {
          setTimeout(() => {
@@ -73,7 +60,6 @@ export default function MyAppointmentsPage() {
         }, 1500);
       }
       
-      // Clean up the URL
       window.history.replaceState(null, '', '/user/appointments');
     }
   }, [searchParams, toast, router]);
@@ -84,8 +70,8 @@ export default function MyAppointmentsPage() {
       getMyAppointments(loggedInPatientName),
       getDoctors(),
     ]);
-    setAppointments(appointmentData);
-    setDoctors(doctorData);
+    setAppointments(appointmentData as Appointment[]);
+    setDoctors(doctorData as Doctor[]);
     setIsLoading(false);
   };
 
@@ -104,26 +90,24 @@ export default function MyAppointmentsPage() {
   const filteredAppointments = useMemo(() => {
     let filtered = appointments;
 
-    // Filter by status
     if (activeFilter === 'upcoming') {
       filtered = filtered.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
     } else {
       filtered = filtered.filter(a => a.status === activeFilter);
     }
     
-    // Filter by search term
     if (searchTerm) {
         const lowercasedFilter = searchTerm.toLowerCase();
         filtered = filtered.filter(appointment => {
             const doctor = doctors.find(d => d.id === appointment.doctorId);
             return (
                 (doctor && doctor.name.toLowerCase().includes(lowercasedFilter)) ||
-                appointment.appointmentDate.toLowerCase().includes(lowercasedFilter)
+                new Date(appointment.appointmentDate).toLocaleDateString().toLowerCase().includes(lowercasedFilter)
             );
         });
     }
 
-    return filtered;
+    return filtered.sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
   }, [appointments, doctors, activeFilter, searchTerm]);
 
   const renderContent = () => {

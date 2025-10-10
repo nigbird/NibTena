@@ -1,13 +1,10 @@
+
 'use server';
 
 import { z } from 'zod';
-import { 
-  addHospital as addHospitalData, 
-  updateHospital as updateHospitalData,
-  deleteHospital as deleteHospitalData,
-} from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import type { Hospital } from '@/lib/definitions';
+import { placeholderImages } from '@/lib/placeholder-images';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -55,14 +52,16 @@ export async function saveHospital(
       success: false,
     };
   }
+  const data = validatedFields.data;
 
   try {
     if (hospitalId) {
       // Editing existing hospital
-      await updateHospitalData(hospitalId, validatedFields.data);
+      await prisma.hospital.update({ where: { id: hospitalId }, data });
     } else {
       // Adding new hospital
-      await addHospitalData(validatedFields.data);
+       const imageId = placeholderImages[Math.floor(Math.random() * (placeholderImages.length -1)) + 1].id
+      await prisma.hospital.create({ data: { ...data, imageId } });
     }
     
     revalidatePath('/super-admin/hospitals');
@@ -80,10 +79,18 @@ export async function saveHospital(
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean, message: string }> {
     try {
-        await deleteHospitalData(hospitalId);
+        await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
+        await prisma.appointment.deleteMany({ where: { hospitalId } });
+        await prisma.hospital.delete({ where: { id: hospitalId } });
         revalidatePath('/super-admin/hospitals');
         return { success: true, message: 'Hospital deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete hospital.' };
     }
+}
+
+export async function getHospitals() {
+    return await prisma.hospital.findMany({
+        orderBy: { name: 'asc' },
+    });
 }

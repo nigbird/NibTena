@@ -1,14 +1,11 @@
+
 'use server';
 
 import { z } from 'zod';
-import { 
-  addAppointment as addAppointmentData, 
-  updateAppointment as updateAppointmentData,
-  deleteAppointment as deleteAppointmentData,
-} from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
 import { format } from 'date-fns';
+import { prisma } from '@/lib/prisma';
 
 const AppointmentFormSchema = z.object({
   patientName: z.string().min(2, { message: 'Patient name must be at least 2 characters.' }),
@@ -60,31 +57,30 @@ export async function saveAppointment(
     };
   }
   
+  const { appointmentDate, ...rest } = validatedFields.data;
   const dataToSave = {
-      ...validatedFields.data,
-      appointmentDate: format(validatedFields.data.appointmentDate, 'yyyy-MM-dd'),
-      symptoms: validatedFields.data.symptoms || '',
-  }
+    ...rest,
+    appointmentDate: format(appointmentDate, 'yyyy-MM-dd'),
+    symptoms: validatedFields.data.symptoms || '',
+  };
 
   try {
     if (appointmentId) {
-      // Editing existing appointment
-      await updateAppointmentData(appointmentId, dataToSave);
-      revalidatePath('/hospital-admin/appointments');
-      return {
-        success: true,
-        message: 'Appointment updated successfully.',
-      };
+      await prisma.appointment.update({ where: { id: appointmentId }, data: dataToSave });
     } else {
-      // Adding new appointment
-      await addAppointmentData(dataToSave);
-      revalidatePath('/hospital-admin/appointments');
-      return {
-        success: true,
-        message: 'Appointment added successfully.',
-      };
+      const doctor = await prisma.doctor.findUnique({ where: { id: dataToSave.doctorId }, include: { hospitals: true } });
+      if (!doctor || !doctor.hospitals[0]) {
+        throw new Error('Doctor or hospital not found');
+      }
+      await prisma.appointment.create({ data: { ...dataToSave, hospitalId: doctor.hospitals[0].hospitalId } });
     }
+    revalidatePath('/hospital-admin/appointments');
+    return {
+      success: true,
+      message: `Appointment ${appointmentId ? 'updated' : 'added'} successfully.`,
+    };
   } catch (error) {
+    console.error('Save appointment error:', error);
     return {
       message: 'Database Error: Failed to save appointment.',
       success: false,
@@ -94,7 +90,7 @@ export async function saveAppointment(
 
 export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled') {
   try {
-    await updateAppointmentData(appointmentId, { status });
+    await prisma.appointment.update({ where: { id: appointmentId }, data: { status } });
     revalidatePath('/hospital-admin/appointments');
     return { success: true, message: `Appointment status updated to ${status}.` };
   } catch (error) {
@@ -104,10 +100,22 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'co
 
 export async function deleteAppointment(appointmentId: string) {
     try {
-        await deleteAppointmentData(appointmentId);
+        await prisma.appointment.delete({ where: { id: appointmentId } });
         revalidatePath('/hospital-admin/appointments');
         return { success: true, message: 'Appointment deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete appointment.' };
     }
+}
+
+export async function getAppointmentsByHospitalId(hospitalId: number) {
+    return await prisma.appointment.findMany({
+        where: { hospitalId },
+    });
+}
+
+export async function getDoctorsByHospitalId(hospitalId: number) {
+    return await prisma.doctor.findMany({
+        where: { hospitals: { some: { hospitalId } } },
+    });
 }

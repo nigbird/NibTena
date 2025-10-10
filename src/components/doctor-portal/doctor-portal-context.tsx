@@ -2,7 +2,8 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { getDoctorById, getHospitalById } from '@/lib/data';
+import { prisma } from '@/lib/prisma';
+import { getDoctorById } from '@/app/doctor-portal/profile/actions';
 
 // Mocking a logged-in doctor with ID 1
 const MOCK_DOCTOR_ID = 1;
@@ -21,28 +22,26 @@ export const DoctorPortalContext = createContext<DoctorPortalContextType>({
   setActiveHospitalId: () => {},
 });
 
-export const DoctorPortalProvider = ({ children }: { children: ReactNode }) => {
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [doctorHospitals, setDoctorHospitals] = useState<Hospital[]>([]);
+// This is a client component, but it needs data that should be fetched on the server.
+// The data fetching logic is now removed from here. The parent layout will fetch it.
+type DoctorPortalProviderProps = {
+    children: ReactNode;
+    doctor: Doctor | null;
+    doctorHospitals: Hospital[];
+};
+
+export const DoctorPortalProvider = ({ children, doctor: initialDoctor, doctorHospitals: initialHospitals }: DoctorPortalProviderProps) => {
+  const [doctor, setDoctor] = useState<Doctor | null>(initialDoctor);
+  const [doctorHospitals, setDoctorHospitals] = useState<Hospital[]>(initialHospitals);
   const [activeHospitalId, setActiveHospitalId] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadInitialData() {
-      const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
-      if (doctorData) {
-        setDoctor(doctorData);
-
-        const hospitalPromises = doctorData.hospitalIds.map(id => getHospitalById(id));
-        const hospitals = (await Promise.all(hospitalPromises)).filter((h): h is Hospital => !!h);
-        setDoctorHospitals(hospitals);
-
-        if (hospitals.length > 0) {
-          setActiveHospitalId(hospitals[0].id);
-        }
-      }
+    setDoctor(initialDoctor);
+    setDoctorHospitals(initialHospitals);
+    if (initialHospitals.length > 0 && !activeHospitalId) {
+        setActiveHospitalId(initialHospitals[0].id);
     }
-    loadInitialData();
-  }, []);
+  }, [initialDoctor, initialHospitals, activeHospitalId]);
 
   return (
     <DoctorPortalContext.Provider

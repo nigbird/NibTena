@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -16,8 +15,8 @@ import {
   CircleUser,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { getHospitalById } from '@/lib/data';
 import type { Hospital as HospitalType } from '@/lib/definitions';
+import { prisma } from '@/lib/prisma';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,14 +48,8 @@ const bottomNavLinks = [
 // Mocking a logged-in admin for Hospital ID 1
 const MOCK_HOSPITAL_ID = 1;
 
-export default function HospitalAdminSidebar() {
+export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalType | null }) {
   const pathname = usePathname();
-  const [hospital, setHospital] = useState<HospitalType | null>(null);
-
-  useEffect(() => {
-    getHospitalById(MOCK_HOSPITAL_ID).then(setHospital);
-  }, []);
-
   const hospitalImage = placeholderImages.find(p => p.id === hospital?.imageId);
 
   return (

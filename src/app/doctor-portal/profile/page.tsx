@@ -1,10 +1,8 @@
-
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
-import { getDoctorById, getSpecialties } from '@/lib/data';
-import { updateDoctorProfile, type DoctorProfileState } from './actions';
+import { updateDoctorProfile, type DoctorProfileState, getSpecialties } from './actions';
 import type { Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,9 +26,8 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
-
-// Mocking a logged-in doctor with ID 1
-const MOCK_DOCTOR_ID = 1;
+import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -50,23 +47,21 @@ function SubmitButton() {
 }
 
 export default function DoctorProfilePage() {
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const { doctor } = useContext(DoctorPortalContext);
   const [specialties, setSpecialties] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     async function fetchData() {
-      const doctorData = await getDoctorById(MOCK_DOCTOR_ID);
       const specialtiesData = await getSpecialties();
-      setDoctor(doctorData || null);
       setSpecialties(specialtiesData);
     }
     fetchData();
   }, []);
-
+  
   const initialState: DoctorProfileState = { message: null, errors: {} };
-  const updateDoctorAction = updateDoctorProfile.bind(null, MOCK_DOCTOR_ID);
-  const [state, dispatch] = useActionState(updateDoctorAction, initialState);
+  const updateDoctorAction = doctor ? updateDoctorProfile.bind(null, doctor.id) : null;
+  const [state, dispatch] = useActionState(updateDoctorAction!, initialState);
 
   useEffect(() => {
     if (state.success) {
@@ -84,7 +79,21 @@ export default function DoctorProfilePage() {
   }, [state, toast]);
 
   if (!doctor) {
-    return <div>Loading profile...</div>;
+    return (
+       <div className="container mx-auto max-w-4xl py-2">
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-80" />
+                </CardHeader>
+                <CardContent className="space-y-8">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    );
   }
 
   const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
@@ -139,7 +148,7 @@ export default function DoctorProfilePage() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
                     <Label htmlFor="experience">Years of Experience</Label>
-                    <Input id="experience" name="experience" type="number" defaultValue={doctor.experience} required />
+                    <Input id="experience" name="experience" type="number" defaultValue={doctor.experience || ''} required />
                     {state.errors?.experience && <p className="text-sm font-medium text-destructive">{state.errors.experience[0]}</p>}
                 </div>
                 <div className="space-y-2">

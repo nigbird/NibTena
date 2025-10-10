@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Users, ClipboardPlus, Search } from "lucide-react";
 import type { Appointment, Doctor } from '@/lib/definitions';
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import AppointmentList from '@/components/hospital-admin/appointment-list';
 import AppointmentFormDrawer from '@/components/hospital-admin/appointment-form-drawer';
 import { Input } from '@/components/ui/input';

@@ -1,13 +1,11 @@
+
 'use server';
 
 import { z } from 'zod';
-import { 
-  addDoctor as addDoctorData, 
-  updateDoctor as updateDoctorData,
-  deleteDoctor as deleteDoctorData,
-} from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import type { Doctor } from '@/lib/definitions';
+import { placeholderImages } from '@/lib/placeholder-images';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -27,12 +25,11 @@ export type DoctorFormState = {
   };
   message?: string | null;
   success?: boolean;
-  newDoctor?: Doctor;
 };
 
-export async function addDoctor(
+export async function saveDoctor(
   hospitalId: number, 
-  doctorId: number | null, // null for add, number for edit
+  doctorId: number | null,
   prevState: DoctorFormState, 
   formData: FormData
 ): Promise<DoctorFormState> {
@@ -52,27 +49,36 @@ export async function addDoctor(
     };
   }
 
+  const data = validatedFields.data;
+
   try {
     if (doctorId) {
-      // Editing existing doctor
-      const updatedDoctor = await updateDoctorData(doctorId, validatedFields.data);
-      revalidatePath('/hospital-admin/doctors');
-      return {
-        success: true,
-        message: 'Doctor updated successfully.',
-        newDoctor: updatedDoctor
-      };
+      await prisma.doctor.update({
+        where: { id: doctorId },
+        data,
+      });
     } else {
-      // Adding new doctor
-      const newDoctor = await addDoctorData({ ...validatedFields.data, hospitalId });
-      revalidatePath('/hospital-admin/doctors');
-      return {
-        success: true,
-        message: 'Doctor added successfully.',
-        newDoctor,
-      };
+        const imageId = placeholderImages[Math.floor(Math.random() * (placeholderImages.length -1)) + 1].id
+      await prisma.doctor.create({
+        data: {
+          ...data,
+          imageId,
+          rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
+          hospitals: {
+            create: {
+              hospitalId,
+            }
+          }
+        },
+      });
     }
+    revalidatePath('/hospital-admin/doctors');
+    return {
+      success: true,
+      message: `Doctor ${doctorId ? 'updated' : 'added'} successfully.`,
+    };
   } catch (error) {
+    console.error('Save doctor error:', error);
     return {
       message: 'Database Error: Failed to save doctor.',
       success: false,
@@ -82,7 +88,7 @@ export async function addDoctor(
 
 export async function updateDoctorStatus(doctorId: number, status: 'active' | 'inactive') {
   try {
-    await updateDoctorData(doctorId, { status });
+    await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
     revalidatePath('/hospital-admin/doctors');
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
@@ -92,10 +98,25 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
 
 export async function deleteDoctor(doctorId: number) {
     try {
-        await deleteDoctorData(doctorId);
+        await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });
+        await prisma.appointment.deleteMany({ where: { doctorId } });
+        await prisma.doctor.delete({ where: { id: doctorId } });
         revalidatePath('/hospital-admin/doctors');
         return { success: true, message: 'Doctor deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete doctor.' };
     }
+}
+
+export async function getDoctorsByHospitalId(hospitalId: number) {
+    return await prisma.doctor.findMany({
+        where: {
+            hospitals: {
+                some: { hospitalId }
+            }
+        },
+        orderBy: {
+            name: 'asc'
+        }
+    });
 }

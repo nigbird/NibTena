@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay } from "lucide-react";
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,7 +50,6 @@ export default function QueueManagementPage() {
        const todaysAppointments = allAppointments
         .filter(app => format(parseISO(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
         .map((app, index) => {
-           // In a real app, this would be persisted. We'll use localStorage for a simple mock.
            const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueStatus | null;
            return {
             ...app,
@@ -77,7 +75,6 @@ export default function QueueManagementPage() {
   useEffect(() => {
     fetchTodaysAppointments();
     
-    // Listen for storage changes to update UI in real-time if projection screen is open
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key?.startsWith('queue-status-')) {
         fetchTodaysAppointments();
@@ -93,7 +90,6 @@ export default function QueueManagementPage() {
 
 
   const handleStatusUpdate = (appointmentId: string, newStatus: QueueStatus) => {
-    // Persist status to localStorage for cross-tab communication
     localStorage.setItem(`queue-status-${appointmentId}`, newStatus);
 
     setQueue(currentQueue => currentQueue.map(item =>

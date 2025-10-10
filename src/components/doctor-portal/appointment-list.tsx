@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { updateAppointment } from '@/lib/data';
+import { updateAppointment } from '@/lib/actions';
 import RescheduleDrawer from './reschedule-drawer';
 
 type DoctorAppointmentListProps = {

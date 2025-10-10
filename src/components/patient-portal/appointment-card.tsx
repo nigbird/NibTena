@@ -10,7 +10,6 @@ import {
   Calendar,
   Clock,
   User,
-  Stethoscope,
   RefreshCw,
   X,
 } from 'lucide-react';
@@ -25,8 +24,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { updateAppointment } from '@/lib/data';
+import { updateAppointment } from '@/app/user/appointments/actions';
 import RescheduleDrawer from '@/components/doctor-portal/reschedule-drawer';
+import { format } from 'date-fns';
 
 type AppointmentCardProps = {
   appointment: Appointment;
@@ -88,7 +88,7 @@ export default function AppointmentCard({
         <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
              <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>{appointment.appointmentDate}</span>
+                <span>{format(new Date(appointment.appointmentDate), 'PPP')}</span>
             </div>
             <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />

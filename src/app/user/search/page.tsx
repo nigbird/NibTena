@@ -4,7 +4,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getDoctors, getHospitals } from '@/lib/data';
+import { getDoctorsAndHospitalsByQuery } from './actions';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,55 +13,47 @@ import { User, Hospital as HospitalIcon, Search as SearchIcon } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 import { placeholderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [filteredHospitals, setFilteredHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!query) {
+        setFilteredDoctors([]);
+        setFilteredHospitals([]);
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
-      const [doctorsData, hospitalsData] = await Promise.all([getDoctors(), getHospitals()]);
-      setDoctors(doctorsData);
-      setHospitals(hospitalsData);
+      const { doctors, hospitals } = await getDoctorsAndHospitalsByQuery(query);
+      setFilteredDoctors(doctors as Doctor[]);
+      setFilteredHospitals(hospitals as Hospital[]);
       setIsLoading(false);
     };
     fetchData();
-  }, []);
-  
-  useEffect(() => {
-    if (!query) {
-      setFilteredDoctors([]);
-      setFilteredHospitals([]);
-      return;
-    }
-
-    const lowercasedQuery = query.toLowerCase();
-    
-    const fDocs = doctors.filter(
-      (doc) =>
-        doc.name.toLowerCase().includes(lowercasedQuery) ||
-        doc.specialty.toLowerCase().includes(lowercasedQuery)
-    );
-    setFilteredDoctors(fDocs);
-
-    const fHospitals = hospitals.filter(
-      (h) =>
-        h.name.toLowerCase().includes(lowercasedQuery) ||
-        h.city.toLowerCase().includes(lowercasedQuery)
-    );
-    setFilteredHospitals(fHospitals);
-  }, [query, doctors, hospitals]);
-
+  }, [query]);
 
   if (isLoading) {
-    return <p className="text-center text-muted-foreground mt-8">Loading search results...</p>;
+    return (
+        <div className="p-4 space-y-8">
+            <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-40 w-full" />
+            </div>
+            <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+            </div>
+        </div>
+    );
   }
 
   if (!query) {

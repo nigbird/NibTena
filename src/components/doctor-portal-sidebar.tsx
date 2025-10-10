@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -10,10 +9,8 @@ import {
   User,
   Settings,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { getDoctorById } from '@/lib/data';
+import { useState, useEffect, useContext } from 'react';
 import type { Doctor } from '@/lib/definitions';
-
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
@@ -27,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DoctorPortalContext } from './doctor-portal/doctor-portal-context';
 
 const navLinks = [
   { href: '/doctor-portal', label: 'Dashboard', icon: LayoutGrid },
@@ -34,15 +32,9 @@ const navLinks = [
   { href: '/doctor-portal/schedule', label: 'My Schedule', icon: CalendarDays },
 ];
 
-const MOCK_DOCTOR_ID = 1;
-
 export default function DoctorPortalSidebar() {
   const pathname = usePathname();
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
-
-  useEffect(() => {
-    getDoctorById(MOCK_DOCTOR_ID).then(setDoctor);
-  }, []);
+  const { doctor } = useContext(DoctorPortalContext);
 
   const doctorImage = placeholderImages.find(p => p.id === doctor?.imageId);
 

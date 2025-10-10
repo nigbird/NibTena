@@ -1,10 +1,26 @@
 'use server';
 
-import { getSpecialties as getSpecialtiesData } from './data';
-
-// This file is intended for truly global server actions.
-// Feature-specific actions have been moved to their respective page directories.
+import { prisma } from './prisma';
 
 export async function getSpecialties() {
-  return await getSpecialtiesData();
+  const distinctSpecialties = await prisma.doctor.findMany({
+    select: {
+        specialty: true,
+    },
+    distinct: ['specialty'],
+  });
+  return distinctSpecialties.map(d => d.specialty);
+}
+
+export async function updateAppointment(appointmentId: string, data: { status?: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled', appointmentDate?: string, appointmentSlot?: string }) {
+  try {
+    const updatedAppointment = await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: data,
+    });
+    return updatedAppointment;
+  } catch (error) {
+    console.error('Failed to update appointment:', error);
+    throw new Error('Failed to update appointment.');
+  }
 }

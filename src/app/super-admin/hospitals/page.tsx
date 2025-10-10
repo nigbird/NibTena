@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Hospital as HospitalIcon, Search } from "lucide-react";
 import { Input } from '@/components/ui/input';
-import { getHospitals } from '@/lib/data';
+import { getHospitals } from './actions';
 import type { Hospital } from '@/lib/definitions';
 import HospitalList from '@/components/super-admin/hospital-list';
 import HospitalFormDrawer from '@/components/super-admin/hospital-form-drawer';

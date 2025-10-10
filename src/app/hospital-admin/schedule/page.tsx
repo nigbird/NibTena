@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, Settings, User } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId } from '@/lib/data';
+import { getDoctorsByHospitalId } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
@@ -46,7 +46,6 @@ export default function ScheduleSettingsPage() {
 
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically call a server action to save the settings
     console.log({ bookingWindow, startTime, endTime });
     toast({
       title: 'Settings Saved',
@@ -69,7 +68,6 @@ export default function ScheduleSettingsPage() {
         />
       )}
 
-      {/* Doctor Schedules Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -100,7 +98,6 @@ export default function ScheduleSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Hospital-Wide Booking Rules Card */}
       <form onSubmit={handleHospitalSettingsSave}>
         <Card>
           <CardHeader>

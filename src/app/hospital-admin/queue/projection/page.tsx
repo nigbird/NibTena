@@ -1,15 +1,13 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { format, parseISO } from 'date-fns';
 import { Clock, Play, User, Users } from 'lucide-react';
 import type { QueueItem } from '../page';
 import { Logo } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 
 const MOCK_HOSPITAL_ID = 1;
@@ -49,19 +47,15 @@ export default function QueueProjectionPage() {
   }, []);
 
   useEffect(() => {
-    // Set initial time on client
     if (typeof window !== 'undefined') {
       setCurrentTime(new Date());
     }
 
     fetchAndFilterQueue();
-    // Refresh data every 15 seconds
     const interval = setInterval(fetchAndFilterQueue, 15000);
     
-    // Update time every second
     const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
 
-    // Listen for storage changes to update UI in real-time
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key?.startsWith('queue-status-')) {
         fetchAndFilterQueue();

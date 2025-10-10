@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter } from "lucide-react";
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from '@/lib/data';
+import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
@@ -39,7 +38,6 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Filters
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(addDays(new Date(), -29)),
     to: startOfDay(new Date()),

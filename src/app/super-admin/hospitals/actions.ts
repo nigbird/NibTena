@@ -35,35 +35,34 @@ export async function saveHospital(
   prevState: HospitalFormState, 
   formData: FormData
 ): Promise<HospitalFormState> {
-  
-  const statusValue = formData.get('status') === 'on' ? 'active' : 'inactive';
-
-  const validatedFields = HospitalFormSchema.safeParse({
-    name: formData.get('name'),
-    description: formData.get('description'),
-    city: formData.get('city'),
-    contactEmail: formData.get('contactEmail'),
-    contactPhone: formData.get('contactPhone'),
-    accountNumber: formData.get('accountNumber'),
-    status: statusValue,
-  });
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to save hospital. Please check the fields.',
-      success: false,
-    };
-  }
-  const data = validatedFields.data;
-
   try {
+    const statusValue = formData.get('status') === 'on' ? 'active' : 'inactive';
+
+    const validatedFields = HospitalFormSchema.safeParse({
+      name: formData.get('name')?.toString() || '',
+      description: formData.get('description')?.toString() || '',
+      city: formData.get('city')?.toString() || '',
+      contactEmail: formData.get('contactEmail')?.toString() || '',
+      contactPhone: formData.get('contactPhone')?.toString() || '',
+      accountNumber: formData.get('accountNumber')?.toString() || '',
+      status: statusValue,
+    });
+
+    if (!validatedFields.success) {
+      return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: 'Failed to save hospital. Please check the fields.',
+        success: false,
+      };
+    }
+    const data = validatedFields.data;
+
     if (hospitalId) {
       // Editing existing hospital
       await prisma.hospital.update({ where: { id: hospitalId }, data });
     } else {
       // Adding new hospital
-       const imageId = placeholderImages[Math.floor(Math.random() * (placeholderImages.length -1)) + 1].id
+      const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
       await prisma.hospital.create({ data: { ...data, imageId } });
     }
     
@@ -80,7 +79,11 @@ export async function saveHospital(
     };
   }
 }
-
+export async function getHospitalById(hospitalId: number) {
+  return await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+  });
+}
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean, message: string }> {
     try {
         await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });

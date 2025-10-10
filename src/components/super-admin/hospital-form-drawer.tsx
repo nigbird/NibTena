@@ -33,7 +33,7 @@ type HospitalFormDrawerProps = {
 function SubmitButton({ isEditing }: { isEditing: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} variant="accent">
+    <Button type="submit" form="hospital-form" disabled={pending} variant="accent">
       {pending ? (
         <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
       ) : (

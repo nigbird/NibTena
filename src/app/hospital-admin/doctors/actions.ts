@@ -59,18 +59,22 @@ export async function saveDoctor(
       });
     } else {
         const imageId = placeholderImages[Math.floor(Math.random() * (placeholderImages.length -1)) + 1].id
-      await prisma.doctor.create({
-        data: {
-          ...data,
-          imageId,
-          rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
-          hospitals: {
-            create: {
-              hospitalId,
+        await prisma.doctor.create({
+          data: {
+            name: data.name,
+            specialty: data.specialty,
+            experience: data.experience,
+            consultationFee: data.consultationFee,
+            bio: data.bio,
+            imageId,
+            rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
+            hospitals: {
+              create: {
+                hospitalId,
+              }
             }
-          }
-        },
-      });
+          },
+        });
     }
     revalidatePath('/hospital-admin/doctors');
     return {

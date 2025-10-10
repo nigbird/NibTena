@@ -63,21 +63,10 @@ const PaginationControls = ({ totalCount }: PaginationControlsProps) => {
     return pages;
   }, [page, totalPages]);
 
-
-  if (totalPages <= 1) {
-    return (
-       <div className="flex items-center justify-start text-sm text-muted-foreground">
-        <p>
-          {totalCount} hospital(s) found.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
         <div className="text-sm text-muted-foreground">
-            Page {page} of {totalPages} ({totalCount} hospital(s) found)
+            Page {page} of {totalPages > 0 ? totalPages : 1} ({totalCount} hospital(s) found)
         </div>
         <div className="flex items-center gap-2">
             <Button

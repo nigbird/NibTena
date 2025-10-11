@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useActionState, useEffect, useRef, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useTransition, useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -21,7 +22,7 @@ import { Calendar } from '../ui/calendar';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const availableSlots = [
   '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
@@ -48,17 +49,19 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Ref to prevent multiple toast calls
-  const successToastShownRef = useRef(false);
+  // Separate state for the date picker
+  const [date, setDate] = useState<Date | undefined>(
+    appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : undefined
+  );
+   const [formKey, setFormKey] = useState(Date.now());
 
   useEffect(() => {
-    if (state.success && !isPending && !successToastShownRef.current) {
+    if (state.success && !isPending) {
         toast({
             title: "Success",
             description: state.message,
         });
         onAppointmentSaved();
-        successToastShownRef.current = true; // Mark toast as shown
     } else if (state.message && !state.success && !isPending) {
         toast({
             variant: "destructive",
@@ -69,10 +72,9 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   }, [state, isPending, onAppointmentSaved, toast]);
 
   useEffect(() => {
-    // Reset form and success flag when the drawer is opened or changes mode
     if (isOpen) {
-      formRef.current?.reset();
-      successToastShownRef.current = false;
+      setFormKey(Date.now());
+      setDate(appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : new Date());
     }
   }, [isOpen, appointmentToEdit]);
 
@@ -94,7 +96,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
-            <form ref={formRef} onSubmit={handleSubmit} id="appointment-form" className="space-y-4 py-4">
+            <form key={formKey} ref={formRef} onSubmit={handleSubmit} id="appointment-form" className="space-y-4 py-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="patientName">Patient Name</Label>
@@ -140,17 +142,27 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
               <div className="grid sm:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="appointmentDate">Appointment Date</Label>
+                     <Input type="hidden" name="appointmentDate" value={date ? format(date, "yyyy-MM-dd") : ""} />
                      <Popover>
                         <PopoverTrigger asChild>
-                            <Input name="appointmentDate" id="appointmentDate" defaultValue={appointmentToEdit?.appointmentDate} placeholder="Select a date" className="justify-start text-left font-normal" />
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" onSelect={(date) => {
-                                const input = document.getElementById('appointmentDate') as HTMLInputElement;
-                                if (input && date) {
-                                    input.value = format(date, 'yyyy-MM-dd');
-                                }
-                            }} initialFocus />
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                            />
                         </PopoverContent>
                     </Popover>
                     {state.errors?.appointmentDate && <p className="text-sm font-medium text-destructive">{state.errors.appointmentDate[0]}</p>}

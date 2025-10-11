@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 
 const AppointmentFormSchema = z.object({
@@ -13,7 +13,7 @@ const AppointmentFormSchema = z.object({
   patientAge: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   patientGender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   doctorId: z.coerce.number({required_error: 'Please select a doctor.'}),
-  appointmentDate: z.coerce.date({ required_error: 'Please select a date.' }),
+  appointmentDate: z.string({ required_error: 'Please select a date.' }).min(1, 'Date is required.'),
   appointmentSlot: z.string({ required_error: 'Please select a time slot.' }),
   symptoms: z.string().optional(),
 });
@@ -60,7 +60,7 @@ export async function saveAppointment(
   const { appointmentDate, ...rest } = validatedFields.data;
   const dataToSave = {
     ...rest,
-    appointmentDate: format(appointmentDate, 'yyyy-MM-dd'),
+    appointmentDate: new Date(appointmentDate),
     symptoms: validatedFields.data.symptoms || '',
   };
 
@@ -119,12 +119,13 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
         }),
     };
 
-    return await prisma.appointment.findMany({
+    const appointments = await prisma.appointment.findMany({
         where,
         orderBy: { appointmentDate: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
     });
+    return appointments.map(a => ({...a, appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd')}));
 }
 
 export async function getAppointmentsCount(hospitalId: number, query: string) {

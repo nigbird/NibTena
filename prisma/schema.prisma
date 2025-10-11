@@ -8,42 +8,8 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  patient
-  doctor
-  hospital_admin
-  super_admin
-}
-
-enum Status {
-  active
-  inactive
-}
-
-enum Gender {
-  male
-  female
-}
-
-enum AppointmentStatus {
-  confirmed
-  cancelled
-  completed
-  rescheduled
-}
-
-model User {
-  id        Int      @id @default(autoincrement())
-  fullName  String
-  email     String   @unique
-  phone     String   @unique
-  role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Hospital {
-  id            Int                  @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   name          String
   city          String
   imageId       String
@@ -51,10 +17,13 @@ model Hospital {
   contactEmail  String
   contactPhone  String
   accountNumber String
-  status        Status               @default(active)
+  status        String   @default("active") // active, inactive
   doctors       DoctorsOnHospitals[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  appointments  Appointment[]
+  schedules     DoctorSchedule[]
+  bookingWindow Int      @default(30)
+  startTime     String   @default("08:00")
+  endTime       String   @default("18:00")
 }
 
 model Doctor {
@@ -66,38 +35,50 @@ model Doctor {
   consultationFee Float
   rating          Float
   experience      Int
-  status          Status               @default(active)
+  status          String               @default("active") // active, inactive
   hospitals       DoctorsOnHospitals[]
   appointments    Appointment[]
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  schedules       DoctorSchedule[]
 }
 
 model DoctorsOnHospitals {
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  hospitalId Int
   doctor     Doctor   @relation(fields: [doctorId], references: [id])
   doctorId   Int
-  assignedAt DateTime @default(now())
-  assignedBy String?
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  hospitalId Int
 
-  @@id([hospitalId, doctorId])
+  @@id([doctorId, hospitalId])
 }
 
 model Appointment {
-  id              Int               @id @default(autoincrement())
+  id              String   @id @default(cuid())
   patientName     String
   patientPhone    String
-  patientGender   Gender
   patientAge      Int
+  patientGender   String
   symptoms        String
-  doctor          Doctor            @relation(fields: [doctorId], references: [id])
   doctorId        Int
+  doctor          Doctor   @relation(fields: [doctorId], references: [id])
+  hospitalId      Int
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
   appointmentSlot String
   appointmentDate DateTime
-  status          AppointmentStatus
-  bookedBy        String?
-  relationship    String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  status          String   @default("confirmed") // confirmed, completed, cancelled, rescheduled
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DoctorSchedule {
+  id           Int      @id @default(autoincrement())
+  doctorId     Int
+  doctor       Doctor   @relation(fields: [doctorId], references: [id])
+  hospitalId   Int
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  dayOfWeek    String // e.g., "Monday", "Tuesday"
+  workingHours Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  breakHours   Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([doctorId, hospitalId, dayOfWeek])
 }

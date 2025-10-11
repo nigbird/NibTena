@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarDays, Clock, Settings, User, PlusCircle } from "lucide-react";
+import { CalendarDays, Clock, Settings, PlusCircle } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
+import { updateHospitalSettings } from './actions';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // In a real app, this would come from an authentication session
 const LOGGED_IN_HOSPITAL_ID = 1;
@@ -21,39 +23,44 @@ const LOGGED_IN_HOSPITAL_ID = 1;
 export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingWindow, setBookingWindow] = useState('30');
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchDoctors = useCallback(async () => {
-    const doctorsData = await getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID);
-    setDoctors(doctorsData);
-  }, []);
+  const fetchDoctorsAndSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const doctorsData = await getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID);
+      // In a real app, you would fetch hospital settings here. For now, we'll use local state.
+      setDoctors(doctorsData);
+    } catch (error) {
+       toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch data.'});
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    fetchDoctors();
-  }, [fetchDoctors]);
+    fetchDoctorsAndSettings();
+  }, [fetchDoctorsAndSettings]);
 
   const handleEditScheduleClick = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setIsEditDrawerOpen(true);
   };
   
-  const handleEditDrawerClose = () => {
+  const handleDrawerClose = () => {
     setIsEditDrawerOpen(false);
     setSelectedDoctor(null);
-  }
-
-  const handleAddDrawerClose = () => {
-    setIsAddDrawerOpen(false);
-    fetchDoctors();
+    fetchDoctorsAndSettings(); // Refetch data when a schedule might have been updated
   }
 
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
     e.preventDefault();
+    // This should be a server action
     console.log({ bookingWindow, startTime, endTime });
     toast({
       title: 'Settings Saved',
@@ -68,28 +75,16 @@ export default function ScheduleSettingsPage() {
           <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
           <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
         </div>
-        <Button onClick={() => setIsAddDrawerOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Schedule
-        </Button>
       </div>
 
       {selectedDoctor && (
         <DoctorScheduleDrawer
           isOpen={isEditDrawerOpen}
-          setIsOpen={handleEditDrawerClose}
+          setIsOpen={handleDrawerClose}
           doctor={selectedDoctor}
+          hospitalId={LOGGED_IN_HOSPITAL_ID}
         />
       )}
-      
-      <AddScheduleDrawer
-          isOpen={isAddDrawerOpen}
-          setIsOpen={setIsAddDrawerOpen}
-          doctors={doctors}
-          hospitalId={LOGGED_IN_HOSPITAL_ID}
-          onScheduleSaved={handleAddDrawerClose}
-      />
-
 
       <Card>
         <CardHeader>
@@ -100,24 +95,33 @@ export default function ScheduleSettingsPage() {
           <CardDescription>Manage the weekly availability for each doctor.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {doctors.map(doctor => {
-            const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
-            return (
-              <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                      {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
-                      <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{doctor.name}</p>
-                    <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={() => handleEditScheduleClick(doctor)}>Edit Schedule</Button>
-              </div>
-            )
-          })}
+           {isLoading ? (
+            <div className="space-y-4">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+            </div>
+           ) : doctors.length > 0 ? (
+                doctors.map(doctor => {
+                    const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
+                    return (
+                    <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-4">
+                        <Avatar className="h-12 w-12">
+                            {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                            <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{doctor.name}</p>
+                            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                        </div>
+                        </div>
+                        <Button variant="outline" onClick={() => handleEditScheduleClick(doctor)}>Edit Schedule</Button>
+                    </div>
+                    )
+                })
+           ) : (
+            <p className="text-muted-foreground text-sm text-center py-8">No doctors found for this hospital.</p>
+           )}
         </CardContent>
       </Card>
 

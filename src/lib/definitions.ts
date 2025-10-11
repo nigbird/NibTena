@@ -1,4 +1,5 @@
 
+
 export type User = {
   id: string;
   fullName: string;
@@ -17,6 +18,9 @@ export type Hospital = {
   contactPhone: string;
   accountNumber: string;
   status: 'active' | 'inactive';
+  bookingWindow: number;
+  startTime: string;
+  endTime: string;
 };
 
 export type Doctor = {
@@ -48,4 +52,20 @@ export type Appointment = {
   bookedBy?: string;
   relationship?: string;
   createdAt: string;
+};
+
+export type TimeSlot = {
+  startTime: string;
+  endTime: string;
+};
+
+export type DoctorSchedule = {
+  id: number;
+  doctorId: number;
+  hospitalId: number;
+  dayOfWeek: string;
+  workingHours: TimeSlot[];
+  breakHours: TimeSlot[];
+  createdAt: Date;
+  updatedAt: Date;
 };

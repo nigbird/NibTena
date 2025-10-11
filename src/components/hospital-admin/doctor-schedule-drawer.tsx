@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition, useActionState, useRef } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -12,41 +13,110 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Clock } from 'lucide-react';
-import type { Doctor } from '@/lib/definitions';
+import { Loader2, Trash2, PlusCircle } from 'lucide-react';
+import type { Doctor, DoctorSchedule, TimeSlot } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
+import { getDoctorSchedules, saveDoctorSchedule, type ScheduleSaveState } from '@/app/hospital-admin/schedule/actions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent } from '../ui/card';
 
 type DoctorScheduleDrawerProps = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   doctor: Doctor;
+  hospitalId: number;
 };
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor }: DoctorScheduleDrawerProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+type DaySchedule = {
+  dayOfWeek: string;
+  workingHours: TimeSlot[];
+  breakHours: TimeSlot[];
+}
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospitalId }: DoctorScheduleDrawerProps) {
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [schedules, setSchedules] = useState<DaySchedule[]>(
+     weekDays.map(day => ({ dayOfWeek: day, workingHours: [], breakHours: [] }))
+  );
+  const [isLoading, setIsLoading] = useState(true);
+
+  const initialState: ScheduleSaveState = { message: null, errors: {} };
+  const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
+  const [state, formAction] = useActionState(saveScheduleWithId, initialState);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+      getDoctorSchedules(doctor.id, hospitalId).then(data => {
+        const newSchedules = weekDays.map(day => {
+          const existing = data.find(d => d.dayOfWeek === day);
+          return existing 
+            ? { dayOfWeek: day, workingHours: existing.workingHours as TimeSlot[], breakHours: existing.breakHours as TimeSlot[] } 
+            : { dayOfWeek: day, workingHours: [{startTime: '09:00', endTime: '17:00'}], breakHours: [{startTime: '12:30', endTime: '13:30'}] };
+        });
+        setSchedules(newSchedules);
+        setIsLoading(false);
+      });
+    }
+  }, [isOpen, doctor, hospitalId]);
+
+  useEffect(() => {
+    if (state.success) {
+      toast({ title: "Success", description: state.message });
+      setIsOpen(false);
+    } else if (state.message) {
+      toast({ variant: "destructive", title: "Error", description: state.message });
+    }
+  }, [state, toast, setIsOpen]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsLoading(true);
-    // In a real app, you would save schedule data to the database here
-    console.log("Saving schedule for Dr.", doctor.name);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    toast({
-      title: "Schedule Updated",
-      description: `Dr. ${doctor.name}'s schedule has been saved.`,
+    const formData = new FormData();
+    const scheduleData = {
+        doctorId: doctor.id,
+        schedules: schedules
+    };
+    formData.append('scheduleData', JSON.stringify(scheduleData));
+    
+    startTransition(() => {
+      formAction(formData);
     });
-    setIsOpen(false);
   };
+
+  const handleTimeChange = (day: string, type: 'workingHours' | 'breakHours', index: number, field: 'startTime' | 'endTime', value: string) => {
+    setSchedules(prev => prev.map(s => 
+        s.dayOfWeek === day 
+        ? {
+            ...s,
+            [type]: s[type].map((slot, i) => i === index ? {...slot, [field]: value} : slot)
+          }
+        : s
+    ));
+  };
+  
+  const addSlot = (day: string, type: 'workingHours' | 'breakHours') => {
+     setSchedules(prev => prev.map(s => 
+        s.dayOfWeek === day
+        ? { ...s, [type]: [...s[type], {startTime: '', endTime: ''}]}
+        : s
+    ));
+  };
+  
+  const removeSlot = (day: string, type: 'workingHours' | 'breakHours', index: number) => {
+     setSchedules(prev => prev.map(s => 
+        s.dayOfWeek === day
+        ? { ...s, [type]: s[type].filter((_, i) => i !== index)}
+        : s
+    ));
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent className="sm:max-w-lg flex flex-col">
+      <SheetContent className="sm:max-w-2xl w-full flex flex-col">
         <SheetHeader>
           <SheetTitle>Edit Schedule for {doctor.name}</SheetTitle>
           <SheetDescription>
@@ -54,62 +124,66 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor }: Doct
           </SheetDescription>
         </SheetHeader>
         <form id="schedule-form" onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-6 py-4">
-              {/* Available Days */}
-              <div className="space-y-3">
-                <Label>Available Days</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {weekDays.map(day => (
-                    <div key={day} className="flex items-center space-x-2">
-                      <Checkbox id={`day-${day}`} defaultChecked={!['Saturday', 'Sunday'].includes(day)} />
-                      <Label htmlFor={`day-${day}`} className="font-normal">
-                        {day}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Available Times */}
-              <div className="space-y-3">
-                <Label>Available Time Slots</Label>
-                <div className="p-4 border rounded-lg space-y-4">
-                  <p className="text-sm text-muted-foreground">Define the standard working hours for the available days.</p>
-                  <div className="flex items-center justify-between gap-4">
-                     <div className="w-full space-y-1">
-                        <Label htmlFor="start-time" className="text-xs">Start Time</Label>
-                        <Input id="start-time" type="time" defaultValue="09:00" />
-                     </div>
-                     <div className="pt-5"> - </div>
-                     <div className="w-full space-y-1">
-                        <Label htmlFor="end-time" className="text-xs">End Time</Label>
-                        <Input id="end-time" type="time" defaultValue="17:00" />
-                     </div>
-                  </div>
-                </div>
-                 <div className="p-4 border rounded-lg space-y-4">
-                  <p className="text-sm text-muted-foreground">Optionally, add a break time.</p>
-                  <div className="flex items-center justify-between gap-4">
-                     <div className="w-full space-y-1">
-                        <Label htmlFor="break-start-time" className="text-xs">Break Start</Label>
-                        <Input id="break-start-time" type="time" defaultValue="12:00" />
-                     </div>
-                      <div className="pt-5"> - </div>
-                     <div className="w-full space-y-1">
-                        <Label htmlFor="break-end-time" className="text-xs">Break End</Label>
-                        <Input id="break-end-time" type="time" defaultValue="13:00" />
-                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
+          {isLoading ? <p>Loading schedule...</p> : (
+            <Tabs defaultValue="Monday" className="flex-1 flex flex-col overflow-hidden">
+                <ScrollArea className="w-full whitespace-nowrap">
+                   <TabsList className="flex">
+                    {weekDays.map(day => (
+                        <TabsTrigger key={day} value={day} className="flex-1">{day.substring(0,3)}</TabsTrigger>
+                    ))}
+                    </TabsList>
+                </ScrollArea>
+                <ScrollArea className="flex-1 -mx-6 px-6 mt-4">
+                    {schedules.map(daySchedule => (
+                         <TabsContent key={daySchedule.dayOfWeek} value={daySchedule.dayOfWeek}>
+                           <div className="space-y-6">
+                              <Card>
+                                 <CardContent className="pt-6">
+                                    <Label className="font-semibold">Working Hours</Label>
+                                    <div className="space-y-3 mt-2">
+                                    {daySchedule.workingHours.map((slot, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'startTime', e.target.value)} />
+                                            <span>-</span>
+                                            <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'endTime', e.target.value)} />
+                                            <Button variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </div>
+                                    ))}
+                                    </div>
+                                    <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Working Slot
+                                    </Button>
+                                 </CardContent>
+                              </Card>
+                               <Card>
+                                 <CardContent className="pt-6">
+                                    <Label className="font-semibold">Break Hours</Label>
+                                     <div className="space-y-3 mt-2">
+                                    {daySchedule.breakHours.map((slot, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'startTime', e.target.value)} />
+                                            <span>-</span>
+                                            <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'endTime', e.target.value)} />
+                                            <Button variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </div>
+                                    ))}
+                                    </div>
+                                    <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Break Slot
+                                    </Button>
+                                 </CardContent>
+                              </Card>
+                           </div>
+                         </TabsContent>
+                    ))}
+                </ScrollArea>
+            </Tabs>
+          )}
         </form>
          <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit" form="schedule-form" disabled={isLoading} variant="accent">
-                {isLoading ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
+            <Button type="submit" form="schedule-form" disabled={isPending || isLoading} variant="accent">
+                {isPending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
             </Button>
         </SheetFooter>
       </SheetContent>

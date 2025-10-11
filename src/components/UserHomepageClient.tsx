@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -81,21 +82,27 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
   const [currentDoctorSlide, setCurrentDoctorSlide] = useState(0);
 
   const router = useRouter();
-  
+
   useEffect(() => {
     if (!hospitalApi) return;
-    setCurrentHospitalSlide(hospitalApi.selectedScrollSnap());
-    hospitalApi.on("select", () => {
+    const onSelect = () => {
       setCurrentHospitalSlide(hospitalApi.selectedScrollSnap());
-    });
+    };
+    hospitalApi.on("select", onSelect);
+    // Set initial value
+    onSelect();
+    return () => hospitalApi.off("select", onSelect);
   }, [hospitalApi]);
 
   useEffect(() => {
     if (!doctorApi) return;
-    setCurrentDoctorSlide(doctorApi.selectedScrollSnap());
-    doctorApi.on("select", () => {
+    const onSelect = () => {
       setCurrentDoctorSlide(doctorApi.selectedScrollSnap());
-    });
+    };
+    doctorApi.on("select", onSelect);
+    // Set initial value
+    onSelect();
+    return () => doctorApi.off("select", onSelect);
   }, [doctorApi]);
 
 

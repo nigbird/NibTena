@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -5,20 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarDays, Clock, Settings, User } from "lucide-react";
+import { CalendarDays, Clock, Settings, User, PlusCircle } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
+import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
 
 // In a real app, this would come from an authentication session
 const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingWindow, setBookingWindow] = useState('30');
   const [startTime, setStartTime] = useState('09:00');
@@ -36,12 +39,17 @@ export default function ScheduleSettingsPage() {
 
   const handleEditScheduleClick = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
-    setIsDrawerOpen(true);
+    setIsEditDrawerOpen(true);
   };
   
-  const handleDrawerClose = () => {
-    setIsDrawerOpen(false);
+  const handleEditDrawerClose = () => {
+    setIsEditDrawerOpen(false);
     setSelectedDoctor(null);
+  }
+
+  const handleAddDrawerClose = () => {
+    setIsAddDrawerOpen(false);
+    fetchDoctors();
   }
 
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
@@ -55,18 +63,33 @@ export default function ScheduleSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
-        <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
+          <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
+        </div>
+        <Button onClick={() => setIsAddDrawerOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Schedule
+        </Button>
       </div>
 
       {selectedDoctor && (
         <DoctorScheduleDrawer
-          isOpen={isDrawerOpen}
-          setIsOpen={handleDrawerClose}
+          isOpen={isEditDrawerOpen}
+          setIsOpen={handleEditDrawerClose}
           doctor={selectedDoctor}
         />
       )}
+      
+      <AddScheduleDrawer
+          isOpen={isAddDrawerOpen}
+          setIsOpen={setIsAddDrawerOpen}
+          doctors={doctors}
+          hospitalId={LOGGED_IN_HOSPITAL_ID}
+          onScheduleSaved={handleAddDrawerClose}
+      />
+
 
       <Card>
         <CardHeader>

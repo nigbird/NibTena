@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -12,19 +12,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface PaginationControlsProps {
   totalCount: number;
+  resourceName?: string;
 }
 
-const PaginationControls = ({ totalCount }: PaginationControlsProps) => {
+const PaginationControls = ({ totalCount, resourceName = "items" }: PaginationControlsProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const page = Number(searchParams.get('page') ?? '1');
   const perPage = Number(searchParams.get('per_page') ?? '10');
-  const query = searchParams.get('query') ?? '';
 
   const totalPages = Math.ceil(totalCount / perPage);
   const hasPrevPage = page > 1;
@@ -34,14 +34,14 @@ const PaginationControls = ({ totalCount }: PaginationControlsProps) => {
     if (newPage < 1 || newPage > totalPages) return;
     const params = new URLSearchParams(searchParams);
     params.set('page', newPage.toString());
-    router.push(`/super-admin/hospitals?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const handlePerPageChange = (value: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('page', '1');
     params.set('per_page', value);
-    router.push(`/super-admin/hospitals?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const paginationNumbers = useMemo(() => {
@@ -66,7 +66,7 @@ const PaginationControls = ({ totalCount }: PaginationControlsProps) => {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
         <div className="text-sm text-muted-foreground">
-            Page {page} of {totalPages > 0 ? totalPages : 1} ({totalCount} hospital(s) found)
+            Page {page} of {totalPages > 0 ? totalPages : 1} ({totalCount} {resourceName} found)
         </div>
         <div className="flex items-center gap-2">
             <Button

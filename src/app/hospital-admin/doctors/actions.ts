@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { Doctor } from '@/lib/definitions';
 import { placeholderImages } from '@/lib/placeholder-images';
+import { revalidatePath } from 'next/cache';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -75,8 +76,7 @@ export async function saveDoctor(
       });
       console.debug('[saveDoctor] create complete');
     }
-    // Client will refresh list; avoid server-side revalidation in dev to prevent loops
-    console.debug('[saveDoctor] skipping revalidatePath (client will refresh)');
+    revalidatePath('/hospital-admin/doctors');
     return {
       success: true,
       message: `Doctor ${doctorId ? 'updated' : 'added'} successfully.`,
@@ -93,7 +93,7 @@ export async function saveDoctor(
 export async function updateDoctorStatus(doctorId: number, status: 'active' | 'inactive') {
   try {
     await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
-    console.debug('[updateDoctorStatus] updated status', { doctorId, status });
+    revalidatePath('/hospital-admin/doctors');
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
     return { success: false, message: 'Database Error: Failed to update doctor status.' };
@@ -105,22 +105,41 @@ export async function deleteDoctor(doctorId: number) {
         await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });
         await prisma.appointment.deleteMany({ where: { doctorId } });
         await prisma.doctor.delete({ where: { id: doctorId } });
-    console.debug('[deleteDoctor] deleted doctor, skipping revalidatePath');
+        revalidatePath('/hospital-admin/doctors');
         return { success: true, message: 'Doctor deleted successfully.' };
     } catch (error) {
         return { success: false, message: 'Database Error: Failed to delete doctor.' };
     }
 }
 
-export async function getDoctorsByHospitalId(hospitalId: number) {
+export async function getDoctors(hospitalId: number, page: number, limit: number, query: string) {
+    const where = {
+        hospitals: { some: { hospitalId } },
+        ...(query && {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { specialty: { contains: query, mode: 'insensitive' } },
+          ],
+        }),
+    };
+
     return await prisma.doctor.findMany({
-        where: {
-            hospitals: {
-                some: { hospitalId }
-            }
-        },
-        orderBy: {
-            name: 'asc'
-        }
+        where,
+        orderBy: { name: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
     });
+}
+
+export async function getDoctorsCount(hospitalId: number, query: string) {
+  const where = {
+        hospitals: { some: { hospitalId } },
+        ...(query && {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { specialty: { contains: query, mode: 'insensitive' } },
+          ],
+        }),
+    };
+  return await prisma.doctor.count({ where });
 }

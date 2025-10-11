@@ -1,37 +1,69 @@
+
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Users, ClipboardPlus, Search } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { PlusCircle, ClipboardPlus, Search } from "lucide-react";
 import type { Appointment, Doctor } from '@/lib/definitions';
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
+import { getAppointments, getAppointmentsCount, getDoctorsByHospitalId } from './actions';
 import AppointmentList from '@/components/hospital-admin/appointment-list';
 import AppointmentFormDrawer from '@/components/hospital-admin/appointment-form-drawer';
 import { Input } from '@/components/ui/input';
+import PaginationControls from '@/components/PaginationControls';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // In a real app, this would come from an authentication session
 const LOGGED_IN_HOSPITAL_ID = 1;
 
-export default function AppointmentsPage() {
+function AppointmentsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const page = searchParams.get('page') ?? '1';
+  const perPage = searchParams.get('per_page') ?? '10';
+  const query = searchParams.get('query') ?? '';
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [totalAppointments, setTotalAppointments] = useState(0);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(query);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchAppointmentsAndDoctors = useCallback(async () => {
-    const [appointmentsData, doctorsData] = await Promise.all([
-      getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
-      getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
-    ]);
-    setAppointments(appointmentsData.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()));
-    setDoctors(doctorsData);
-  }, []);
+    setIsLoading(true);
+    const pageAsNumber = Number(page);
+    const perPageAsNumber = Number(perPage);
+    try {
+      const [appointmentsData, count, doctorsData] = await Promise.all([
+        getAppointments(LOGGED_IN_HOSPITAL_ID, pageAsNumber, perPageAsNumber, query),
+        getAppointmentsCount(LOGGED_IN_HOSPITAL_ID, query),
+        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
+      ]);
+      setAppointments(appointmentsData);
+      setTotalAppointments(count);
+      setDoctors(doctorsData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, perPage, query]);
 
   useEffect(() => {
     fetchAppointmentsAndDoctors();
   }, [fetchAppointmentsAndDoctors]);
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
+    params.set('page', '1');
+    params.set('query', searchTerm);
+    router.push(`/hospital-admin/appointments?${params.toString()}`);
+  }
 
   const handleAddClick = () => {
     setEditingAppointment(null);
@@ -48,19 +80,6 @@ export default function AppointmentsPage() {
     setIsDrawerOpen(false);
     setEditingAppointment(null);
   }, [fetchAppointmentsAndDoctors]);
-
-  const filteredAppointments = useMemo(() => {
-    if (!searchTerm) return appointments;
-    
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return appointments.filter(appointment => {
-      const doctor = doctors.find(d => d.id === appointment.doctorId);
-      return (
-        appointment.patientName.toLowerCase().includes(lowercasedFilter) ||
-        (doctor && doctor.name.toLowerCase().includes(lowercasedFilter))
-      );
-    });
-  }, [searchTerm, appointments, doctors]);
 
   return (
     <div className="space-y-6">
@@ -87,7 +106,7 @@ export default function AppointmentsPage() {
         <CardHeader>
           <CardTitle>All Appointments</CardTitle>
           <CardDescription>A list of all upcoming and past appointments.</CardDescription>
-            <div className="relative pt-2">
+            <form onSubmit={handleSearch} className="relative pt-2">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -96,12 +115,19 @@ export default function AppointmentsPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              </div>
+              </form>
         </CardHeader>
         <CardContent>
-          {filteredAppointments.length > 0 ? (
+          {isLoading ? (
+             <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+          ) : appointments.length > 0 ? (
             <AppointmentList 
-              appointments={filteredAppointments}
+              appointments={appointments}
               doctors={doctors}
               onEdit={handleEditClick}
               onActionSuccess={handleFormActionSuccess}
@@ -114,7 +140,19 @@ export default function AppointmentsPage() {
             </div>
           )}
         </CardContent>
+        <CardFooter className="border-t p-4">
+            <PaginationControls totalCount={totalAppointments} resourceName="appointments" />
+        </CardFooter>
       </Card>
     </div>
   );
+}
+
+
+export default function AppointmentsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AppointmentsPageContent />
+        </Suspense>
+    )
 }

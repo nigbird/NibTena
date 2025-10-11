@@ -108,10 +108,36 @@ export async function deleteAppointment(appointmentId: string) {
     }
 }
 
-export async function getAppointmentsByHospitalId(hospitalId: number) {
+export async function getAppointments(hospitalId: number, page: number, limit: number, query: string) {
+    const where = {
+        hospitalId,
+        ...(query && {
+          OR: [
+            { patientName: { contains: query, mode: 'insensitive' } },
+            { doctor: { name: { contains: query, mode: 'insensitive' } } },
+          ],
+        }),
+    };
+
     return await prisma.appointment.findMany({
-        where: { hospitalId },
+        where,
+        orderBy: { appointmentDate: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
     });
+}
+
+export async function getAppointmentsCount(hospitalId: number, query: string) {
+    const where = {
+        hospitalId,
+        ...(query && {
+          OR: [
+            { patientName: { contains: query, mode: 'insensitive' } },
+            { doctor: { name: { contains: query, mode: 'insensitive' } } },
+          ],
+        }),
+    };
+    return await prisma.appointment.count({ where });
 }
 
 export async function getDoctorsByHospitalId(hospitalId: number) {

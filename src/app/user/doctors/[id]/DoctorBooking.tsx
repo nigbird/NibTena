@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format } from 'date-fns';
@@ -96,7 +95,7 @@ export default function DoctorBooking({
                 <Button
                     key={i}
                     variant={selectedSlot === window ? 'accent' : 'outline'}
-                    className="h-12 text-base"
+                    className="h-10 text-sm rounded-lg"
                     onClick={() => setSelectedSlot(window)}
                 >
                     {window}
@@ -111,7 +110,7 @@ export default function DoctorBooking({
         <div>
             {doctorHospitals.length > 0 && (
                  <div className="space-y-3">
-                    <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <h3 className="font-medium text-lg text-foreground/80 flex items-center gap-2">
                         <HospitalIcon className="h-5 w-5" />
                         Select Hospital
                     </h3>
@@ -138,7 +137,7 @@ export default function DoctorBooking({
         </div>
 
         <div>
-            <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 mb-3">Select Date</h3>
+            <h3 className="font-medium text-lg text-foreground/80 mb-3">Select Date</h3>
             <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex pb-2 space-x-2">
                     {dates.map((date, index) => (
@@ -162,7 +161,7 @@ export default function DoctorBooking({
         </div>
       
         <div>
-            <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <h3 className="font-medium text-lg text-foreground/80 mb-3 flex items-center gap-2">
                 <Clock className="h-5 w-5"/>
                 Available Windows for {format(selectedDate, 'MMMM d')}
             </h3>

@@ -57,11 +57,11 @@ export default async function DoctorProfilePage({
   const selectedHospital = doctorHospitals.find(h => h.id === initialHospitalId) || doctorHospitals[0];
 
   return (
-    <div className="bg-muted/20">
+    <div className="bg-muted/30">
       <div className="container py-6 md:py-8">
         <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-1 space-y-6">
-            <Card className="p-6 md:p-8 text-center shadow-lg rounded-xl bg-background">
+            <Card className="p-6 md:p-8 text-center shadow-lg rounded-2xl bg-card">
                 <Avatar className="h-32 w-32 mb-4 border-4 border-primary/50 mx-auto">
                     {doctorImage && (
                     <AvatarImage
@@ -74,7 +74,7 @@ export default async function DoctorProfilePage({
                     {doctor.name.charAt(0)}
                     </AvatarFallback>
                 </Avatar>
-                <h1 className="font-headline text-3xl font-bold">
+                <h1 className="font-headline text-2xl font-semibold">
                     {doctor.name}
                 </h1>
                 <Badge variant="secondary" className="mt-2 text-md">
@@ -95,7 +95,7 @@ export default async function DoctorProfilePage({
                     </div>
                 </div>
             </Card>
-             <Card className="p-6 shadow-lg rounded-xl">
+             <Card className="p-6 shadow-lg rounded-2xl">
                  <h2 className="font-headline text-xl font-semibold mb-2">
                   Professional Bio
                 </h2>
@@ -103,7 +103,7 @@ export default async function DoctorProfilePage({
              </Card>
           </div>
           <div className="lg:col-span-2">
-            <Card className="p-6 md:p-8 shadow-lg rounded-xl">
+            <Card className="p-6 md:p-8 shadow-lg rounded-2xl">
                <h2 className="font-headline text-2xl font-semibold mb-4">Book an Appointment</h2>
                <DoctorBooking 
                   doctor={doctor} 

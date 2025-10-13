@@ -90,16 +90,20 @@ export default function DoctorBooking({
     }
     
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {timeWindows.map((window, i) => (
-                <Button
+                <button
                     key={i}
-                    variant={selectedSlot === window ? 'accent' : 'outline'}
-                    className="h-10 text-sm rounded-lg"
                     onClick={() => setSelectedSlot(window)}
+                    className={cn(
+                        'px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
+                        selectedSlot === window
+                        ? 'bg-primary text-primary-foreground border-2 border-secondary'
+                        : 'bg-background text-foreground'
+                    )}
                 >
                     {window}
-                </Button>
+                </button>
             ))}
         </div>
     )

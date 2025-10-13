@@ -47,16 +47,12 @@ export default function DoctorAppointmentList({ appointments, onActionSuccess, o
                   <Clock className="h-4 w-4" />
                   <span>{appointment.appointmentSlot}</span>
               </div>
-              <div className="flex items-center gap-2">
-                  <Hospital className="h-4 w-4" />
-                  <span>{(appointment as any).hospital.name}</span>
-              </div>
           </div>
 
           <div className="border-t pt-3">
-             <h4 className="text-sm font-semibold mb-1">Appointment Summary</h4>
+             <h4 className="text-sm font-semibold mb-1">Concerns</h4>
              <p className="text-xs text-muted-foreground italic truncate">
-              {appointment.appointmentSummary || "No summary available."}
+              {appointment.symptoms || "No concerns listed."}
              </p>
           </div>
           

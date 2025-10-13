@@ -82,24 +82,7 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
                     </div>
                      <Badge variant={statusBadgeVariant[appointment.status]} className="capitalize text-sm">{appointment.status}</Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" /> <span>{appointment.patientPhone}</span>
-                  </div>
               </div>
-
-             <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <NotebookText className="h-5 w-5 text-primary" />
-                        AI-Generated Summary
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground italic">
-                        {appointment.appointmentSummary}
-                    </p>
-                </CardContent>
-             </Card>
 
               <div className="space-y-3">
                  <div className="flex items-center gap-3">
@@ -107,13 +90,6 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
                     <div>
                         <p className="text-xs text-muted-foreground">Date & Time</p>
                         <p className="font-medium">{format(parseISO(appointment.appointmentDate as unknown as string), 'PPPP')} at {appointment.appointmentSlot}</p>
-                    </div>
-                </div>
-                 <div className="flex items-center gap-3">
-                    <Hospital className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                        <p className="text-xs text-muted-foreground">Hospital</p>
-                        <p className="font-medium">{(appointment as any).hospital.name}</p>
                     </div>
                 </div>
                 <div className="flex items-start gap-3">

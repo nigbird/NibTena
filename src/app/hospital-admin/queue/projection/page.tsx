@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { format } from 'date-fns';
-import { Clock, Play, User, Users } from 'lucide-react';
+import { Stethoscope, User, Users } from 'lucide-react';
 import type { QueueItem } from '../page';
 import { Logo } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // In a real app, this would come from an authentication session
 const LOGGED_IN_HOSPITAL_ID = 1;
@@ -29,7 +30,7 @@ export default function QueueProjectionPage() {
       ]);
 
       const todaysAppointments = allAppointments
-        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
+        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && (app.status === 'confirmed' || app.status === 'rescheduled'))
         .map(app => {
           const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueItem['queueStatus'] | null;
           return {
@@ -58,8 +59,7 @@ export default function QueueProjectionPage() {
     }
 
     fetchAndFilterQueue();
-    const interval = setInterval(fetchAndFilterQueue, 15000);
-    
+    const interval = setInterval(fetchAndFilterQueue, 5000);
     const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
 
     const handleStorageChange = (event: StorageEvent) => {
@@ -76,42 +76,30 @@ export default function QueueProjectionPage() {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [fetchAndFilterQueue]);
-
+  
   const getDoctorName = (doctorId: number) => {
     return doctors.find(d => d.id === doctorId)?.name || 'Unknown Doctor';
   };
   
-  const inProgressPatients = queue.filter(p => p.queueStatus === 'In Progress');
-  const checkedInPatients = queue.filter(p => p.queueStatus === 'Checked-in' || p.queueStatus === 'Waiting');
+  const inProgressPatients = useMemo(() => queue.filter(p => p.queueStatus === 'In Progress'), [queue]);
   
-  const groupedBySlot = checkedInPatients.reduce((acc, item) => {
-      const slot = item.appointmentSlot;
-      if (!acc[slot]) {
-          acc[slot] = [];
-      }
-      acc[slot].push(item);
-      return acc;
-  }, {} as Record<string, QueueItem[]>);
+  const nowServingPatient = useMemo(() => {
+    // The patient to be served is the first one who is 'Checked-in'
+    return queue.find(p => p.queueStatus === 'Checked-in');
+  }, [queue]);
 
-  const sortedSlots = Object.keys(groupedBySlot).sort();
-  
-  // Find the first slot that has patients who are not 'In Progress'
-  const nowServingSlotKey = sortedSlots.find(slot => 
-    groupedBySlot[slot].some(p => p.queueStatus === 'Checked-in' || p.queueStatus === 'Waiting')
-  );
-
-  const nowServingSlot = nowServingSlotKey ? groupedBySlot[nowServingSlotKey] : [];
-  
-  // The next patient is the first one in the "now serving" slot who isn't already 'In Progress'
-  const nextPatient = nowServingSlot.find(p => p.queueStatus === 'Checked-in' || p.queueStatus === 'Waiting');
-
-  // Find the next slot with patients
-  const nextSlotKey = sortedSlots.find(slot => slot > (nowServingSlotKey || ''));
-  const nextSlotPatients = nextSlotKey ? groupedBySlot[nextSlotKey] : [];
+  const upNextPatients = useMemo(() => {
+    // All patients who are 'Waiting' or 'Checked-in' but not the one currently being served
+    const waitingList = queue.filter(p => p.queueStatus === 'Waiting' || p.queueStatus === 'Checked-in');
+    if (nowServingPatient) {
+      return waitingList.filter(p => p.id !== nowServingPatient.id).slice(0, 5); // Limit to next 5
+    }
+    return waitingList.slice(0, 5);
+  }, [queue, nowServingPatient]);
 
 
   return (
-    <div className="bg-background text-foreground min-h-screen flex flex-col p-8 lg:p-12">
+    <div className="bg-background text-foreground min-h-screen flex flex-col p-6 lg:p-8">
       <header className="flex justify-between items-center pb-4 border-b-2 border-primary/20">
         <Logo />
         <div className="text-right">
@@ -129,64 +117,103 @@ export default function QueueProjectionPage() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row items-center justify-center gap-12 pt-8">
-        {isLoading ? (
-          <div className="w-full max-w-4xl space-y-8">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        ) : nowServingSlot.length > 0 || inProgressPatients.length > 0 ? (
-          <>
-            {/* Now Serving Section */}
-            <div className="w-full md:w-2/3 text-center">
-              <h2 className="font-headline text-3xl md:text-4xl font-bold text-muted-foreground mb-4">Now Serving Window</h2>
-              <Card className="bg-primary/10 border-2 border-primary rounded-xl p-6 md:p-10 shadow-2xl animate-fade-in">
-                <CardContent className="p-0">
-                    <p className="font-bold text-5xl md:text-7xl text-primary-foreground tracking-tight">{nowServingSlotKey}</p>
-                    <div className="mt-4 flex flex-col md:flex-row items-center justify-center gap-x-8 gap-y-2 text-2xl md:text-3xl text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                            <Users className="h-8 w-8" />
-                            <span>{nowServingSlot.length} Patient(s) in Queue</span>
-                        </div>
-                    </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Next Up Section */}
-            <div className="w-full md:w-1/3">
-              {nextSlotPatients.length > 0 && (
-                <div className="animate-fade-in-delay">
-                  <h3 className="font-headline text-2xl md:text-3xl font-bold text-muted-foreground mb-3 text-center">Next Window</h3>
-                  <Card className="bg-muted/50 border rounded-lg p-6 max-w-md mx-auto">
-                     <p className="font-semibold text-3xl md:text-4xl text-foreground text-center mb-2">{nextSlotKey}</p>
-                     <div className="text-xl text-muted-foreground flex items-center justify-center gap-3">
-                          <Users className="h-6 w-6" />
-                          <span>{nextSlotPatients.length} Patient(s)</span>
-                      </div>
-                  </Card>
+      <main className="flex-1 grid md:grid-cols-3 gap-8 pt-8">
+        {/* Main "Now Serving" Area */}
+        <div className="md:col-span-2 flex flex-col items-center justify-center text-center">
+            {isLoading ? (
+                <Skeleton className="h-80 w-full" />
+            ) : nowServingPatient ? (
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={nowServingPatient.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.5 }}
+                        className="w-full"
+                    >
+                        <Card className="w-full bg-primary/10 border-2 border-primary/30 shadow-2xl animate-pulse-slow">
+                            <CardHeader>
+                                <CardTitle className="text-4xl lg:text-5xl font-bold text-primary-foreground font-headline tracking-wide">
+                                    Now Serving
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="py-8 lg:py-12">
+                                <h1 className="text-6xl lg:text-8xl font-extrabold text-foreground tracking-tighter">
+                                    {nowServingPatient.patientName}
+                                </h1>
+                                <div className="mt-6 flex items-center justify-center gap-4 text-xl lg:text-2xl text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <Stethoscope />
+                                        <span>{getDoctorName(nowServingPatient.doctorId)}</span>
+                                    </div>
+                                    <span>&bull;</span>
+                                    <span>Consultation Room 3</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                </AnimatePresence>
+            ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <Users className="h-24 w-24" />
+                    <h2 className="mt-6 text-3xl font-bold">No patients currently checked in.</h2>
+                    <p className="mt-2 text-lg">The waiting queue is empty.</p>
                 </div>
-              )}
-            </div>
-          </>
-        ) : (
-            <div className="text-center">
-                <Users className="h-24 w-24 mx-auto text-muted-foreground/50" />
-                <h2 className="font-headline text-4xl md:text-5xl font-bold text-muted-foreground mt-8">Queue is currently empty.</h2>
-                <p className="mt-2 text-lg text-muted-foreground">No confirmed appointments for today.</p>
-            </div>
-        )}
+            )}
+        </div>
+
+        {/* "Up Next" Sidebar */}
+        <div className="md:col-span-1">
+             <Card className="h-full bg-muted/30">
+                <CardHeader>
+                    <CardTitle className="text-3xl font-headline">Up Next</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="space-y-4">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                        </div>
+                    ) : upNextPatients.length > 0 ? (
+                        <ul className="space-y-3">
+                            {upNextPatients.map((patient, index) => (
+                                <motion.li 
+                                    key={patient.id}
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                >
+                                    <div className="bg-background/50 p-4 rounded-lg border flex items-center gap-4">
+                                        <div className="flex-shrink-0 h-10 w-10 bg-primary/20 text-primary-foreground font-bold rounded-full flex items-center justify-center text-lg">{index + 1}</div>
+                                        <div>
+                                            <p className="font-semibold text-lg">{patient.patientName}</p>
+                                            <p className="text-sm text-muted-foreground">{getDoctorName(patient.doctorId)}</p>
+                                        </div>
+                                    </div>
+                                </motion.li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="text-center text-muted-foreground pt-8">
+                             <p>The queue is clear.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
       </main>
 
        {inProgressPatients.length > 0 && (
-          <footer className="mt-auto pt-6 border-t-2 border-muted">
-            <h3 className="text-center font-headline text-xl text-muted-foreground font-bold mb-3">Consultations in Progress</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <footer className="mt-auto pt-6 border-t-2 border-muted/50">
+            <h3 className="text-center font-headline text-xl text-muted-foreground font-bold mb-4">Consultations in Progress</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {inProgressPatients.map(patient => (
-                <div key={patient.id} className="bg-green-100/50 dark:bg-green-900/30 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
+                <div key={patient.id} className="bg-green-100/50 dark:bg-green-900/30 border border-green-500/30 rounded-lg p-4 flex items-center justify-between">
                   <p className="font-semibold text-lg">{patient.patientName}</p>
                   <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-                    <Play className="h-4 w-4 fill-current" />
+                    <Stethoscope className="h-4 w-4" />
                     <span>{getDoctorName(patient.doctorId)}</span>
                   </div>
                 </div>
@@ -197,3 +224,5 @@ export default function QueueProjectionPage() {
     </div>
   );
 }
+
+    

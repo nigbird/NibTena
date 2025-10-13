@@ -8,7 +8,7 @@ import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -48,7 +48,7 @@ export default function QueueManagementPage() {
       ]);
 
        const todaysAppointments = allAppointments
-        .filter(app => format(parseISO(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
+        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
         .map((app, index) => {
            const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueStatus | null;
            return {
@@ -59,7 +59,7 @@ export default function QueueManagementPage() {
         .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
       setQueue(todaysAppointments);
-      setDoctors(doctorsData);
+      setDoctors(doctorsData as Doctor[]);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast({

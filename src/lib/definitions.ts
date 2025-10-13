@@ -47,7 +47,7 @@ export type Appointment = {
   symptoms: string;
   doctorId: number;
   appointmentSlot: string;
-  appointmentDate: string;
+  appointmentDate: Date;
   status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
   bookedBy?: string;
   relationship?: string;

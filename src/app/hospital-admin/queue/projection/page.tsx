@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Clock, Play, User, Users } from 'lucide-react';
 import type { QueueItem } from '../page';
 import { Logo } from '@/components/icons';
@@ -28,7 +28,7 @@ export default function QueueProjectionPage() {
       ]);
 
       const todaysAppointments = allAppointments
-        .filter(app => format(parseISO(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
+        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
         .map(app => {
           const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueItem['queueStatus'] | null;
           return {
@@ -39,7 +39,7 @@ export default function QueueProjectionPage() {
         .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
 
       setQueue(todaysAppointments);
-      setDoctors(doctorsData);
+      setDoctors(doctorsData as Doctor[]);
     } catch (error) {
       console.error("Failed to fetch queue data:", error);
     } finally {

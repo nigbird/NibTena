@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { updateAppointment } from '@/lib/actions';
 import RescheduleDrawer from './reschedule-drawer';
+import { format as formatDate, parseISO } from 'date-fns';
+
 
 type DoctorAppointmentListProps = {
   appointments: Appointment[];
@@ -103,7 +105,7 @@ export default function DoctorAppointmentList({ appointments, onActionSuccess }:
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {appointment.appointmentDate}
+                    {formatDate(parseISO(appointment.appointmentDate as unknown as string), 'PPP')}
                   </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="h-3 w-3" />
@@ -153,7 +155,7 @@ export default function DoctorAppointmentList({ appointments, onActionSuccess }:
               </div>
                <div>
                   <p className="text-sm text-muted-foreground">
-                    {appointment.appointmentDate} at {appointment.appointmentSlot}
+                    {formatDate(parseISO(appointment.appointmentDate as unknown as string), 'PPP')} at {appointment.appointmentSlot}
                   </p>
               </div>
               {appointment.status === 'confirmed' && (

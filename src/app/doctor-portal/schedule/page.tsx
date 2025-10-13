@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useContext, useEffect, useTransition, useCallback } from 'react';
@@ -12,6 +13,9 @@ import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-co
 import type { DaySchedule, TimeSlot } from './actions';
 import { getDoctorSchedulesForHospital, saveDoctorSchedulesForHospital } from './actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -119,70 +123,72 @@ export default function DoctorSchedulePage() {
     if (isLoading) {
         return (
             <div className="space-y-4">
-                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-48 w-full" />
             </div>
         )
     }
 
     return (
-        <>
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Available Days</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 rounded-lg border p-4">
-                {weekDays.map(day => (
-                  <div key={day} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`day-${day}`}
-                      checked={schedules.find(s => s.dayOfWeek === day)?.active}
-                      onCheckedChange={(checked) => handleDayToggle(day, checked)}
-                    />
-                    <Label htmlFor={`day-${day}`} className="font-normal cursor-pointer">
-                      {day}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {schedules.filter(s => s.active).map(daySchedule => (
-                <Card key={daySchedule.dayOfWeek}>
-                    <CardHeader>
-                        <CardTitle className="text-lg">{daySchedule.dayOfWeek} Hours</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="font-semibold">Working Hours</Label>
-                            {daySchedule.workingHours.map((slot, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                    <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'startTime', e.target.value)} />
-                                    <span>-</span>
-                                    <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'endTime', e.target.value)} />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+        <Tabs defaultValue="Monday" className="w-full">
+            <ScrollArea className="w-full whitespace-nowrap">
+                <TabsList className="flex">
+                    {weekDays.map(day => (
+                        <TabsTrigger key={day} value={day} className="flex-1">{day}</TabsTrigger>
+                    ))}
+                </TabsList>
+            </ScrollArea>
+             {schedules.map(daySchedule => (
+                <TabsContent key={daySchedule.dayOfWeek} value={daySchedule.dayOfWeek}>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`day-toggle-${daySchedule.dayOfWeek}`}
+                                    checked={daySchedule.active}
+                                    onCheckedChange={(checked) => handleDayToggle(daySchedule.dayOfWeek, checked)}
+                                />
+                                <Label htmlFor={`day-toggle-${daySchedule.dayOfWeek}`} className="text-lg font-semibold cursor-pointer">
+                                    {daySchedule.dayOfWeek} - {daySchedule.active ? 'Available' : 'Unavailable'}
+                                </Label>
+                            </div>
+                        </CardHeader>
+                         {daySchedule.active && (
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label className="font-semibold">Working Hours</Label>
+                                    {daySchedule.workingHours.map((slot, index) => (
+                                        <div key={`work-${index}`} className="flex items-center gap-2">
+                                            <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'startTime', e.target.value)} />
+                                            <span>-</span>
+                                            <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'endTime', e.target.value)} />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Working Slot
+                                    </Button>
                                 </div>
-                            ))}
-                            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Working Slot
-                            </Button>
-                        </div>
-                         <div className="space-y-2">
-                            <Label className="font-semibold">Break Hours</Label>
-                             {daySchedule.breakHours.map((slot, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                    <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'startTime', e.target.value)} />
-                                    <span>-</span>
-                                    <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'endTime', e.target.value)} />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                <div className="space-y-2">
+                                    <Label className="font-semibold">Break Hours</Label>
+                                    {daySchedule.breakHours.map((slot, index) => (
+                                        <div key={`break-${index}`} className="flex items-center gap-2">
+                                            <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'startTime', e.target.value)} />
+                                            <span>-</span>
+                                            <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'endTime', e.target.value)} />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Break Slot
+                                    </Button>
                                 </div>
-                            ))}
-                            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Break Slot
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                            </CardContent>
+                         )}
+                    </Card>
+                </TabsContent>
             ))}
-        </>
+        </Tabs>
     )
   }
 
@@ -201,7 +207,7 @@ export default function DoctorSchedulePage() {
               Weekly Availability
             </CardTitle>
             <CardDescription>
-              Set your standard working days and hours. This schedule is specific to the currently selected hospital.
+              Select available days and set the working and break hours for each day. This schedule is specific to the currently selected hospital.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -217,3 +223,4 @@ export default function DoctorSchedulePage() {
     </div>
   );
 }
+

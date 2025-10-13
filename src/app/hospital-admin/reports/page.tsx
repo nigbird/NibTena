@@ -51,8 +51,8 @@ export default function ReportsPage() {
         getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
         getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
       ]);
-      setAppointments(appointmentsData);
-      setDoctors(doctorsData);
+      setAppointments(appointmentsData as Appointment[]);
+      setDoctors(doctorsData as Doctor[]);
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Failed to fetch report data:", error);
@@ -67,7 +67,7 @@ export default function ReportsPage() {
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter(appt => {
-      const apptDate = startOfDay(parseISO(appt.appointmentDate));
+      const apptDate = startOfDay(new Date(appt.appointmentDate));
       const isDateInRange = dateRange?.from && dateRange?.to && !isBefore(apptDate, dateRange.from) && !isAfter(apptDate, dateRange.to);
       const isDoctorMatch = doctorFilter === 'all' || appt.doctorId === Number(doctorFilter);
       return isDateInRange && isDoctorMatch;
@@ -105,7 +105,7 @@ export default function ReportsPage() {
     }
 
     filteredAppointments.forEach(appt => {
-        const dateStr = format(parseISO(appt.appointmentDate), 'yyyy-MM-dd');
+        const dateStr = format(new Date(appt.appointmentDate), 'yyyy-MM-dd');
         if (trendData[dateStr] !== undefined) {
             trendData[dateStr]++;
         }

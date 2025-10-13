@@ -59,12 +59,12 @@ export default function ScheduleSettingsPage() {
     setIsEditDrawerOpen(true);
   };
   
-  const handleDrawerClose = () => {
+  const handleDrawerClose = useCallback(() => {
     setIsEditDrawerOpen(false);
     setIsAddDrawerOpen(false);
     setSelectedDoctor(null);
     fetchDoctorsAndSettings();
-  }
+  }, [fetchDoctorsAndSettings]);
 
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
     e.preventDefault();

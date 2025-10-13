@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useContext } from 'react';
@@ -41,7 +42,7 @@ export default function DoctorAppointmentsPage() {
   useEffect(() => {
     let newFiltered = appointments.filter(a => {
         const patientNameMatch = a.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-        const dateMatch = a.appointmentDate.toLowerCase().includes(searchTerm.toLowerCase());
+        const dateMatch = a.appointmentDate.toISOString().toLowerCase().includes(searchTerm.toLowerCase());
         return searchTerm ? (patientNameMatch || dateMatch) : true;
     });
 

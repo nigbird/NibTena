@@ -13,22 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { saveAppointment, type AppointmentFormState } from "@/app/hospital-admin/appointments/actions";
+import { saveAppointment, getDoctorScheduleForDate, type AppointmentFormState } from "@/app/hospital-admin/appointments/actions";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
-import type { Appointment, Doctor } from '@/lib/definitions';
+import type { Appointment, Doctor, DoctorSchedule } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
-
-const availableSlots = [
-  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-  '04:00 PM', '04:30 PM'
-];
+import { Badge } from '../ui/badge';
 
 type AppointmentFormDrawerProps = {
   isOpen: boolean;
@@ -37,6 +32,14 @@ type AppointmentFormDrawerProps = {
   appointmentToEdit?: Appointment | null;
   doctors: Doctor[];
 };
+
+function formatTime(timeStr: string) {
+    const [hour, minute] = timeStr.split(':');
+    const hourNum = parseInt(hour, 10);
+    const ampm = hourNum >= 12 ? 'PM' : 'AM';
+    const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+    return `${String(formattedHour).padStart(2, '0')}:${minute} ${ampm}`;
+}
 
 export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointmentSaved, appointmentToEdit, doctors }: AppointmentFormDrawerProps) {
   const isEditing = !!appointmentToEdit;
@@ -49,11 +52,26 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Separate state for the date picker
   const [date, setDate] = useState<Date | undefined>(
-    appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : undefined
+    appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : new Date()
   );
-   const [formKey, setFormKey] = useState(Date.now());
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(appointmentToEdit?.doctorId?.toString());
+  const [doctorSchedule, setDoctorSchedule] = useState<DoctorSchedule | null>(null);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+  const [formKey, setFormKey] = useState(Date.now());
+
+  const LOGGED_IN_HOSPITAL_ID = 1; // In real app, get from session
+
+  useEffect(() => {
+    if (selectedDoctorId && date) {
+      setIsLoadingSchedule(true);
+      getDoctorScheduleForDate(Number(selectedDoctorId), format(date, 'yyyy-MM-dd'), LOGGED_IN_HOSPITAL_ID)
+        .then(schedule => setDoctorSchedule(schedule as DoctorSchedule | null))
+        .finally(() => setIsLoadingSchedule(false));
+    } else {
+      setDoctorSchedule(null);
+    }
+  }, [selectedDoctorId, date]);
 
   useEffect(() => {
     if (state.success && !isPending) {
@@ -75,6 +93,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
     if (isOpen) {
       setFormKey(Date.now());
       setDate(appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : new Date());
+      setSelectedDoctorId(appointmentToEdit?.doctorId.toString());
     }
   }, [isOpen, appointmentToEdit]);
 
@@ -84,6 +103,38 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
     startTransition(() => {
         formAction(formData);
     });
+  }
+
+  const renderScheduleInfo = () => {
+    if (isLoadingSchedule) {
+      return <p className="text-sm text-muted-foreground">Loading schedule...</p>;
+    }
+    if (doctorSchedule) {
+      const workingHours = doctorSchedule.workingHours as {startTime: string, endTime: string}[];
+      const breakHours = doctorSchedule.breakHours as {startTime: string, endTime: string}[];
+      return (
+        <div className="text-xs space-y-1">
+          <p className="font-medium text-foreground">Available hours for this day:</p>
+          {workingHours.length > 0 ? (
+            workingHours.map((slot, i) => (
+              <Badge variant="secondary" key={`wh-${i}`}>{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</Badge>
+            ))
+          ) : (
+            <Badge variant="outline">Not available</Badge>
+          )}
+
+          {breakHours.length > 0 && (
+             <div className="flex gap-2 items-center">
+                <p className="font-medium text-foreground">Breaks:</p>
+                {breakHours.map((slot, i) => (
+                    <Badge variant="outline" key={`bh-${i}`}>{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</Badge>
+                ))}
+             </div>
+          )}
+        </div>
+      );
+    }
+    return <p className="text-sm text-muted-foreground">Select a doctor and date to see their schedule.</p>;
   }
 
   return (
@@ -130,7 +181,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
 
                <div className="space-y-2">
                   <Label htmlFor="doctorId">Doctor</Label>
-                  <Select name="doctorId" defaultValue={appointmentToEdit?.doctorId?.toString()} required>
+                  <Select name="doctorId" value={selectedDoctorId} onValueChange={setSelectedDoctorId} required>
                       <SelectTrigger id="doctorId"><SelectValue placeholder="Select a doctor" /></SelectTrigger>
                       <SelectContent>
                           {doctors.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name} - <span className="text-muted-foreground">{d.specialty}</span></SelectItem>)}
@@ -168,14 +219,10 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
                     {state.errors?.appointmentDate && <p className="text-sm font-medium text-destructive">{state.errors.appointmentDate[0]}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="appointmentSlot">Time Slot</Label>
-                    <Select name="appointmentSlot" defaultValue={appointmentToEdit?.appointmentSlot} required>
-                        <SelectTrigger id="appointmentSlot"><SelectValue placeholder="Select a time" /></SelectTrigger>
-                        <SelectContent>
-                          {availableSlots.map(slot => <SelectItem key={slot} value={slot}>{slot}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    {state.errors?.appointmentSlot && <p className="text-sm font-medium text-destructive">{state.errors.appointmentSlot[0]}</p>}
+                  <Label htmlFor="appointmentSlot">Appointment Time</Label>
+                  <Input id="appointmentSlot" name="appointmentSlot" type="time" defaultValue={appointmentToEdit?.appointmentSlot} required />
+                  <div className="pt-1">{renderScheduleInfo()}</div>
+                  {state.errors?.appointmentSlot && <p className="text-sm font-medium text-destructive">{state.errors.appointmentSlot[0]}</p>}
                 </div>
               </div>
               <div className="space-y-2">

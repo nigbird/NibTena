@@ -1,49 +1,28 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { Doctor, Hospital } from '@/lib/definitions';
+import type { Doctor, Hospital, DoctorSchedule, TimeSlot } from '@/lib/definitions';
 import { addDays, format } from 'date-fns';
-import { Hospital as HospitalIcon, Clock } from 'lucide-react';
+import { Hospital as HospitalIcon, Clock, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getDoctorScheduleForDate } from '@/app/hospital-admin/appointments/actions';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
-const availableSlots = [
-  '09:00 AM',
-  '09:30 AM',
-  '10:00 AM',
-  '10:30 AM',
-  '11:00 AM',
-  '11:30 AM',
-  '01:00 PM',
-  '01:30 PM',
-  '02:00 PM',
-  '02:30 PM',
-  '03:00 PM',
-  '03:30 PM',
-  '04:00 PM',
-  '04:30 PM',
-];
+function formatTime(timeStr: string) {
+    if (!timeStr) return '';
+    const [hour, minute] = timeStr.split(':');
+    const hourNum = parseInt(hour, 10);
+    const ampm = hourNum >= 12 ? 'PM' : 'AM';
+    const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+    return `${String(formattedHour).padStart(2, '0')}:${minute} ${ampm}`;
+}
 
-// Generate dates for the next 14 days
-const generateDates = () => {
-  const dates = [];
-  for (let i = 0; i < 14; i++) {
-    dates.push(addDays(new Date(), i));
-  }
-  return dates;
-};
 
 type DoctorBookingProps = {
   doctor: Doctor;
@@ -61,22 +40,41 @@ export default function DoctorBooking({
   const getInitialHospitalId = () => {
     const hospitalIdParam = searchParams?.hospitalId;
     return hospitalIdParam 
-      ? hospitalIdParam.toString() 
-      : (doctorHospitals[0]?.id.toString() || undefined);
+      ? Number(hospitalIdParam)
+      : (doctorHospitals[0]?.id);
   }
 
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string | undefined>(
+  const [selectedHospitalId, setSelectedHospitalId] = useState<number | undefined>(
     getInitialHospitalId()
   );
-  const [dates, setDates] = useState(generateDates());
+  const [dates] = useState(() => {
+    const dates = [];
+    const bookingWindow = doctorHospitals.find(h => h.id === getInitialHospitalId())?.bookingWindow || 14;
+    for (let i = 0; i < bookingWindow; i++) {
+        dates.push(addDays(new Date(), i));
+    }
+    return dates;
+  });
   const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [doctorSchedule, setDoctorSchedule] = useState<DoctorSchedule | null>(null);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+
+  useEffect(() => {
+    if (selectedHospitalId && selectedDate) {
+        setIsLoadingSchedule(true);
+        getDoctorScheduleForDate(doctor.id, format(selectedDate, 'yyyy-MM-dd'), selectedHospitalId)
+            .then(schedule => setDoctorSchedule(schedule as DoctorSchedule | null))
+            .finally(() => setIsLoadingSchedule(false));
+    }
+  }, [doctor.id, selectedHospitalId, selectedDate]);
+
 
   const handleBookNow = () => {
     if (selectedHospitalId && selectedDate && selectedSlot) {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const params = new URLSearchParams({
-        hospitalId: selectedHospitalId,
+        hospitalId: String(selectedHospitalId),
         date: formattedDate,
         slot: selectedSlot,
       });
@@ -84,41 +82,64 @@ export default function DoctorBooking({
     }
   };
   
-  const selectedHospital = doctorHospitals.find(h => h.id === Number(selectedHospitalId));
+  const selectedHospital = doctorHospitals.find(h => h.id === selectedHospitalId);
+
+  const renderTimeSelection = () => {
+    if (isLoadingSchedule) {
+        return <div className="flex items-center justify-center h-24"><Loader2 className="animate-spin" /></div>;
+    }
+    if (!doctorSchedule || doctorSchedule.workingHours.length === 0) {
+        return <p className="text-center text-muted-foreground p-4 border rounded-md">No available slots for this day.</p>
+    }
+    const workingHours = doctorSchedule.workingHours as TimeSlot[];
+
+    return (
+        <div className="space-y-3">
+            {workingHours.map((slot, i) => (
+                 <div key={i} className="text-sm">
+                    <Badge variant="secondary" >{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</Badge>
+                </div>
+            ))}
+            <div className="space-y-2 pt-2">
+                <Label htmlFor="appointment-time" className="font-semibold">Choose a time</Label>
+                <Input
+                    id="appointment-time"
+                    type="time"
+                    value={selectedSlot || ""}
+                    onChange={(e) => setSelectedSlot(e.target.value)}
+                    min={workingHours[0].startTime}
+                    max={workingHours[workingHours.length - 1].endTime}
+                    className="max-w-xs"
+                />
+                <p className="text-xs text-muted-foreground">Select a time within the available ranges.</p>
+            </div>
+        </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
         <div>
-            {doctorHospitals.length > 1 ? (
+            {doctorHospitals.length > 0 && (
                  <div className="space-y-2">
                     <Label className="font-semibold text-lg flex items-center gap-2">
                         <HospitalIcon className="h-5 w-5" />
                         Select Hospital
                     </Label>
-                    <Select
-                    value={selectedHospitalId}
-                    onValueChange={setSelectedHospitalId}
-                    >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Choose a hospital" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {doctorHospitals.map((hospital) => (
-                        <SelectItem key={hospital.id} value={String(hospital.id)}>
-                            {hospital.name} - {hospital.city}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                </div>
-            ) : selectedHospital && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <HospitalIcon className="h-5 w-5" />
-                    <span className="font-medium">{selectedHospital.name}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {doctorHospitals.map((hospital) => (
+                        <Button
+                          key={hospital.id}
+                          variant={selectedHospitalId === hospital.id ? 'accent' : 'outline'}
+                          onClick={() => setSelectedHospitalId(hospital.id)}
+                        >
+                          {hospital.name}
+                        </Button>
+                      ))}
+                    </div>
                 </div>
             )}
         </div>
-
 
         <div>
             <h3 className="font-semibold mb-3 text-lg">Select Date</h3>
@@ -149,21 +170,7 @@ export default function DoctorBooking({
                 <Clock className="h-5 w-5"/>
                 Available Slots for {format(selectedDate, 'MMMM d')}
             </h3>
-             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {availableSlots.map((slot) => (
-                <Button
-                    key={slot}
-                    variant="outline"
-                    className={cn(
-                    'w-full h-12',
-                    selectedSlot === slot && 'bg-accent text-accent-foreground'
-                    )}
-                    onClick={() => setSelectedSlot(slot)}
-                >
-                    {slot}
-                </Button>
-                ))}
-            </div>
+             {renderTimeSelection()}
         </div>
       
       <Button

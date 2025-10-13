@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, Settings, PlusCircle } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId } from './actions';
+import { getDoctorsByHospitalId, getHospitalSettings } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { updateHospitalSettings } from './actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
 
 
 // In a real app, this would come from an authentication session
@@ -22,6 +22,7 @@ const LOGGED_IN_HOSPITAL_ID = 1;
 
 export default function ScheduleSettingsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingWindow, setBookingWindow] = useState('30');
@@ -33,9 +34,15 @@ export default function ScheduleSettingsPage() {
   const fetchDoctorsAndSettings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const doctorsData = await getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID);
-      // In a real app, you would fetch hospital settings here. For now, we'll use local state.
+      const [doctorsData, settingsData] = await Promise.all([
+          getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+          getHospitalSettings(LOGGED_IN_HOSPITAL_ID)
+      ]);
       setDoctors(doctorsData);
+      if (settingsData) {
+        setStartTime(settingsData.startTime);
+        setEndTime(settingsData.endTime);
+      }
     } catch (error) {
        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch data.'});
     } finally {
@@ -54,8 +61,9 @@ export default function ScheduleSettingsPage() {
   
   const handleDrawerClose = () => {
     setIsEditDrawerOpen(false);
+    setIsAddDrawerOpen(false);
     setSelectedDoctor(null);
-    fetchDoctorsAndSettings(); // Refetch data when a schedule might have been updated
+    fetchDoctorsAndSettings();
   }
 
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
@@ -75,6 +83,10 @@ export default function ScheduleSettingsPage() {
           <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
           <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
         </div>
+         <Button onClick={() => setIsAddDrawerOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Schedule
+        </Button>
       </div>
 
       {selectedDoctor && (
@@ -85,6 +97,14 @@ export default function ScheduleSettingsPage() {
           hospitalId={LOGGED_IN_HOSPITAL_ID}
         />
       )}
+      
+      <AddScheduleDrawer
+        isOpen={isAddDrawerOpen}
+        setIsOpen={setIsAddDrawerOpen}
+        doctors={doctors}
+        hospitalId={LOGGED_IN_HOSPITAL_ID}
+        onScheduleSaved={handleDrawerClose}
+       />
 
       <Card>
         <CardHeader>

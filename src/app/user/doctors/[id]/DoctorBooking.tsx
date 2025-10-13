@@ -6,23 +6,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { Doctor, Hospital, DoctorSchedule, TimeSlot } from '@/lib/definitions';
+import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format } from 'date-fns';
-import { Hospital as HospitalIcon, Clock, Loader2 } from 'lucide-react';
+import { Hospital as HospitalIcon, Clock, Loader2, Calendar } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getDoctorScheduleForDate } from '@/app/hospital-admin/appointments/actions';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-
-function formatTime(timeStr: string) {
-    if (!timeStr) return '';
-    const [hour, minute] = timeStr.split(':');
-    const hourNum = parseInt(hour, 10);
-    const ampm = hourNum >= 12 ? 'PM' : 'AM';
-    const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
-    return `${String(formattedHour).padStart(2, '0')}:${minute} ${ampm}`;
-}
-
+import { getAvailableTimeWindows } from './actions';
 
 type DoctorBookingProps = {
   doctor: Doctor;
@@ -57,14 +45,15 @@ export default function DoctorBooking({
   });
   const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [doctorSchedule, setDoctorSchedule] = useState<DoctorSchedule | null>(null);
+  const [timeWindows, setTimeWindows] = useState<string[]>([]);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
 
   useEffect(() => {
     if (selectedHospitalId && selectedDate) {
         setIsLoadingSchedule(true);
-        getDoctorScheduleForDate(doctor.id, format(selectedDate, 'yyyy-MM-dd'), selectedHospitalId)
-            .then(schedule => setDoctorSchedule(schedule as DoctorSchedule | null))
+        setSelectedSlot(null); // Reset selected slot when date or hospital changes
+        getAvailableTimeWindows(doctor.id, format(selectedDate, 'yyyy-MM-dd'), selectedHospitalId)
+            .then(windows => setTimeWindows(windows))
             .finally(() => setIsLoadingSchedule(false));
     }
   }, [doctor.id, selectedHospitalId, selectedDate]);
@@ -82,37 +71,37 @@ export default function DoctorBooking({
     }
   };
   
-  const selectedHospital = doctorHospitals.find(h => h.id === selectedHospitalId);
-
   const renderTimeSelection = () => {
     if (isLoadingSchedule) {
-        return <div className="flex items-center justify-center h-24"><Loader2 className="animate-spin" /></div>;
-    }
-    if (!doctorSchedule || doctorSchedule.workingHours.length === 0) {
-        return <p className="text-center text-muted-foreground p-4 border rounded-md">No available slots for this day.</p>
-    }
-    const workingHours = doctorSchedule.workingHours as TimeSlot[];
-
-    return (
-        <div className="space-y-3">
-            {workingHours.map((slot, i) => (
-                 <div key={i} className="text-sm">
-                    <Badge variant="secondary" >{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</Badge>
-                </div>
-            ))}
-            <div className="space-y-2 pt-2">
-                <Label htmlFor="appointment-time" className="font-semibold">Choose a time</Label>
-                <Input
-                    id="appointment-time"
-                    type="time"
-                    value={selectedSlot || ""}
-                    onChange={(e) => setSelectedSlot(e.target.value)}
-                    min={workingHours[0].startTime}
-                    max={workingHours[workingHours.length - 1].endTime}
-                    className="max-w-xs"
-                />
-                <p className="text-xs text-muted-foreground">Select a time within the available ranges.</p>
+        return (
+            <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">Finding available windows...</p>
             </div>
+        );
+    }
+    if (timeWindows.length === 0) {
+        return (
+             <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg text-center p-4">
+                <Calendar className="h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 font-semibold">No available slots</p>
+                <p className="text-sm text-muted-foreground">There are no bookable time windows for this day. Please select another date.</p>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {timeWindows.map((window, i) => (
+                <Button
+                    key={i}
+                    variant={selectedSlot === window ? 'accent' : 'outline'}
+                    className="h-12 text-base"
+                    onClick={() => setSelectedSlot(window)}
+                >
+                    {window}
+                </Button>
+            ))}
         </div>
     )
   }
@@ -168,7 +157,7 @@ export default function DoctorBooking({
         <div>
             <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
                 <Clock className="h-5 w-5"/>
-                Available Slots for {format(selectedDate, 'MMMM d')}
+                Available Windows for {format(selectedDate, 'MMMM d')}
             </h3>
              {renderTimeSelection()}
         </div>

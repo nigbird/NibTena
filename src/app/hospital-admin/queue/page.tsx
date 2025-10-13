@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay } from "lucide-react";
+import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay, Users } from "lucide-react";
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
@@ -23,10 +24,10 @@ export type QueueItem = Appointment & {
 };
 
 const statusConfig: Record<QueueStatus, { icon: React.ElementType, color: string, nextAction?: { label: string; status: QueueStatus, icon: React.ElementType } }> = {
-  'Waiting': { icon: Clock, color: 'bg-yellow-500', nextAction: { label: 'Check In', status: 'Checked-in', icon: Check } },
-  'Checked-in': { icon: User, color: 'bg-blue-500', nextAction: { label: 'Start Consultation', status: 'In Progress', icon: Play } },
-  'In Progress': { icon: Play, color: 'bg-green-500', nextAction: { label: 'Mark as Completed', status: 'Completed', icon: CheckCircle2 } },
-  'Completed': { icon: CheckCircle2, color: 'bg-gray-400' },
+  'Waiting': { icon: Clock, color: 'bg-yellow-500 dark:bg-yellow-800', nextAction: { label: 'Check In', status: 'Checked-in', icon: Check } },
+  'Checked-in': { icon: User, color: 'bg-blue-500 dark:bg-blue-800', nextAction: { label: 'Start Consultation', status: 'In Progress', icon: Play } },
+  'In Progress': { icon: Play, color: 'bg-green-500 dark:bg-green-800', nextAction: { label: 'Mark as Completed', status: 'Completed', icon: CheckCircle2 } },
+  'Completed': { icon: CheckCircle2, color: 'bg-gray-400 dark:bg-gray-600' },
 };
 
 
@@ -56,7 +57,12 @@ export default function QueueManagementPage() {
             queueStatus: storedStatus || 'Waiting',
            }
         })
-        .sort((a, b) => a.appointmentSlot.localeCompare(b.appointmentSlot));
+        .sort((a, b) => {
+            if (a.appointmentSlot < b.appointmentSlot) return -1;
+            if (a.appointmentSlot > b.appointmentSlot) return 1;
+            // If slots are same, sort by booking time
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
 
       setQueue(todaysAppointments);
       setDoctors(doctorsData as Doctor[]);
@@ -109,6 +115,17 @@ export default function QueueManagementPage() {
     });
   }, [queue, doctorFilter, statusFilter]);
 
+  const groupedBySlot = useMemo(() => {
+    return filteredQueue.reduce((acc, item) => {
+        const slot = item.appointmentSlot;
+        if (!acc[slot]) {
+            acc[slot] = [];
+        }
+        acc[slot].push(item);
+        return acc;
+    }, {} as Record<string, QueueItem[]>);
+  }, [filteredQueue]);
+
   const getDoctorName = (doctorId: number) => {
     return doctors.find(d => d.id === doctorId)?.name || 'Unknown Doctor';
   }
@@ -137,48 +154,58 @@ export default function QueueManagementPage() {
       );
     }
 
-    if (filteredQueue.length > 0) {
+    if (Object.keys(groupedBySlot).length > 0) {
        return (
-          <div className="space-y-4">
-            {filteredQueue.map((item) => {
-              const config = statusConfig[item.queueStatus];
-              const Icon = config.icon;
-              return (
-                <Card key={item.id} className="shadow-sm">
-                  <div className="flex items-center p-4">
-                    <div className={`mr-4 h-12 w-12 rounded-full flex items-center justify-center text-white ${config.color}`}>
-                        <Icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-                        <div>
-                          <p className="font-semibold">{item.patientName}</p>
-                          <p className="text-sm text-muted-foreground">{getDoctorName(item.doctorId)}</p>
+          <div className="space-y-6">
+            {Object.entries(groupedBySlot).map(([slot, items]) => (
+                <Card key={slot}>
+                    <CardHeader className="bg-muted/50 p-4">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            Time Window: {slot}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="divide-y">
+                        {items.map((item, index) => {
+                          const config = statusConfig[item.queueStatus];
+                          const Icon = config.icon;
+                          return (
+                            <div key={item.id} className="flex items-center p-4 gap-4">
+                                <div className="font-bold text-lg text-muted-foreground w-8 text-center">{index + 1}</div>
+                                <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white ${config.color}`}>
+                                    <Icon className="h-6 w-6" />
+                                </div>
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                    <div>
+                                      <p className="font-semibold">{item.patientName}</p>
+                                      <p className="text-sm text-muted-foreground">{getDoctorName(item.doctorId)}</p>
+                                    </div>
+                                    <div className="text-sm">
+                                      <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
+                                    </div>
+                                    <div className="flex justify-end">
+                                      {config.nextAction ? (
+                                          <Button
+                                              variant="accent"
+                                              size="sm"
+                                              onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
+                                          >
+                                              <config.nextAction.icon className="mr-2 h-4 w-4" />
+                                              {config.nextAction.label}
+                                          </Button>
+                                      ) : (
+                                          <Button variant="outline" size="sm" disabled>Completed</Button>
+                                      )}
+                                    </div>
+                                </div>
+                            </div>
+                          )
+                        })}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          <Badge variant="outline">{item.appointmentSlot}</Badge>
-                        </div>
-                          <div className="text-sm">
-                          <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
-                        </div>
-                        <div className="flex justify-end">
-                          {config.nextAction ? (
-                              <Button
-                                  variant="accent"
-                                  size="sm"
-                                  onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
-                              >
-                                  <config.nextAction.icon className="mr-2 h-4 w-4" />
-                                  {config.nextAction.label}
-                              </Button>
-                          ) : (
-                              <Button variant="outline" size="sm" disabled>Completed</Button>
-                          )}
-                        </div>
-                    </div>
-                  </div>
+                    </CardContent>
                 </Card>
-              )
-            })}
+            ))}
           </div>
         );
     }
@@ -210,7 +237,7 @@ export default function QueueManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>Today's Queue ({format(new Date(), 'PPP')})</CardTitle>
-          <CardDescription>Live view of patients waiting and being served.</CardDescription>
+          <CardDescription>Live view of patients waiting and being served within their time windows.</CardDescription>
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Select value={doctorFilter} onValueChange={setDoctorFilter}>
               <SelectTrigger className="w-full sm:w-[200px]">

@@ -1,5 +1,4 @@
 
-
 export type User = {
   id: string;
   fullName: string;
@@ -46,7 +45,7 @@ export type Appointment = {
   patientAge: number;
   symptoms: string;
   doctorId: number;
-  appointmentSlot: string;
+  appointmentSlot: string; // This will now store the time window, e.g., "09:00 AM - 09:30 AM"
   appointmentDate: Date;
   status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
   bookedBy?: string;

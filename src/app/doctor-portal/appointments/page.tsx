@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
 import { getAppointmentsByDoctorIdForDoctor } from './actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import AppointmentDetailsDrawer from '@/components/doctor-portal/appointment-details-drawer';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled', 'rescheduled'] as const;
 type AppointmentStatusFilter = typeof appointmentStatuses[number];
@@ -22,6 +23,8 @@ export default function DoctorAppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const { toast } = useToast();
   const { doctor, activeHospitalId } = useContext(DoctorPortalContext);
 
@@ -74,13 +77,18 @@ export default function DoctorAppointmentsPage() {
     });
   };
 
+  const handleCardClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsDrawerOpen(true);
+  };
+
   const renderContent = () => {
     if (isLoading) {
        return (
         <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       );
     }
@@ -89,6 +97,7 @@ export default function DoctorAppointmentsPage() {
             <DoctorAppointmentList
               appointments={filteredAppointments}
               onActionSuccess={handleActionSuccess}
+              onCardClick={handleCardClick}
             />
         );
     }
@@ -107,6 +116,15 @@ export default function DoctorAppointmentsPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">My Appointments</h1>
         <p className="text-lg text-muted-foreground">View and manage your patient appointments.</p>
       </div>
+
+      {selectedAppointment && (
+        <AppointmentDetailsDrawer
+            isOpen={isDrawerOpen}
+            setIsOpen={setIsDrawerOpen}
+            appointment={selectedAppointment}
+            onActionSuccess={handleActionSuccess}
+        />
+      )}
 
       <Card>
         <CardHeader>

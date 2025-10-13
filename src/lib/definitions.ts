@@ -44,6 +44,7 @@ export type Appointment = {
   patientGender: 'male' | 'female';
   patientAge: number;
   symptoms: string;
+  appointmentSummary?: string;
   doctorId: number;
   appointmentSlot: string; // This will now store the time window, e.g., "09:00 AM - 09:30 AM"
   appointmentDate: Date;

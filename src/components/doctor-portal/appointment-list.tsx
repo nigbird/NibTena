@@ -1,78 +1,19 @@
 
 'use client';
 
-import { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit, Calendar, Clock, User, X, Check, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { MoreHorizontal, Calendar, Clock, MessageSquare, Hospital } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import type { Appointment } from '@/lib/definitions';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { updateAppointment } from '@/lib/actions';
-import RescheduleDrawer from './reschedule-drawer';
+import type { Appointment, Hospital as HospitalType } from '@/lib/definitions';
 import { format as formatDate, parseISO } from 'date-fns';
-
+import { Card } from '../ui/card';
 
 type DoctorAppointmentListProps = {
   appointments: Appointment[];
   onActionSuccess: () => void;
+  onCardClick: (appointment: Appointment) => void;
 };
 
-export default function DoctorAppointmentList({ appointments, onActionSuccess }: DoctorAppointmentListProps) {
-  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
-  const [isRescheduleDrawerOpen, setIsRescheduleDrawerOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-
-  const handleCancelClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsCancelAlertOpen(true);
-  };
-
-  const handleRescheduleClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsRescheduleDrawerOpen(true);
-  };
-  
-  const handleConfirmCancel = async () => {
-    if (!selectedAppointment) return;
-    await updateAppointment(selectedAppointment.id, { status: 'cancelled' });
-    onActionSuccess();
-    setIsCancelAlertOpen(false);
-    setSelectedAppointment(null);
-  };
-  
-  const handleRescheduleSave = async (date: string, slot: string) => {
-    if (!selectedAppointment) return;
-    await updateAppointment(selectedAppointment.id, { appointmentDate: date, appointmentSlot: slot, status: 'rescheduled' });
-    onActionSuccess();
-    setIsRescheduleDrawerOpen(false);
-    setSelectedAppointment(null);
-  };
-
+export default function DoctorAppointmentList({ appointments, onActionSuccess, onCardClick }: DoctorAppointmentListProps) {
 
   const statusBadgeVariant = {
     confirmed: 'default',
@@ -82,117 +23,48 @@ export default function DoctorAppointmentList({ appointments, onActionSuccess }:
   } as const;
 
   return (
-    <>
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {appointments.map((appointment) => (
-              <TableRow key={appointment.id}>
-                <TableCell>
-                  <div className="font-medium">{appointment.patientName}</div>
-                  <div className="text-sm text-muted-foreground">{appointment.patientPhone}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {formatDate(parseISO(appointment.appointmentDate as unknown as string), 'PPP')}
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {appointment.appointmentSlot}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusBadgeVariant[appointment.status] as any}>{appointment.status}</Badge>
-                </TableCell>
-                <TableCell>
-                   {appointment.status === 'confirmed' && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleRescheduleClick(appointment)}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Reschedule
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCancelClick(appointment)} className="text-destructive">
-                            <X className="mr-2 h-4 w-4" /> Cancel
-                        </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                   )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {/* Mobile Card View */}
-      <div className="grid gap-4 md:hidden">
-        {appointments.map(appointment => (
-          <div key={appointment.id} className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3">
-              <div className="flex justify-between items-start">
-                  <div>
-                      <p className="font-semibold">{appointment.patientName}</p>
-                      <p className="text-sm text-muted-foreground">{appointment.patientPhone}</p>
-                  </div>
-                  <Badge variant={statusBadgeVariant[appointment.status] as any} className="capitalize">{appointment.status}</Badge>
-              </div>
-               <div>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(parseISO(appointment.appointmentDate as unknown as string), 'PPP')} at {appointment.appointmentSlot}
-                  </p>
-              </div>
-              {appointment.status === 'confirmed' && (
-                <div className="flex justify-end gap-2 border-t pt-3 mt-3">
-                    <Button variant="outline" size="sm" onClick={() => handleRescheduleClick(appointment)}>Reschedule</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleCancelClick(appointment)}>Cancel</Button>
-                </div>
-              )}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {appointments.map((appointment) => (
+        <Card 
+          key={appointment.id} 
+          className="p-4 space-y-3 cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => onCardClick(appointment)}
+        >
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="font-semibold">{appointment.patientName}</p>
+              <p className="text-sm text-muted-foreground">Age: {appointment.patientAge}</p>
+            </div>
+            <Badge variant={statusBadgeVariant[appointment.status] as any}>{appointment.status}</Badge>
           </div>
-        ))}
-      </div>
+          
+          <div className="text-sm text-muted-foreground space-y-2 border-t pt-3">
+              <div className="flex items-center gap-2 font-medium text-foreground/90">
+                  <Calendar className="h-4 w-4" />
+                  <span>{formatDate(parseISO(appointment.appointmentDate as unknown as string), 'PPP')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{appointment.appointmentSlot}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Hospital className="h-4 w-4" />
+                  <span>{(appointment as any).hospital.name}</span>
+              </div>
+          </div>
 
-       <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will cancel the appointment for {selectedAppointment?.patientName}. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Back</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmCancel} className="bg-destructive hover:bg-destructive/90">
-              Confirm Cancellation
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {selectedAppointment && (
-        <RescheduleDrawer
-            isOpen={isRescheduleDrawerOpen}
-            setIsOpen={setIsRescheduleDrawerOpen}
-            appointment={selectedAppointment}
-            onReschedule={handleRescheduleSave}
-        />
-      )}
-    </>
+          <div className="border-t pt-3">
+             <h4 className="text-sm font-semibold mb-1">Appointment Summary</h4>
+             <p className="text-xs text-muted-foreground italic truncate">
+              {appointment.appointmentSummary || "No summary available."}
+             </p>
+          </div>
+          
+          <div className="flex justify-end">
+            <button className="text-xs font-semibold text-primary hover:underline">View Details</button>
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }

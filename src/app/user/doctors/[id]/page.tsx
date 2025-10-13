@@ -58,10 +58,10 @@ export default async function DoctorProfilePage({
 
   return (
     <div className="bg-muted/20">
-      <div className="container py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <div className="container py-6 md:py-8">
+        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-1 space-y-6">
-            <Card className="p-8 text-center shadow-lg">
+            <Card className="p-6 md:p-8 text-center shadow-lg rounded-xl bg-background">
                 <Avatar className="h-32 w-32 mb-4 border-4 border-primary/50 mx-auto">
                     {doctorImage && (
                     <AvatarImage
@@ -74,7 +74,7 @@ export default async function DoctorProfilePage({
                     {doctor.name.charAt(0)}
                     </AvatarFallback>
                 </Avatar>
-                <h1 className="font-headline text-3xl font-bold text-primary-foreground">
+                <h1 className="font-headline text-3xl font-bold">
                     {doctor.name}
                 </h1>
                 <Badge variant="secondary" className="mt-2 text-md">
@@ -85,25 +85,25 @@ export default async function DoctorProfilePage({
                 <div className="w-full text-left pt-6 space-y-4">
                     {selectedHospital && (
                          <div className="flex items-center gap-3 text-muted-foreground">
-                            <HospitalIcon className="h-5 w-5 flex-shrink-0"/>
+                            <HospitalIcon className="h-5 w-5 flex-shrink-0 text-accent"/>
                             <span className="font-medium text-foreground">{selectedHospital.name}</span>
                         </div>
                     )}
                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <Wallet className="h-5 w-5 flex-shrink-0" />
+                        <Wallet className="h-5 w-5 flex-shrink-0 text-accent" />
                         <span className="font-bold text-lg text-foreground">${doctor.consultationFee} Consultation Fee</span>
                     </div>
                 </div>
             </Card>
-             <Card className="p-6 shadow-lg">
-                 <h2 className="font-headline text-2xl font-semibold mb-2">
+             <Card className="p-6 shadow-lg rounded-xl">
+                 <h2 className="font-headline text-xl font-semibold mb-2">
                   Professional Bio
                 </h2>
                 <p className="text-muted-foreground text-sm">{doctor.bio}</p>
              </Card>
           </div>
           <div className="lg:col-span-2">
-            <Card className="p-8 shadow-lg">
+            <Card className="p-6 md:p-8 shadow-lg rounded-xl">
                <h2 className="font-headline text-2xl font-semibold mb-4">Book an Appointment</h2>
                <DoctorBooking 
                   doctor={doctor} 

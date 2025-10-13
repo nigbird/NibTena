@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -109,28 +110,35 @@ export default function DoctorBooking({
     <div className="space-y-8">
         <div>
             {doctorHospitals.length > 0 && (
-                 <div className="space-y-2">
-                    <Label className="font-semibold text-lg flex items-center gap-2">
+                 <div className="space-y-3">
+                    <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 flex items-center gap-2">
                         <HospitalIcon className="h-5 w-5" />
                         Select Hospital
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {doctorHospitals.map((hospital) => (
-                        <Button
-                          key={hospital.id}
-                          variant={selectedHospitalId === hospital.id ? 'accent' : 'outline'}
-                          onClick={() => setSelectedHospitalId(hospital.id)}
-                        >
-                          {hospital.name}
-                        </Button>
-                      ))}
-                    </div>
+                    </h3>
+                    <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex pb-2 space-x-2">
+                          {doctorHospitals.map((hospital) => (
+                            <button
+                              key={hospital.id}
+                              onClick={() => setSelectedHospitalId(hospital.id)}
+                              className={cn(
+                                'px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors',
+                                selectedHospitalId === hospital.id
+                                ? 'bg-accent text-accent-foreground border-accent'
+                                : 'bg-card hover:bg-muted/50 border-border'
+                              )}
+                            >
+                              {hospital.name}
+                            </button>
+                          ))}
+                        </div>
+                    </ScrollArea>
                 </div>
             )}
         </div>
 
         <div>
-            <h3 className="font-semibold mb-3 text-lg">Select Date</h3>
+            <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 mb-3">Select Date</h3>
             <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex pb-2 space-x-2">
                     {dates.map((date, index) => (
@@ -140,8 +148,8 @@ export default function DoctorBooking({
                         className={cn(
                         'flex flex-col items-center justify-center p-3 rounded-lg border-2 w-20 h-24 transition-colors',
                         selectedDate.toDateString() === date.toDateString()
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-card hover:bg-muted'
+                            ? 'bg-accent text-accent-foreground border-accent'
+                            : 'bg-card hover:bg-muted/50 border-border'
                         )}
                     >
                         <span className="text-sm font-semibold">{format(date, 'EEE')}</span>
@@ -154,7 +162,7 @@ export default function DoctorBooking({
         </div>
       
         <div>
-            <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+            <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <Clock className="h-5 w-5"/>
                 Available Windows for {format(selectedDate, 'MMMM d')}
             </h3>
@@ -163,7 +171,7 @@ export default function DoctorBooking({
       
       <Button
         size="lg"
-        className="w-full font-bold text-lg"
+        className="w-full font-bold text-lg h-12"
         onClick={handleBookNow}
         disabled={!selectedHospitalId || !selectedDate || !selectedSlot}
         variant="accent"

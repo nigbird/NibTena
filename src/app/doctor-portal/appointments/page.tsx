@@ -29,7 +29,7 @@ export default function DoctorAppointmentsPage() {
     if (!doctor || !activeHospitalId) return;
     setIsLoading(true);
     const data = await getAppointmentsByDoctorIdForDoctor(doctor.id, activeHospitalId);
-    setAppointments(data);
+    setAppointments(data as Appointment[]);
     setIsLoading(false);
   };
   
@@ -42,7 +42,7 @@ export default function DoctorAppointmentsPage() {
   useEffect(() => {
     let newFiltered = appointments.filter(a => {
         const patientNameMatch = a.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-        const dateMatch = a.appointmentDate.toISOString().toLowerCase().includes(searchTerm.toLowerCase());
+        const dateMatch = (a.appointmentDate as unknown as string).toLowerCase().includes(searchTerm.toLowerCase());
         return searchTerm ? (patientNameMatch || dateMatch) : true;
     });
 

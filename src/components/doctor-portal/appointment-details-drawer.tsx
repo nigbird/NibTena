@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from '../ui/separator';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 type AppointmentDetailsDrawerProps = {
   isOpen: boolean;

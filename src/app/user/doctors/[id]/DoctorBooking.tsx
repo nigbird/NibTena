@@ -98,7 +98,7 @@ export default function DoctorBooking({
                     className={cn(
                         'px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
                         selectedSlot === window
-                        ? 'bg-primary text-primary-foreground border-2 border-secondary'
+                        ? 'bg-primary text-primary-foreground border-2 border-primary'
                         : 'bg-background text-foreground'
                     )}
                 >
@@ -127,7 +127,7 @@ export default function DoctorBooking({
                               className={cn(
                                 'px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors',
                                 selectedHospitalId === hospital.id
-                                ? 'bg-accent text-accent-foreground border-accent'
+                                ? 'bg-primary text-primary-foreground border-2 border-primary'
                                 : 'bg-card hover:bg-muted/50 border-border'
                               )}
                             >
@@ -151,7 +151,7 @@ export default function DoctorBooking({
                         className={cn(
                         'flex flex-col items-center justify-center p-3 rounded-lg border-2 w-20 h-24 transition-colors',
                         selectedDate.toDateString() === date.toDateString()
-                            ? 'bg-accent text-accent-foreground border-accent'
+                            ? 'bg-primary text-primary-foreground border-2 border-primary'
                             : 'bg-card hover:bg-muted/50 border-border'
                         )}
                     >

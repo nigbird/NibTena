@@ -38,7 +38,7 @@ export default function BottomNavbar() {
               )}
             >
               <div className={cn("flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", isActive ? 'bg-accent/10' : '')}>
-                 <Icon className={cn("w-6 h-6 mb-1 transition-transform duration-300", isActive && 'scale-110 text-primary')} />
+                 <Icon className={cn("w-6 h-6 mb-1 transition-transform duration-300", isActive && 'scale-110 text-secondary')} />
               </div>
               <span className={cn("text-xs text-center transition-transform", isActive && 'font-semibold text-accent-foreground')}>{label}</span>
             </Link>

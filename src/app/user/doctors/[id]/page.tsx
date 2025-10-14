@@ -77,7 +77,7 @@ export default async function DoctorProfilePage({
                 <h1 className="font-headline text-2xl font-semibold">
                     {doctor.name}
                 </h1>
-                <Badge variant="secondary" className="mt-2 text-md">
+                <Badge variant="default" className="mt-2 text-md">
                     <Stethoscope className="mr-2 h-4 w-4" />
                     {doctor.specialty}
                 </Badge>

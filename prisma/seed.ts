@@ -8,8 +8,10 @@ async function main() {
   console.log(`Start seeding ...`);
 
   // --- Create Hospitals ---
-  const hospital1 = await prisma.hospital.create({
-    data: {
+  const hospital1 = await prisma.hospital.upsert({
+    where: { contactEmail: 'admin@tikuranbessa.com' },
+    update: {},
+    create: {
       name: 'Tikur Anbessa Specialized Hospital',
       description: 'A leading public hospital in Addis Ababa, providing comprehensive healthcare services and medical education. It is the largest specialized hospital in Ethiopia.',
       city: 'Addis Ababa',
@@ -25,8 +27,10 @@ async function main() {
     },
   });
 
-  const hospital2 = await prisma.hospital.create({
-    data: {
+  const hospital2 = await prisma.hospital.upsert({
+    where: { contactEmail: 'admin@sphmmc.com' },
+    update: {},
+    create: {
       name: 'St. Paul\'s Hospital Millennium Medical College',
       description: 'A specialized teaching hospital in Addis Ababa, known for its advanced medical training and patient care services in various fields.',
       city: 'Addis Ababa',
@@ -42,8 +46,10 @@ async function main() {
     },
   });
   
-  const hospital3 = await prisma.hospital.create({
-    data: {
+  const hospital3 = await prisma.hospital.upsert({
+    where: { contactEmail: 'admin@hu.com' },
+    update: {},
+    create: {
         name: 'Hawassa University Comprehensive Specialized Hospital',
         description: 'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
         city: 'Hawassa',
@@ -61,8 +67,10 @@ async function main() {
 
 
   // --- Create Doctors ---
-  const doctor1 = await prisma.doctor.create({
-    data: {
+  const doctor1 = await prisma.doctor.upsert({
+    where: { contact: 'mulugeta.t@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Mulugeta Tesfaye',
       contact: 'mulugeta.t@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -76,8 +84,10 @@ async function main() {
     },
   });
 
-  const doctor2 = await prisma.doctor.create({
-    data: {
+  const doctor2 = await prisma.doctor.upsert({
+    where: { contact: 'selamawit.b@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Selamawit Bekele',
       contact: 'selamawit.b@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -91,8 +101,10 @@ async function main() {
     },
   });
 
-  const doctor3 = await prisma.doctor.create({
-    data: {
+  const doctor3 = await prisma.doctor.upsert({
+    where: { contact: 'tewodros.m@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Tewodros Mekonnen',
       contact: 'tewodros.m@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -106,8 +118,10 @@ async function main() {
     },
   });
   
-   const doctor4 = await prisma.doctor.create({
-    data: {
+   const doctor4 = await prisma.doctor.upsert({
+    where: { contact: 'meron.a@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Meron Alemu',
       contact: 'meron.a@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -121,8 +135,10 @@ async function main() {
     },
   });
 
-  const doctor5 = await prisma.doctor.create({
-    data: {
+  const doctor5 = await prisma.doctor.upsert({
+    where: { contact: 'yoseph.h@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Yoseph Hailemariam',
       contact: 'yoseph.h@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -136,8 +152,10 @@ async function main() {
     },
   });
   
-   const doctor6 = await prisma.doctor.create({
-    data: {
+   const doctor6 = await prisma.doctor.upsert({
+    where: { contact: 'rahel.t@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Rahel Tadesse',
       contact: 'rahel.t@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -151,8 +169,10 @@ async function main() {
     },
   });
   
-   const doctor7 = await prisma.doctor.create({
-    data: {
+   const doctor7 = await prisma.doctor.upsert({
+    where: { contact: 'dawit.a@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Dawit Abebe',
       contact: 'dawit.a@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -166,8 +186,10 @@ async function main() {
     },
   });
   
-   const doctor8 = await prisma.doctor.create({
-    data: {
+   const doctor8 = await prisma.doctor.upsert({
+    where: { contact: 'liya.k@mediverse.com' },
+    update: {},
+    create: {
       name: 'Dr. Liya Kebede',
       contact: 'liya.k@mediverse.com',
       password: 'password123', // In a real app, this should be a hashed password
@@ -183,6 +205,8 @@ async function main() {
 
 
   // --- Link Doctors to Hospitals (Many-to-Many) ---
+  // Delete existing relations to avoid duplicates
+  await prisma.doctorsOnHospitals.deleteMany({});
   await prisma.doctorsOnHospitals.createMany({
     data: [
       // Tikur Anbessa Doctors
@@ -204,20 +228,32 @@ async function main() {
   });
 
   // --- Create an initial appointment for demonstration ---
-   await prisma.appointment.create({
-    data: {
-        patientName: 'Hana Worku',
-        patientPhone: '912345678',
-        patientAge: 28,
-        patientGender: 'female',
-        symptoms: 'Annual check-up and consultation regarding recent fatigue.',
-        doctorId: doctor2.id, // Dr. Selamawit Bekele
-        hospitalId: hospital1.id, // Tikur Anbessa
-        appointmentSlot: '10:30 AM',
-        appointmentDate: new Date(),
-        status: 'confirmed',
-      },
-   });
+  // For seeding, it's often okay to just create one if the identifying data isn't unique
+  const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+          patientName: 'Hana Worku',
+          doctorId: doctor2.id,
+          hospitalId: hospital1.id,
+      }
+  });
+
+  if (!existingAppointment) {
+      await prisma.appointment.create({
+        data: {
+            patientName: 'Hana Worku',
+            patientPhone: '912345678',
+            patientAge: 28,
+            patientGender: 'female',
+            symptoms: 'Annual check-up and consultation regarding recent fatigue.',
+            doctorId: doctor2.id, // Dr. Selamawit Bekele
+            hospitalId: hospital1.id, // Tikur Anbessa
+            appointmentSlot: '10:30 AM',
+            appointmentDate: new Date(),
+            status: 'confirmed',
+          },
+      });
+  }
+
 
   console.log(`Seeding finished.`);
 }
@@ -231,5 +267,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-
-    

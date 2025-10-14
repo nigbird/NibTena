@@ -1,6 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -17,24 +20,84 @@ model SuperAdmin {
 }
 
 model Hospital {
-  id             Int        @id @default(autoincrement())
-  name           String
-  description    String     @db.Text
-  city           String
-  imageId        String
-  contactEmail   String     @unique
-  contactPhone   String
-  password       String
-  accountNumber  String?
-  status         String     @default("active") // "active" or "inactive"
-  startTime      String
-  endTime        String
-  bookingWindow  Int
-  doctors        DoctorsOnHospitals[]
-  appointments   Appointment[]
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String   @db.Text
+  city            String
+  imageId         String
+  contactEmail    String   @unique
+  contactPhone    String
+  password        String
+  accountNumber   String
+  status          String   @default("active") // "active" | "inactive"
+  startTime       String
+  endTime         String
+  bookingWindow   Int // Number of days in advance patients can book
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  doctors         DoctorsOnHospitals[]
+  appointments    Appointment[]
   doctorSchedules DoctorSchedule[]
 }
 
 model Doctor {
-  id              Int        @id @default(autoinou
-[toxicity=1]
+  id              Int                  @id @default(-1)
+  name            String
+  contact         String               @unique
+  password        String
+  specialty       String
+  imageId         String
+  bio             String?              @db.Text
+  consultationFee Int
+  rating          Float
+  experience      Int?
+  status          String               @default("active") // "active" | "inactive"
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  hospitals       DoctorsOnHospitals[]
+  appointments    Appointment[]
+  doctorSchedules DoctorSchedule[]
+}
+
+model DoctorsOnHospitals {
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId   Int
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId Int
+  assignedAt DateTime @default(now())
+
+  @@id([doctorId, hospitalId])
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  patientName     String
+  patientPhone    String
+  patientGender   String // "male" | "female"
+  patientAge      Int
+  symptoms        String   @db.Text
+  doctor          Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId        Int
+  hospital        Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId      Int
+  appointmentSlot String
+  appointmentDate DateTime
+  status          String   @default("confirmed") // "confirmed" | "cancelled" | "completed" | "rescheduled"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DoctorSchedule {
+  id           Int      @id @default(autoincrement())
+  doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     Int
+  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId   Int
+  dayOfWeek    String // e.g., "Monday", "Tuesday"
+  workingHours Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  breakHours   Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([doctorId, hospitalId, dayOfWeek])
+}

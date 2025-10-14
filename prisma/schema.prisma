@@ -10,83 +10,31 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model SuperAdmin {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
+}
+
 model Hospital {
-  id                 Int                  @id @default(autoincrement())
-  name               String
-  description        String
-  city               String
-  imageId            String
-  contactEmail       String               @unique
-  contactPhone       String
-  password           String
-  status             String               @default("active")
-  startTime          String
-  endTime            String
-  bookingWindow      Int
-  doctors            DoctorsOnHospitals[]
-  appointments       Appointment[]
-  schedules          DoctorSchedule[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id             Int        @id @default(autoincrement())
+  name           String
+  description    String     @db.Text
+  city           String
+  imageId        String
+  contactEmail   String     @unique
+  contactPhone   String
+  password       String
+  accountNumber  String?
+  status         String     @default("active") // "active" or "inactive"
+  startTime      String
+  endTime        String
+  bookingWindow  Int
+  doctors        DoctorsOnHospitals[]
+  appointments   Appointment[]
+  doctorSchedules DoctorSchedule[]
 }
 
 model Doctor {
-  id                 Int                  @id @default(autoincrement())
-  name               String
-  contact            String               @unique
-  password           String
-  specialty          String
-  imageId            String
-  bio                String
-  consultationFee    Int
-  rating             Float
-  experience         Int?
-  status             String?              @default("active")
-  hospitals          DoctorsOnHospitals[]
-  appointments       Appointment[]
-  schedules          DoctorSchedule[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-}
-
-model DoctorsOnHospitals {
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  doctorId   Int
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  hospitalId Int
-
-  @@id([doctorId, hospitalId])
-}
-
-model Appointment {
-  id              String   @id @default(cuid())
-  patientName     String
-  patientPhone    String
-  patientAge      Int
-  patientGender   String
-  symptoms        String
-  doctorId        Int
-  doctor          Doctor   @relation(fields: [doctorId], references: [id])
-  hospitalId      Int
-  hospital        Hospital @relation(fields: [hospitalId], references: [id])
-  appointmentSlot String
-  appointmentDate DateTime
-  status          String   @default("confirmed")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model DoctorSchedule {
-  id           Int        @id @default(autoincrement())
-  doctorId     Int
-  doctor       Doctor     @relation(fields: [doctorId], references: [id])
-  hospitalId   Int
-  hospital     Hospital   @relation(fields: [hospitalId], references: [id])
-  dayOfWeek    String
-  workingHours Json
-  breakHours   Json
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@unique([doctorId, hospitalId, dayOfWeek])
-}
+  id              Int        @id @default(autoinou
+[toxicity=1]

@@ -51,19 +51,19 @@ export default function SuperAdminLoginPage() {
   }, [state, toast, router]);
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-        <div className="max-w-sm w-full">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
+        <div className="max-w-md w-full">
             <div className="text-center mb-6">
                 <Link href="/">
                     <Logo />
                 </Link>
             </div>
-            <Card className="shadow-lg">
+            <Card className="bg-white p-2 rounded-2xl shadow-md">
                 <CardHeader className="text-center">
-                    <div className="inline-block mx-auto rounded-full bg-primary/20 p-3 ring-4 ring-background">
+                    <div className="inline-block mx-auto rounded-full bg-primary/20 p-3">
                         <Shield className="h-6 w-6 text-primary-foreground" />
                     </div>
-                    <CardTitle className="text-2xl font-headline pt-2">Super Admin Portal</CardTitle>
+                    <CardTitle className="text-2xl font-headline pt-2 text-[#2E2E2E]">Super Admin Portal</CardTitle>
                     <CardDescription>
                         Global platform management access.
                     </CardDescription>
@@ -72,11 +72,11 @@ export default function SuperAdminLoginPage() {
                     <form action={formAction} className="grid gap-4">
                         <input type="hidden" name="role" value="superadmin" />
                         <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email" className="text-[#2E2E2E]">Email</Label>
                             <Input id="email" name="email" type="email" placeholder="super@mediverse.com" required />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
                             <Input id="password" name="password" type="password" required />
                         </div>
                         <SubmitButton />

@@ -51,19 +51,19 @@ export default function HospitalAdminLoginPage() {
     }, [state, toast, router]);
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-        <div className="max-w-sm w-full">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
+        <div className="w-full max-w-md">
             <div className="text-center mb-6">
                 <Link href="/">
                     <Logo />
                 </Link>
             </div>
-            <Card className="shadow-lg">
+            <Card className="bg-white p-2 rounded-2xl shadow-md">
                 <CardHeader className="text-center">
-                    <div className="inline-block mx-auto rounded-full bg-primary/20 p-3 ring-4 ring-background">
+                    <div className="inline-block mx-auto rounded-full bg-primary/20 p-3">
                         <Hospital className="h-6 w-6 text-primary-foreground" />
                     </div>
-                    <CardTitle className="text-2xl font-headline pt-2">Hospital Admin Portal</CardTitle>
+                    <CardTitle className="text-2xl font-headline pt-2 text-[#2E2E2E]">Hospital Admin Portal</CardTitle>
                     <CardDescription>
                         Sign in to manage your hospital's operations.
                     </CardDescription>
@@ -72,12 +72,12 @@ export default function HospitalAdminLoginPage() {
                 <form action={formAction} className="grid gap-4">
                     <input type="hidden" name="role" value="hospital" />
                     <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email" className="text-[#2E2E2E]">Email</Label>
                         <Input id="email" name="email" type="email" placeholder="admin@hospital.com" required />
                     </div>
                     <div className="grid gap-2">
                         <div className="flex items-center">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
                             <Link href="#" className="ml-auto inline-block text-sm underline text-muted-foreground">
                                 Forgot password?
                             </Link>

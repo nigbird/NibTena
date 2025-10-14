@@ -12,7 +12,7 @@ const HospitalFormSchema = z.object({
   city: z.string().min(2, 'City is required.'),
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  accountNumber: z.string().min(10, { message: 'Please enter a valid account number.' }),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
 });
 
 export type HospitalFormState = {
@@ -22,7 +22,7 @@ export type HospitalFormState = {
     city?: string[];
     contactEmail?: string[];
     contactPhone?: string[];
-    accountNumber?: string[];
+    password?: string[];
     status?: string[];
   };
   message?: string | null;
@@ -47,6 +47,9 @@ export async function saveHospital(
     ...validatedFields.data,
     status: formData.get('status') === 'active' ? 'active' : ('inactive' as 'active' | 'inactive'),
   };
+  
+  // In a real app, you would hash the password here before saving.
+  // Example: data.password = await bcrypt.hash(data.password, 10);
 
   try {
     if (hospitalId) {

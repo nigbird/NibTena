@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -66,7 +67,7 @@ export default function HospitalFormDrawer({
         toast({
           variant: "destructive",
           title: "Error saving hospital",
-          description: Object.values(result.errors || {}).flat().join('\n') || result.message,
+          description: Object.values(result.errors || {}).flat().join('\\n') || result.message,
         });
       }
     });
@@ -110,14 +111,15 @@ export default function HospitalFormDrawer({
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
               </div>
-              <div className="space-y-2">
-                  <Label htmlFor="accountNumber">Account Number</Label>
-                  <Input
-                    id="accountNumber"
-                    name="accountNumber"
-                    defaultValue={hospitalToEdit?.accountNumber}
-                    required
-                  />
+               <div className="space-y-2">
+                <Label htmlFor="password">Admin Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Enter password'}
+                  required={!isEditing}
+                />
               </div>
             </div>
 

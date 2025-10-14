@@ -105,6 +105,15 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                   {state.errors?.contact && <p className="text-sm font-medium text-destructive">{state.errors.contact[0]}</p>}
                 </div>
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="password" className="text-right">
+                  Password
+                </Label>
+                <div className="col-span-3">
+                  <Input id="password" name="password" type="password" placeholder={isEditing ? "Leave blank to keep unchanged" : "Set initial password"} required={!isEditing} />
+                   {state.errors?.password && <p className="text-sm font-medium text-destructive">{state.errors.password[0]}</p>}
+                </div>
+              </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="specialty" className="text-right">
                 Specialty
@@ -153,7 +162,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                 </Label>
                 <div className="col-span-3">
                 <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" required />
-                {state.errors?.bio && <p className="text_sm font_medium text_destructive">{state.errors.bio[0]}</p>}
+                {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
                 </div>
             </div>
             </form>

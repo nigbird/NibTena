@@ -16,7 +16,7 @@ async function main() {
       imageId: 'hospital-1',
       contactEmail: 'admin@tikuranbessa.com',
       contactPhone: '+251-11-551-1211',
-      accountNumber: 'password123', // Plain text for demo
+      password: 'password123', // In a real app, this should be a hashed password
       status: 'active',
       startTime: '08:00',
       endTime: '20:00',
@@ -32,7 +32,7 @@ async function main() {
       imageId: 'hospital-2',
       contactEmail: 'admin@sphmmc.com',
       contactPhone: '+251-11-275-0125',
-      accountNumber: 'password123', // Plain text for demo
+      password: 'password123', // In a real app, this should be a hashed password
       status: 'active',
       startTime: '08:00',
       endTime: '19:00',
@@ -48,7 +48,7 @@ async function main() {
         imageId: 'hospital-3',
         contactEmail: 'admin@hu.com',
         contactPhone: '+251-46-220-5576',
-        accountNumber: 'password123', // Plain text for demo
+        password: 'password123', // In a real app, this should be a hashed password
         status: 'active',
         startTime: '08:30',
         endTime: '18:30',
@@ -62,6 +62,7 @@ async function main() {
     data: {
       name: 'Dr. Mulugeta Tesfaye',
       contact: 'mulugeta.t@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Cardiology',
       imageId: 'doctor-1',
       bio: 'Dr. Mulugeta is a senior cardiologist with over 15 years of experience in treating complex heart conditions. He is known for his patient-centric approach and dedication to cardiovascular health.',
@@ -76,6 +77,7 @@ async function main() {
     data: {
       name: 'Dr. Selamawit Bekele',
       contact: 'selamawit.b@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Dermatology',
       imageId: 'doctor-2',
       bio: 'Dr. Selamawit specializes in both clinical and cosmetic dermatology. With 10 years of experience, she offers expert care for skin, hair, and nail disorders.',
@@ -90,6 +92,7 @@ async function main() {
     data: {
       name: 'Dr. Tewodros Mekonnen',
       contact: 'tewodros.m@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Neurology',
       imageId: 'doctor-3',
       bio: 'A highly respected neurologist, Dr. Tewodros focuses on diagnosing and managing disorders of the nervous system. He has a special interest in epilepsy and stroke management.',
@@ -104,6 +107,7 @@ async function main() {
     data: {
       name: 'Dr. Meron Alemu',
       contact: 'meron.a@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Pediatrics',
       imageId: 'doctor-4',
       bio: 'Dr. Meron is a compassionate pediatrician dedicated to the health and well-being of children from infancy through adolescence. She has over 8 years of experience in pediatric care.',
@@ -118,6 +122,7 @@ async function main() {
     data: {
       name: 'Dr. Yoseph Hailemariam',
       contact: 'yoseph.h@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Orthopedics',
       imageId: 'doctor-5',
       bio: 'Dr. Yoseph is an orthopedic surgeon specializing in sports injuries and joint replacement. He is committed to restoring mobility and improving quality of life for his patients.',
@@ -132,6 +137,7 @@ async function main() {
     data: {
       name: 'Dr. Rahel Tadesse',
       contact: 'rahel.t@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Dentistry',
       imageId: 'doctor-6',
       bio: 'A skilled dentist with a gentle touch, Dr. Rahel provides comprehensive dental care, from routine check-ups to advanced cosmetic procedures.',
@@ -146,6 +152,7 @@ async function main() {
     data: {
       name: 'Dr. Dawit Abebe',
       contact: 'dawit.a@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Cardiology',
       imageId: 'doctor-7',
       bio: 'Dr. Dawit is a cardiologist focused on preventative care and the management of chronic heart conditions. He is an advocate for heart-healthy lifestyles.',
@@ -160,6 +167,7 @@ async function main() {
     data: {
       name: 'Dr. Liya Kebede',
       contact: 'liya.k@mediverse.com',
+      password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Pediatrics',
       imageId: 'doctor-4',
       bio: 'With a friendly demeanor and extensive knowledge, Dr. Liya provides exceptional care for children, focusing on developmental health and preventative medicine.',

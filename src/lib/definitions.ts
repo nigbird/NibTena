@@ -17,7 +17,7 @@ export type Hospital = {
   description: string;
   contactEmail: string;
   contactPhone: string;
-  accountNumber: string;
+  password?: string;
   status: 'active' | 'inactive';
   bookingWindow: number;
   startTime: string;
@@ -35,6 +35,7 @@ export type Doctor = {
   rating: number;
   experience?: number;
   contact?: string;
+  password?: string;
   status?: 'active' | 'inactive';
 };
 

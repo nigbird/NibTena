@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache';
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   contact: z.string().email({ message: 'A valid email is required for login.'}),
+  password: z.string().min(8, 'Password must be at least 8 characters.').or(z.literal('')),
   specialty: z.string().min(2, { message: 'Specialty is required.' }),
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
@@ -20,6 +21,7 @@ export type DoctorFormState = {
   errors?: {
     name?: string[];
     contact?: string[];
+    password?: string[];
     specialty?: string[];
     experience?: string[];
     consultationFee?: string[];
@@ -35,16 +37,14 @@ export async function saveDoctor(
   prevState: DoctorFormState, 
   formData: FormData
 ): Promise<DoctorFormState> {
-  console.debug('[saveDoctor] start', { hospitalId, doctorId });
+  const rawData = Object.fromEntries(formData.entries());
+  
+  // If password is not being updated, remove it from validation.
+  if (doctorId && !rawData.password) {
+    delete rawData.password;
+  }
 
-  const validatedFields = DoctorFormSchema.safeParse({
-    name: formData.get('name')?.toString() || '',
-    contact: formData.get('contact')?.toString() || '',
-    specialty: formData.get('specialty')?.toString() || '',
-    experience: formData.get('experience')?.toString() || '',
-    consultationFee: formData.get('consultationFee')?.toString() || '',
-    bio: formData.get('bio')?.toString() || '',
-  });
+  const validatedFields = DoctorFormSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
     return {
@@ -54,31 +54,31 @@ export async function saveDoctor(
     };
   }
 
-  const data = validatedFields.data;
+  const { password, ...doctorData } = validatedFields.data;
 
   try {
     if (doctorId) {
-      console.debug('[saveDoctor] updating doctor', { doctorId, data });
-      await prisma.doctor.update({ where: { id: doctorId }, data });
-      console.debug('[saveDoctor] update complete', { doctorId });
+      const dataToUpdate: any = { ...doctorData };
+      if (password) {
+        // In a real app, hash the password here before saving
+        // dataToUpdate.password = await bcrypt.hash(password, 10);
+        dataToUpdate.password = password;
+      }
+      await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
-      // pick random placeholder image
+      if (!password) {
+        return { message: 'Password is required for new doctors.', success: false };
+      }
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
-      console.debug('[saveDoctor] creating doctor, imageId=', imageId, 'data=', data);
       await prisma.doctor.create({
         data: {
-          name: data.name,
-          contact: data.contact,
-          specialty: data.specialty,
-          experience: data.experience,
-          consultationFee: data.consultationFee,
-          bio: data.bio,
+          ...doctorData,
+          password: password, // In a real app, hash this password
           imageId,
           rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
           hospitals: { create: { hospitalId } },
         },
       });
-      console.debug('[saveDoctor] create complete');
     }
     revalidatePath('/hospital-admin/doctors');
     return {

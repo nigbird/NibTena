@@ -49,7 +49,7 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
   } else if (role === 'hospital') {
      const hospital = await prisma.hospital.findUnique({ where: { contactEmail: email } });
      // Mock password check. Replace with bcrypt.compare in a real app.
-     if (hospital && hospital.accountNumber === password) {
+     if (hospital && hospital.password === password) {
         session.userId = hospital.id;
         session.name = hospital.name;
         session.role = 'hospital';
@@ -60,9 +60,8 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
   } else if (role === 'doctor') {
     const doctor = await prisma.doctor.findUnique({ where: { contact: email } });
     
-    // Mock password check. In a real app, you would fetch the doctor's hashed password
-    // and use a library like bcrypt to compare it with the provided password.
-    if (doctor && password === 'password123') {
+    // Mock password check. Replace with bcrypt.compare in a real app.
+    if (doctor && doctor.password === password) {
         session.userId = doctor.id;
         session.name = doctor.name;
         session.role = 'doctor';

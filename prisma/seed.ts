@@ -14,9 +14,9 @@ async function main() {
       description: 'A leading public hospital in Addis Ababa, providing comprehensive healthcare services and medical education. It is the largest specialized hospital in Ethiopia.',
       city: 'Addis Ababa',
       imageId: 'hospital-1',
-      contactEmail: 'contact@tikuranbessa.org.et',
+      contactEmail: 'admin@tikuranbessa.com',
       contactPhone: '+251-11-551-1211',
-      accountNumber: '1000012345678',
+      accountNumber: 'password123', // Plain text for demo
       status: 'active',
       startTime: '08:00',
       endTime: '20:00',
@@ -30,9 +30,9 @@ async function main() {
       description: 'A specialized teaching hospital in Addis Ababa, known for its advanced medical training and patient care services in various fields.',
       city: 'Addis Ababa',
       imageId: 'hospital-2',
-      contactEmail: 'info@sphmmc.edu.et',
+      contactEmail: 'admin@sphmmc.com',
       contactPhone: '+251-11-275-0125',
-      accountNumber: '1000098765432',
+      accountNumber: 'password123', // Plain text for demo
       status: 'active',
       startTime: '08:00',
       endTime: '19:00',
@@ -46,9 +46,9 @@ async function main() {
         description: 'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
         city: 'Hawassa',
         imageId: 'hospital-3',
-        contactEmail: 'info@hu.edu.et',
+        contactEmail: 'admin@hu.com',
         contactPhone: '+251-46-220-5576',
-        accountNumber: '1000024681357',
+        accountNumber: 'password123', // Plain text for demo
         status: 'active',
         startTime: '08:30',
         endTime: '18:30',
@@ -61,6 +61,7 @@ async function main() {
   const doctor1 = await prisma.doctor.create({
     data: {
       name: 'Dr. Mulugeta Tesfaye',
+      contact: 'mulugeta.t@mediverse.com',
       specialty: 'Cardiology',
       imageId: 'doctor-1',
       bio: 'Dr. Mulugeta is a senior cardiologist with over 15 years of experience in treating complex heart conditions. He is known for his patient-centric approach and dedication to cardiovascular health.',
@@ -74,6 +75,7 @@ async function main() {
   const doctor2 = await prisma.doctor.create({
     data: {
       name: 'Dr. Selamawit Bekele',
+      contact: 'selamawit.b@mediverse.com',
       specialty: 'Dermatology',
       imageId: 'doctor-2',
       bio: 'Dr. Selamawit specializes in both clinical and cosmetic dermatology. With 10 years of experience, she offers expert care for skin, hair, and nail disorders.',
@@ -87,6 +89,7 @@ async function main() {
   const doctor3 = await prisma.doctor.create({
     data: {
       name: 'Dr. Tewodros Mekonnen',
+      contact: 'tewodros.m@mediverse.com',
       specialty: 'Neurology',
       imageId: 'doctor-3',
       bio: 'A highly respected neurologist, Dr. Tewodros focuses on diagnosing and managing disorders of the nervous system. He has a special interest in epilepsy and stroke management.',
@@ -100,6 +103,7 @@ async function main() {
    const doctor4 = await prisma.doctor.create({
     data: {
       name: 'Dr. Meron Alemu',
+      contact: 'meron.a@mediverse.com',
       specialty: 'Pediatrics',
       imageId: 'doctor-4',
       bio: 'Dr. Meron is a compassionate pediatrician dedicated to the health and well-being of children from infancy through adolescence. She has over 8 years of experience in pediatric care.',
@@ -113,6 +117,7 @@ async function main() {
   const doctor5 = await prisma.doctor.create({
     data: {
       name: 'Dr. Yoseph Hailemariam',
+      contact: 'yoseph.h@mediverse.com',
       specialty: 'Orthopedics',
       imageId: 'doctor-5',
       bio: 'Dr. Yoseph is an orthopedic surgeon specializing in sports injuries and joint replacement. He is committed to restoring mobility and improving quality of life for his patients.',
@@ -126,6 +131,7 @@ async function main() {
    const doctor6 = await prisma.doctor.create({
     data: {
       name: 'Dr. Rahel Tadesse',
+      contact: 'rahel.t@mediverse.com',
       specialty: 'Dentistry',
       imageId: 'doctor-6',
       bio: 'A skilled dentist with a gentle touch, Dr. Rahel provides comprehensive dental care, from routine check-ups to advanced cosmetic procedures.',
@@ -139,6 +145,7 @@ async function main() {
    const doctor7 = await prisma.doctor.create({
     data: {
       name: 'Dr. Dawit Abebe',
+      contact: 'dawit.a@mediverse.com',
       specialty: 'Cardiology',
       imageId: 'doctor-7',
       bio: 'Dr. Dawit is a cardiologist focused on preventative care and the management of chronic heart conditions. He is an advocate for heart-healthy lifestyles.',
@@ -152,6 +159,7 @@ async function main() {
    const doctor8 = await prisma.doctor.create({
     data: {
       name: 'Dr. Liya Kebede',
+      contact: 'liya.k@mediverse.com',
       specialty: 'Pediatrics',
       imageId: 'doctor-4',
       bio: 'With a friendly demeanor and extensive knowledge, Dr. Liya provides exceptional care for children, focusing on developmental health and preventative medicine.',

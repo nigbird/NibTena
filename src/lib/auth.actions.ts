@@ -58,12 +58,11 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
         return { success: true, message: 'Logged in successfully' };
      }
   } else if (role === 'doctor') {
-    // For demonstration, we'll use a hardcoded email and check the doctor ID as a password.
-    // This should be a proper email/password check against the Doctor table.
-    const doctor = await prisma.doctor.findFirst({ where: { contact: email } });
+    const doctor = await prisma.doctor.findUnique({ where: { contact: email } });
     
-    // Mock password check. Replace with a real password field and bcrypt.
-    if (doctor && String(doctor.id) === password) {
+    // Mock password check. In a real app, you would fetch the doctor's hashed password
+    // and use a library like bcrypt to compare it with the provided password.
+    if (doctor && password === 'password123') {
         session.userId = doctor.id;
         session.name = doctor.name;
         session.role = 'doctor';

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useState, useTransition, useRef } from 'react';
@@ -95,6 +96,15 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                 {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name[0]}</p>}
                 </div>
             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="contact" className="text-right">
+                  Email
+                </Label>
+                <div className="col-span-3">
+                  <Input id="contact" name="contact" type="email" defaultValue={doctorToEdit?.contact} className="w-full" required />
+                  {state.errors?.contact && <p className="text-sm font-medium text-destructive">{state.errors.contact[0]}</p>}
+                </div>
+              </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="specialty" className="text-right">
                 Specialty
@@ -143,7 +153,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                 </Label>
                 <div className="col-span-3">
                 <Textarea id="bio" name="bio" defaultValue={doctorToEdit?.bio} className="w-full" required />
-                {state.errors?.bio && <p className="text-sm font-medium text-destructive">{state.errors.bio[0]}</p>}
+                {state.errors?.bio && <p className="text_sm font_medium text_destructive">{state.errors.bio[0]}</p>}
                 </div>
             </div>
             </form>

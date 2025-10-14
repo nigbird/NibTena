@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
+  contact: z.string().email({ message: 'A valid email is required for login.'}),
   specialty: z.string().min(2, { message: 'Specialty is required.' }),
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
@@ -18,6 +19,7 @@ const DoctorFormSchema = z.object({
 export type DoctorFormState = {
   errors?: {
     name?: string[];
+    contact?: string[];
     specialty?: string[];
     experience?: string[];
     consultationFee?: string[];
@@ -37,6 +39,7 @@ export async function saveDoctor(
 
   const validatedFields = DoctorFormSchema.safeParse({
     name: formData.get('name')?.toString() || '',
+    contact: formData.get('contact')?.toString() || '',
     specialty: formData.get('specialty')?.toString() || '',
     experience: formData.get('experience')?.toString() || '',
     consultationFee: formData.get('consultationFee')?.toString() || '',
@@ -65,6 +68,7 @@ export async function saveDoctor(
       await prisma.doctor.create({
         data: {
           name: data.name,
+          contact: data.contact,
           specialty: data.specialty,
           experience: data.experience,
           consultationFee: data.consultationFee,
@@ -84,7 +88,7 @@ export async function saveDoctor(
   } catch (error) {
     console.error('[saveDoctor] caught error', error);
     if ((error as any)?.code === 'P2002') {
-      console.error('[saveDoctor] Unique constraint failed:', (error as any).meta);
+      return { message: `A doctor with this contact email already exists.`, success: false };
     }
     return { message: `Database Error: Failed to save doctor. ${(error as any)?.message ?? ''}`, success: false };
   }

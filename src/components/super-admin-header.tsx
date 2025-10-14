@@ -3,7 +3,6 @@
 
 import Link from 'next/link';
 import {
-  Bell,
   CircleUser,
   LayoutGrid,
   Hospital,
@@ -25,8 +24,10 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
+import { logout } from '@/lib/auth.actions';
+import { type SessionData } from '@/lib/definitions';
 
-export default function SuperAdminHeader() {
+export default function SuperAdminHeader({ user }: { user: SessionData }) {
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
@@ -82,14 +83,18 @@ export default function SuperAdminHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{user?.name || 'My Account'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
                <DropdownMenuItem asChild>
                     <Link href="/super-admin/profile">Profile</Link>
                 </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <form action={logout} className="w-full">
+                    <button type="submit" className="w-full text-left">Logout</button>
+                </form>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>

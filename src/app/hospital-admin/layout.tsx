@@ -1,13 +1,12 @@
+
 import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
-
-async function getHospital() {
+async function getHospital(hospitalId: number) {
     const hospital = await prisma.hospital.findUnique({
-        where: { id: LOGGED_IN_HOSPITAL_ID },
+        where: { id: hospitalId },
     });
     return hospital;
 }
@@ -17,12 +16,14 @@ export default async function HospitalAdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const hospital = await getHospital();
+  const session = await getSession();
+  const hospital = session.userId ? await getHospital(session.userId) : null;
+  
   return (
     <div className="flex min-h-screen w-full">
-      <HospitalAdminSidebar hospital={hospital} />
+      <HospitalAdminSidebar hospital={hospital} user={session} />
       <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
-        <Header />
+        <Header user={session} />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           {children}
         </main>

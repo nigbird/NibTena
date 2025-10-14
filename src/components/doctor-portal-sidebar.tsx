@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -9,8 +10,7 @@ import {
   User,
   Settings,
 } from 'lucide-react';
-import { useState, useEffect, useContext } from 'react';
-import type { Doctor } from '@/lib/definitions';
+import { useContext } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DoctorPortalContext } from './doctor-portal/doctor-portal-context';
+import { logout } from '@/lib/auth.actions';
 
 const navLinks = [
   { href: '/doctor-portal', label: 'Dashboard', icon: LayoutGrid },
@@ -88,7 +89,11 @@ export default function DoctorPortalSidebar() {
                     <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <form action={logout} className="w-full">
+                        <button type="submit" className="w-full text-left">Logout</button>
+                    </form>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -1,5 +1,9 @@
 
+'use client';
+
 import Link from 'next/link';
+import { useFormState, useFormStatus } from 'react-dom';
+import { login } from '@/lib/auth.actions';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,9 +15,41 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Hospital } from 'lucide-react';
+import { Hospital, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" variant="accent" disabled={pending}>
+      {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Signing in...</> : 'Sign In'}
+    </Button>
+  );
+}
 
 export default function HospitalAdminLoginPage() {
+    const [state, formAction] = useFormState(login, undefined);
+    const { toast } = useToast();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (state?.success === false) {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: state.message,
+            })
+        } else if (state?.success === true) {
+            toast({
+                title: 'Login Successful',
+                description: 'Redirecting to your dashboard...',
+            });
+            router.push('/hospital-admin');
+        }
+    }, [state, toast, router]);
+
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
         <div className="max-w-sm w-full">
@@ -33,10 +69,11 @@ export default function HospitalAdminLoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                <div className="grid gap-4">
+                <form action={formAction} className="grid gap-4">
+                    <input type="hidden" name="role" value="hospital" />
                     <div className="grid gap-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="admin@hospital.com" required />
+                        <Input id="email" name="email" type="email" placeholder="admin@hospital.com" required />
                     </div>
                     <div className="grid gap-2">
                         <div className="flex items-center">
@@ -45,12 +82,10 @@ export default function HospitalAdminLoginPage() {
                                 Forgot password?
                             </Link>
                         </div>
-                        <Input id="password" type="password" required />
+                        <Input id="password" name="password" type="password" required />
                     </div>
-                    <Button type="submit" className="w-full" variant="accent">
-                        Sign In
-                    </Button>
-                </div>
+                    <SubmitButton />
+                </form>
                 </CardContent>
             </Card>
         </div>

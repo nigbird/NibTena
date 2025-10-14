@@ -1,4 +1,6 @@
 
+import { type SessionOptions } from 'iron-session';
+
 export type User = {
   id: string;
   fullName: string;
@@ -56,7 +58,7 @@ export type Appointment = {
 
 export type TimeSlot = {
   startTime: string;
-  endTime: string;
+  endTime:string;
 };
 
 export type DoctorSchedule = {
@@ -68,4 +70,20 @@ export type DoctorSchedule = {
   breakHours: TimeSlot[];
   createdAt: Date;
   updatedAt: Date;
+};
+
+// --- SESSION ---
+export type SessionData = {
+  userId?: number;
+  name?: string;
+  role?: 'superadmin' | 'hospital' | 'doctor';
+  isLoggedIn: boolean;
+};
+
+export const sessionOptions: SessionOptions = {
+  password: process.env.SECRET_COOKIE_PASSWORD as string,
+  cookieName: 'mediverse-session',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
 };

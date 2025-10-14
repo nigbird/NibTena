@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,10 +15,7 @@ import {
   Settings,
   CircleUser,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import type { Hospital as HospitalType } from '@/lib/definitions';
-import { prisma } from '@/lib/prisma';
-
+import type { Hospital as HospitalType, SessionData } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
@@ -31,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { logout } from '@/lib/auth.actions';
 
 const navLinks = [
   { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
@@ -45,10 +44,7 @@ const bottomNavLinks = [
     { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
 ];
 
-// Mocking a logged-in admin for Hospital ID 1
-const MOCK_HOSPITAL_ID = 1;
-
-export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalType | null }) {
+export default function HospitalAdminSidebar({ hospital, user }: { hospital: HospitalType | null, user: SessionData }) {
   const pathname = usePathname();
   const hospitalImage = placeholderImages.find(p => p.id === hospital?.imageId);
 
@@ -58,10 +54,6 @@ export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalT
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Logo />
         </Link>
-        <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-          <Bell className="h-4 w-4" />
-          <span className="sr-only">Toggle notifications</span>
-        </Button>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 lg:p-4">
         {navLinks.map(({ href, label, icon: Icon }) => (
@@ -102,7 +94,7 @@ export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalT
                         <AvatarFallback>{hospital?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{hospital?.name}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{user.name}</p>
                         <p className="text-xs text-muted-foreground">Admin</p>
                     </div>
                 </Button>
@@ -121,7 +113,11 @@ export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalT
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <form action={logout} className="w-full">
+                    <button type="submit" className="w-full text-left">Logout</button>
+                  </form>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
       </div>

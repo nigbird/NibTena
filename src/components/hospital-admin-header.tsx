@@ -15,8 +15,6 @@ import {
   Menu,
   Search,
 } from 'lucide-react';
-
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,8 +31,10 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
+import { logout } from '@/lib/auth.actions';
+import { type SessionData } from '@/lib/definitions';
 
-export default function Header() {
+export default function Header({ user }: { user: SessionData }) {
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
@@ -53,10 +53,6 @@ export default function Header() {
                 <Link href="/" className="flex items-center gap-2 font-semibold">
                     <Logo />
                 </Link>
-                <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-                    <Bell className="h-4 w-4" />
-                    <span className="sr-only">Toggle notifications</span>
-                </Button>
                 </div>
                 <nav className="grid gap-2 text-lg font-medium p-2">
                     <Link
@@ -132,14 +128,18 @@ export default function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{user?.name || 'My Account'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/hospital-admin/settings">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <form action={logout} className="w-full">
+                    <button type="submit" className="w-full text-left">Logout</button>
+                </form>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>

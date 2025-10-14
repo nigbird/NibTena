@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
@@ -16,11 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { addDoctor, getSpecialties, type DoctorFormState } from "@/lib/actions";
+import { getSpecialties } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
+import { saveDoctor, type DoctorFormState } from '@/app/hospital-admin/doctors/actions';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -48,7 +50,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const initialState: DoctorFormState = { message: null, errors: {} };
   
   // The action needs to be bound with the hospitalId and potentially the doctorId if editing
-  const action = isEditing ? addDoctor.bind(null, hospitalId, doctorToEdit.id) : addDoctor.bind(null, hospitalId, null);
+  const action = isEditing ? saveDoctor.bind(null, hospitalId, doctorToEdit.id) : saveDoctor.bind(null, hospitalId, null);
   const [state, formAction] = useActionState<DoctorFormState, FormData>(action, initialState);
 
   const { toast } = useToast();

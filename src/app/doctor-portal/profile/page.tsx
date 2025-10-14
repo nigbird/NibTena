@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useState, useContext } from 'react';
@@ -61,7 +62,10 @@ export default function DoctorProfilePage() {
   
   const initialState: DoctorProfileState = { message: null, errors: {} };
   const updateDoctorAction = doctor ? updateDoctorProfile.bind(null, doctor.id) : null;
-  const [state, dispatch] = useActionState(updateDoctorAction!, initialState);
+  
+  // This check is necessary because useActionState cannot be called conditionally.
+  // We provide a dummy action if the main action isn't available yet.
+  const [state, dispatch] = useActionState(updateDoctorAction || (async () => initialState), initialState);
 
   useEffect(() => {
     if (state.success) {

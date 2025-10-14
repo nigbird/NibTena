@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import { login } from '@/lib/auth.actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,7 +30,7 @@ function SubmitButton() {
 }
 
 export default function SuperAdminLoginPage() {
-  const [state, formAction] = useFormState(login, undefined);
+  const [state, formAction] = useActionState(login, undefined);
   const { toast } = useToast();
   const router = useRouter();
 

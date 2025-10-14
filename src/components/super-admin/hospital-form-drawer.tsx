@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
+import { saveHospital } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
 import { Switch } from '../ui/switch';
 
@@ -111,7 +111,7 @@ export default function HospitalFormDrawer({
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
               </div>
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="password">Admin Password</Label>
                 <Input
                   id="password"

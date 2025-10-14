@@ -12,7 +12,7 @@ const HospitalFormSchema = z.object({
   city: z.string().min(2, 'City is required.'),
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }).or(z.literal('')),
 });
 
 export type HospitalFormState = {
@@ -33,7 +33,14 @@ export async function saveHospital(
   hospitalId: number | null,
   formData: FormData
 ): Promise<HospitalFormState> {
-  const validatedFields = HospitalFormSchema.safeParse(Object.fromEntries(formData.entries()));
+
+  const rawData = Object.fromEntries(formData.entries());
+
+  if (hospitalId && !rawData.password) {
+      delete rawData.password;
+  }
+
+  const validatedFields = HospitalFormSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
     return {
@@ -42,21 +49,31 @@ export async function saveHospital(
       success: false,
     };
   }
+  
+  const { password, ...hospitalData } = validatedFields.data;
 
-  const data = {
-    ...validatedFields.data,
+  const dataToSave: any = {
+    ...hospitalData,
     status: formData.get('status') === 'active' ? 'active' : ('inactive' as 'active' | 'inactive'),
   };
   
   // In a real app, you would hash the password here before saving.
   // Example: data.password = await bcrypt.hash(data.password, 10);
+  if (password) {
+      dataToSave.password = password; // Storing plain text for demo purposes
+  }
+
 
   try {
     if (hospitalId) {
-      await prisma.hospital.update({ where: { id: hospitalId }, data });
+      await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
     } else {
+      if (!password) {
+          return { success: false, message: 'Password is required for new hospitals.' };
+      }
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
-      await prisma.hospital.create({ data: { ...data, imageId } });
+      // startTime, endTime, and bookingWindow have been removed from here as they are not on the form
+      await prisma.hospital.create({ data: { ...dataToSave, imageId, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
     }
 
     revalidatePath('/super-admin/hospitals');
@@ -92,8 +109,7 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
   try {
-    await prisma.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
-    await prisma.appointment.deleteMany({ where: { hospitalId } });
+    // This will cascade delete related DoctorsOnHospitals, Appointments, and DoctorSchedules due to schema relations
     await prisma.hospital.delete({ where: { id: hospitalId } });
     revalidatePath('/super-admin/hospitals');
     return { success: true, message: 'Hospital deleted successfully.' };
@@ -101,6 +117,7 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
     return { success: false, message: 'Database Error: Failed to delete hospital.' };
   }
 }
+
 
 export async function getHospitals(page: number, limit: number, query: string) {
   const where = query

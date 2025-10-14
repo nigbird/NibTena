@@ -90,27 +90,27 @@ export default function DoctorBooking({
     }
     
     return (
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {timeWindows.map((window, i) => (
-                <button
-                    key={i}
-                    onClick={() => setSelectedSlot(window)}
-                    className={cn(
-                        'px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
-                        selectedSlot === window
-                        ? 'bg-primary text-primary-foreground border-2 border-primary'
-                        : 'bg-background text-foreground'
-                    )}
-                >
-                    {window}
-                </button>
-            ))}
+       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {timeWindows.map((window, i) => (
+            <button
+                key={i}
+                onClick={() => setSelectedSlot(window)}
+                className={cn(
+                    'px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
+                    selectedSlot === window
+                    ? 'bg-primary text-primary-foreground border-2 border-secondary'
+                    : 'bg-background text-foreground'
+                )}
+            >
+                {window}
+            </button>
+        ))}
         </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
         <div>
             {doctorHospitals.length > 0 && (
                  <div className="space-y-3">

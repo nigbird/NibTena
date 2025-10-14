@@ -21,6 +21,7 @@ async function main() {
       startTime: '08:00',
       endTime: '20:00',
       bookingWindow: 30,
+      accountNumber: 'ACCT-TASH-001',
     },
   });
 
@@ -37,6 +38,7 @@ async function main() {
       startTime: '08:00',
       endTime: '19:00',
       bookingWindow: 21,
+      accountNumber: 'ACCT-SPHMMC-002',
     },
   });
   
@@ -53,6 +55,7 @@ async function main() {
         startTime: '08:30',
         endTime: '18:30',
         bookingWindow: 14,
+        accountNumber: 'ACCT-HUCSH-003',
     },
    });
 
@@ -228,3 +231,5 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+
+    

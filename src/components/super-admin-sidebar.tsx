@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -22,8 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/lib/auth.actions';
-import { type SessionData } from '@/lib/definitions';
+import { signOut, useSession } from 'next-auth/react';
 
 const navLinks = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
@@ -31,8 +29,9 @@ const navLinks = [
   { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function SuperAdminSidebar({ user }: { user: SessionData }) {
+export default function SuperAdminSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -64,7 +63,7 @@ export default function SuperAdminSidebar({ user }: { user: SessionData }) {
                         <AvatarFallback>SA</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{user?.name || 'Super Admin'}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{session?.user?.name || 'Super Admin'}</p>
                         <p className="text-xs text-muted-foreground truncate">Mediverse Platform</p>
                     </div>
                 </Button>
@@ -81,10 +80,8 @@ export default function SuperAdminSidebar({ user }: { user: SessionData }) {
                     <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <form action={logout} className="w-full">
-                    <button type="submit" className="w-full text-left">Logout</button>
-                  </form>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/super-admin/login' })}>
+                  Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

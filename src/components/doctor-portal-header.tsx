@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -26,10 +25,11 @@ import {
 } from '@/components/ui/sheet';
 import { Logo } from './icons';
 import HospitalSwitcher from './doctor-portal/hospital-switcher';
-import { logout } from '@/lib/auth.actions';
-import { type SessionData } from '@/lib/definitions';
+import { signOut, useSession } from 'next-auth/react';
 
-export default function DoctorPortalHeader({ user }: { user: SessionData }) {
+export default function DoctorPortalHeader() {
+    const { data: session } = useSession();
+
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
@@ -94,17 +94,15 @@ export default function DoctorPortalHeader({ user }: { user: SessionData }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{user?.name || 'My Account'}</DropdownMenuLabel>
+              <DropdownMenuLabel>{session?.user?.name || 'My Account'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
                <DropdownMenuItem asChild>
                     <Link href="/doctor-portal/profile">Profile</Link>
                 </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <form action={logout} className="w-full">
-                    <button type="submit" className="w-full text-left">Logout</button>
-                </form>
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/doctor-portal/login' })}>
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

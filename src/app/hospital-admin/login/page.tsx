@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { login } from '@/lib/auth.actions';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,9 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
 import { Hospital, Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -30,25 +29,48 @@ function SubmitButton() {
 }
 
 export default function HospitalAdminLoginPage() {
-    const [state, formAction] = useActionState(login, undefined);
     const { toast } = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get('callbackUrl') || '/hospital-admin';
+    const [error, setError] = useState<string | null>(searchParams.get('error'));
 
-    useEffect(() => {
-        if (state?.success === false) {
+     useEffect(() => {
+        if (error) {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: state.message,
+                description: 'Invalid email or password. Please try again.',
             })
-        } else if (state?.success === true) {
+            setError(null); // Clear error after showing toast
+        }
+    }, [error, toast]);
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+
+        const result = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+            role: 'hospital',
+            callbackUrl
+        });
+
+        if (result?.error) {
+           router.push(`/hospital-admin/login?error=CredentialsSignin`);
+        } else if (result?.url) {
             toast({
                 title: 'Login Successful',
                 description: 'Redirecting to your dashboard...',
             });
-            router.push('/hospital-admin');
+            router.push(result.url);
         }
-    }, [state, toast, router]);
+    }
+
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
@@ -69,8 +91,7 @@ export default function HospitalAdminLoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                <form action={formAction} className="grid gap-4">
-                    <input type="hidden" name="role" value="hospital" />
+                <form onSubmit={handleSubmit} className="grid gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="email" className="text-[#2E2E2E]">Email</Label>
                         <Input id="email" name="email" type="email" placeholder="admin@hospital.com" required />

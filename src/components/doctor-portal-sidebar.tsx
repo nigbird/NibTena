@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -25,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DoctorPortalContext } from './doctor-portal/doctor-portal-context';
-import { logout } from '@/lib/auth.actions';
+import { signOut } from 'next-auth/react';
 
 const navLinks = [
   { href: '/doctor-portal', label: 'Dashboard', icon: LayoutGrid },
@@ -89,10 +88,8 @@ export default function DoctorPortalSidebar() {
                     <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <form action={logout} className="w-full">
-                        <button type="submit" className="w-full text-left">Logout</button>
-                    </form>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/doctor-portal/login' })}>
+                  Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

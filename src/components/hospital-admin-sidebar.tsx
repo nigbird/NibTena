@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -15,7 +14,7 @@ import {
   Settings,
   CircleUser,
 } from 'lucide-react';
-import type { Hospital as HospitalType, SessionData } from '@/lib/definitions';
+import type { Hospital as HospitalType } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
@@ -29,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/lib/auth.actions';
+import { signOut, useSession } from 'next-auth/react';
 
 const navLinks = [
   { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
@@ -44,8 +43,9 @@ const bottomNavLinks = [
     { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function HospitalAdminSidebar({ hospital, user }: { hospital: HospitalType | null, user: SessionData }) {
+export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalType | null }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const hospitalImage = placeholderImages.find(p => p.id === hospital?.imageId);
 
   return (
@@ -94,7 +94,7 @@ export default function HospitalAdminSidebar({ hospital, user }: { hospital: Hos
                         <AvatarFallback>{hospital?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{user.name}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{session?.user?.name}</p>
                         <p className="text-xs text-muted-foreground">Admin</p>
                     </div>
                 </Button>
@@ -113,10 +113,8 @@ export default function HospitalAdminSidebar({ hospital, user }: { hospital: Hos
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <form action={logout} className="w-full">
-                    <button type="submit" className="w-full text-left">Logout</button>
-                  </form>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/hospital-admin/login' })}>
+                  Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

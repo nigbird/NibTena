@@ -1,6 +1,4 @@
 
-import { type SessionOptions } from 'iron-session';
-
 export type User = {
   id: string;
   fullName: string;
@@ -22,6 +20,7 @@ export type Hospital = {
   bookingWindow: number;
   startTime: string;
   endTime: string;
+  accountNumber: string;
 };
 
 export type Doctor = {
@@ -71,33 +70,4 @@ export type DoctorSchedule = {
   breakHours: TimeSlot[];
   createdAt: Date;
   updatedAt: Date;
-};
-
-// --- SESSION ---
-export type SessionData = {
-  userId?: number;
-  name?: string;
-  role?: 'superadmin' | 'hospital' | 'doctor';
-  isLoggedIn: boolean;
-};
-
-export const sessionOptions: SessionOptions = {
-  // Validate that the SECRET_COOKIE_PASSWORD env var is present. iron-session
-  // requires a password between 32 and 1024 characters. Throwing here gives a
-  // clear, early error message for developers instead of the generic
-  // 'Bad usage. Missing password.' runtime error.
-  password: ((): string => {
-    const pw = process.env.SECRET_COOKIE_PASSWORD;
-    if (!pw) {
-      throw new Error('Missing SECRET_COOKIE_PASSWORD environment variable. Create a .env.local file with SECRET_COOKIE_PASSWORD set to a secure value (32+ chars) and restart the dev server.');
-    }
-    if (pw.length < 32 || pw.length > 1024) {
-      throw new Error('SECRET_COOKIE_PASSWORD must be between 32 and 1024 characters.');
-    }
-    return pw;
-  })(),
-  cookieName: 'mediverse-session',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
 };

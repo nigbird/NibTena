@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { login } from '@/lib/auth.actions';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,9 +14,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
 import { Stethoscope, Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -30,25 +31,49 @@ function SubmitButton() {
 }
 
 export default function DoctorLoginPage() {
-    const [state, formAction] = useActionState(login, undefined);
     const { toast } = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get('callbackUrl') || '/doctor-portal';
+    const [error, setError] = useState<string | null>(searchParams.get('error'));
 
     useEffect(() => {
-        if (state?.success === false) {
+        if (error) {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: state.message,
+                description: 'Invalid email or password. Please try again.',
             })
-        } else if (state?.success === true) {
-            toast({
+            setError(null); // Clear error after showing toast
+        }
+    }, [error, toast]);
+    
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+
+        const result = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+            role: 'doctor',
+            callbackUrl,
+        });
+
+        if (result?.error) {
+           setError(result.error);
+           router.push(`/doctor-portal/login?error=CredentialsSignin`);
+        } else if (result?.url) {
+             toast({
                 title: 'Login Successful',
                 description: 'Redirecting to your dashboard...',
             });
-            router.push('/doctor-portal');
+            router.push(result.url);
         }
-    }, [state, toast, router]);
+    }
+
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
@@ -69,8 +94,7 @@ export default function DoctorLoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                <form action={formAction} className="grid gap-4">
-                    <input type="hidden" name="role" value="doctor" />
+                <form onSubmit={handleSubmit} className="grid gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="email" className="text-[#2E2E2E]">Email</Label>
                         <Input id="email" name="email" type="email" placeholder="doctor@example.com" required />

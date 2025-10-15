@@ -1,8 +1,6 @@
-
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -58,7 +56,7 @@ const nextConfig: NextConfig = {
         hostname: 'media.istockphoto.com',
         port: '',
         pathname: '/**',
-      }
+      },
     ],
   },
   async headers() {
@@ -77,6 +75,15 @@ const nextConfig: NextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(), microphone=(), geolocation=(), payment=()',
           },
         ],
       },

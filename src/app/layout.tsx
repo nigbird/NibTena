@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './providers';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'MediVerse',
@@ -13,6 +14,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = headers().get('x-nonce') || '';
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

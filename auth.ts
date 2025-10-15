@@ -39,7 +39,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!user) return null;
           
           // In a real app, passwords should be hashed. The seed script uses plaintext for demo purposes.
-          // This logic assumes passwords are NOT hashed for now, based on the seed file.
           // For production, you'd use: const passwordsMatch = await bcrypt.compare(password, user.password);
           const passwordsMatch = password === user.password;
 
@@ -88,43 +87,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
       const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
 
+      // Define which routes are protected
       const isProtected = isSuperAdminRoute || isHospitalAdminRoute || isDoctorPortalRoute;
+      
+      // If user is logged in
+      if (isLoggedIn) {
+        // If they are on a login page, redirect them to their dashboard
+        if (isLoginPage) {
+          if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
+          if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
+          if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+          return Response.redirect(new URL('/', nextUrl)); // Fallback
+        }
 
-      if (isProtected) {
-          if (isLoggedIn) {
-              // User is logged in, check their role and redirect if they are on the wrong portal
-              if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/', nextUrl));
-              if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/', nextUrl));
-              if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/', nextUrl));
+        // If they are on a protected route, check their role
+        if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/', nextUrl));
+        if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/', nextUrl));
+        if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/', nextUrl));
+        
+        // If all checks pass, allow access
+        return true;
+      }
 
-              // If user is logged in and tries to access a login page, redirect them to their dashboard
-              if (isLoginPage) {
-                  if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
-                  if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
-                  if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
-              }
+      // If user is not logged in and trying to access a protected route (that isn't a login page)
+      if (!isLoggedIn && isProtected && !isLoginPage) {
+        let loginUrl;
+        if (isSuperAdminRoute) loginUrl = '/super-admin/login';
+        else if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
+        else if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
 
-          } else {
-              // User is not logged in, redirect them to the correct login page if they are not already there
-              if (isLoginPage) {
-                return true; // Allow access to login page
-              }
-
-              let loginUrl;
-              if (isSuperAdminRoute) loginUrl = '/super-admin/login';
-              else if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
-              else if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
-
-              if (loginUrl) {
-                const redirectUrl = new URL(loginUrl, nextUrl);
-                // Use pathname to avoid nested callbackUrls
-                redirectUrl.searchParams.set('callbackUrl', nextUrl.pathname); 
-                return Response.redirect(redirectUrl);
-              }
-          }
+        if (loginUrl) {
+          const redirectUrl = new URL(loginUrl, nextUrl);
+          redirectUrl.searchParams.set('callbackUrl', nextUrl.pathname);
+          return Response.redirect(redirectUrl);
+        }
       }
       
-      return true; // Allow access by default
+      // Allow access to all other pages by default (including login pages for unauthenticated users)
+      return true;
     },
   },
   pages: {

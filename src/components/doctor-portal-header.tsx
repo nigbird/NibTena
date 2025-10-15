@@ -27,9 +27,15 @@ import {
 import { Logo } from './icons';
 import HospitalSwitcher from './doctor-portal/hospital-switcher';
 import { signOut, useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
 export default function DoctorPortalHeader() {
     const { data: session } = useSession();
+    const pathname = usePathname();
+
+    if (pathname === '/doctor-portal/login') {
+      return null;
+    }
 
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">

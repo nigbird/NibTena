@@ -6,7 +6,6 @@ import DoctorPortalHeader from '@/components/doctor-portal-header';
 import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-context';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { prisma } from '@/lib/prisma';
-import { usePathname } from 'next/navigation';
 
 async function getDoctorData(userId: string): Promise<{ doctor: Doctor | null; doctorHospitals: Hospital[] }> {
   if (!userId) return { doctor: null, doctorHospitals: [] };
@@ -42,10 +41,10 @@ export default async function DoctorPortalLayout({
 }) {
   const session = await auth();
 
-  // This is a server component, so we can't use usePathname here.
-  // The check for login will be handled by middleware and the client wrapper if needed.
   if (!session?.user || session.user.role !== 'doctor') {
-      redirect('/doctor-portal/login');
+      // This is a server component, so middleware handles the redirect for protected routes.
+      // We just pass children through to allow the login page to render.
+      return <>{children}</>;
   }
 
   const { doctor, doctorHospitals } = await getDoctorData(session.user.id);

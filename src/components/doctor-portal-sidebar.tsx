@@ -38,6 +38,10 @@ export default function DoctorPortalSidebar() {
   const pathname = usePathname();
   const { doctor } = useContext(DoctorPortalContext);
 
+  if (pathname === '/doctor-portal/login') {
+    return null;
+  }
+
   if (!doctor) {
      return (
        <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full p-4">

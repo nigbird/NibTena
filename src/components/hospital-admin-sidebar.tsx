@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,7 +15,6 @@ import {
   Settings,
   CircleUser,
 } from 'lucide-react';
-import type { Hospital as HospitalType } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut, useSession } from 'next-auth/react';
+import { Skeleton } from './ui/skeleton';
 
 const navLinks = [
   { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
@@ -43,10 +44,28 @@ const bottomNavLinks = [
     { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalType | null }) {
+export default function HospitalAdminSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const hospitalImage = placeholderImages.find(p => p.id === hospital?.imageId);
+  
+  // As hospital data is not passed down, we use session name as a placeholder.
+  // A better solution would involve a global state or context provider for hospital data.
+  const hospitalName = session?.user?.name || 'Hospital Admin';
+  const hospitalImage = placeholderImages.find(p => p.id === 'hospital-1'); // Placeholder image
+
+  if (!session) {
+    return (
+       <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full p-4">
+        <Skeleton className="h-[60px] w-full mb-4" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-12 w-full mt-auto" />
+      </aside>
+    );
+  }
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -90,11 +109,11 @@ export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalT
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {hospitalImage && <AvatarImage src={hospitalImage.imageUrl} alt={hospital?.name} />}
-                        <AvatarFallback>{hospital?.name.charAt(0)}</AvatarFallback>
+                        {hospitalImage && <AvatarImage src={hospitalImage.imageUrl} alt={hospitalName} />}
+                        <AvatarFallback>{hospitalName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{hospital?.name}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{hospitalName}</p>
                         <p className="text-xs text-muted-foreground">Admin</p>
                     </div>
                 </Button>

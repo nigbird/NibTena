@@ -1,20 +1,35 @@
 
-import { auth } from '../../../auth';
+'use client';
+
 import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
-import { prisma } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
-export default async function HospitalAdminLayout({
+export default function HospitalAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  
-  if (!session?.user || session.user.role !== 'hospital' || !session.user.hospitalId) {
-    // This will handle users who are not hospital admins or somehow lack a hospitalId.
-    // The middleware should already handle non-logged-in users, but this is a safeguard.
+  const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/hospital-admin/login';
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (status === 'loading') {
+    return (
+       <div className="flex min-h-screen w-full items-center justify-center">
+        {/* You can replace this with a more sophisticated skeleton loader */}
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    // The middleware should handle redirects, but this is a client-side safeguard.
     return (
        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
         {children}
@@ -22,19 +37,9 @@ export default async function HospitalAdminLayout({
     );
   }
 
-  const hospital = await prisma.hospital.findUnique({
-    where: { id: session.user.hospitalId },
-  });
-
-  if (!hospital) {
-    // This case might happen if a hospital is deleted but the session is still active.
-    // The middleware should handle redirecting to login, but we can be explicit.
-    redirect('/hospital-admin/login');
-  }
-
   return (
     <div className="flex min-h-screen w-full">
-      <HospitalAdminSidebar hospital={hospital} />
+      <HospitalAdminSidebar />
       <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">

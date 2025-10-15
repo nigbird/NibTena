@@ -1,3 +1,4 @@
+
 import { auth } from '../../../auth';
 import {
   Card,
@@ -27,7 +28,8 @@ export default async function HospitalAdminDashboard() {
   });
 
   if (!hospital) {
-    return <div>Hospital not found</div>;
+    // This case should ideally be handled by the layout or middleware, but it's a good safeguard.
+    return <div>Hospital not found. Please log out and try again.</div>;
   }
 
   const doctors = await prisma.doctor.findMany({

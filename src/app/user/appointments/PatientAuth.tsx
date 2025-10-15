@@ -20,12 +20,14 @@ export default function PatientAuth() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const phone = formData.get('phone') as string;
+    const phoneInput = formData.get('phone') as string;
 
-    if (!phone) {
+    if (!phoneInput) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please enter a phone number.' });
       return;
     }
+    
+    const phone = `+251${phoneInput}`;
 
     startTransition(async () => {
       const result = await generateAndSendOtp(phone);
@@ -83,5 +85,3 @@ export default function PatientAuth() {
     </div>
   );
 }
-
-    

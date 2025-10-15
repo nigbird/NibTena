@@ -23,7 +23,6 @@ function OtpForm() {
     const router = useRouter();
     const phone = searchParams.get('phone');
     const bookingDataString = searchParams.get('bookingData');
-    const returnUrl = searchParams.get('returnUrl') || '/user/appointments';
     const isBooking = !!bookingDataString;
 
     const { toast } = useToast();
@@ -124,7 +123,7 @@ function OtpForm() {
                 await completeBooking(bookingData);
             } else {
                 // If not booking, redirect to appointments page with patientId
-                router.push(`${returnUrl}?patientId=${result.patient?.id}`);
+                router.push(`/user/appointments?patientId=${result.patient?.id}`);
             }
        });
     }
@@ -143,7 +142,7 @@ function OtpForm() {
                     </div>
                     <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
                     <CardDescription>
-                        We've sent a 6-digit code to +251 {phone}. Check your server console for the code.
+                        We've sent a 6-digit code to {phone}. Check your server console for the code.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

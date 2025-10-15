@@ -1,29 +1,32 @@
 
-'use client';
-
-import { usePathname } from 'next/navigation';
+import { auth } from '../../../auth';
 import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
-// This is a temporary solution until we have proper async context
-async function getHospital(hospitalId: number) {
-    // This function will not be used in the client-side rendered layout
-    return null;
-}
-
-export default function HospitalAdminLayout({
+export default async function HospitalAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  // We assume a session object is passed from a higher-level provider in a real app
-  const session = { isLoggedIn: !pathname.endsWith('/login') }; // Mock session check
-  const hospital = null; // Mock hospital data
+  const session = await auth();
 
-  const isLoginPage = pathname.endsWith('/login');
+  if (!session?.user || session.user.role !== 'hospital') {
+    redirect('/hospital-admin/login');
+  }
+
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: session.user.hospitalId! },
+  });
+
+  if (!hospital) {
+    // This can happen if the hospital is deleted but the session is still active.
+    // Log out the user and redirect to login.
+    redirect('/api/auth/signout');
+  }
+  
+  const isLoginPage = false; // This layout won't be used for login page
 
   if (isLoginPage) {
     return <>{children}</>;
@@ -31,9 +34,9 @@ export default function HospitalAdminLayout({
 
   return (
     <div className="flex min-h-screen w-full">
-      <HospitalAdminSidebar hospital={hospital} user={session} />
+      <HospitalAdminSidebar hospital={hospital} />
       <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
-        <Header user={session} />
+        <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           {children}
         </main>

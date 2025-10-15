@@ -94,7 +94,7 @@ export default function HospitalAdminSidebar({ hospital }: { hospital: HospitalT
                         <AvatarFallback>{hospital?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{session?.user?.name}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{hospital?.name}</p>
                         <p className="text-xs text-muted-foreground">Admin</p>
                     </div>
                 </Button>

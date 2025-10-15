@@ -35,6 +35,7 @@ export type AppointmentFormState = {
 };
 
 export async function saveAppointment(
+  hospitalId: number,
   appointmentId: string | null, // null for add, string for edit
   prevState: AppointmentFormState, 
   formData: FormData
@@ -59,18 +60,16 @@ export async function saveAppointment(
     const doctor = await prisma.doctor.findUnique({ 
         where: { id: doctorId }, 
         include: { 
-            hospitals: { include: { hospital: true }},
-            schedules: { where: { dayOfWeek } }
+            schedules: { where: { dayOfWeek, hospitalId } }
         } 
     });
 
-    if (!doctor || !doctor.hospitals[0]) {
-      throw new Error('Doctor or hospital not found');
+    if (!doctor) {
+      throw new Error('Doctor not found');
     }
-    const hospitalId = doctor.hospitals[0].hospitalId;
 
     // Server-side validation of the time slot
-    const doctorSchedule = doctor.schedules.find(s => s.hospitalId === hospitalId);
+    const doctorSchedule = doctor.schedules[0];
     if (doctorSchedule) {
       const workingHours = doctorSchedule.workingHours as { startTime: string, endTime: string }[];
       const breakHours = doctorSchedule.breakHours as { startTime: string, endTime: string }[];
@@ -104,7 +103,7 @@ export async function saveAppointment(
     if (appointmentId) {
       await prisma.appointment.update({ where: { id: appointmentId }, data: dataToSave });
     } else {
-      await prisma.appointment.create({ data: dataToSave });
+      await prisma.appointment.create({ data: { ...dataToSave, status: 'confirmed' } });
     }
     revalidatePath('/hospital-admin/appointments');
     return {

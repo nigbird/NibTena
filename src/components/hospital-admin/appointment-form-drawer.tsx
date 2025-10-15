@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useRef, useTransition, useState } from 'react';
@@ -45,7 +46,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const isEditing = !!appointmentToEdit;
   const initialState: AppointmentFormState = { message: null, errors: {} };
   
-  const action = isEditing ? saveAppointment.bind(null, appointmentToEdit.id) : saveAppointment.bind(null, null);
+  const action = saveAppointment.bind(null, hospitalId, appointmentToEdit?.id ?? null);
   const [state, formAction] = useActionState<AppointmentFormState, FormData>(action, initialState);
 
   const { toast } = useToast();

@@ -133,6 +133,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // If all checks pass, user is authorized.
       return true;
+      console.log('AUTHORIZED DEBUG:', {
+        pathname: nextUrl.pathname,
+        isLoggedIn,
+        role,
+      });
+      
     },
   },
   pages: {

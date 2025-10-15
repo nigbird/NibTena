@@ -13,6 +13,7 @@ export async function getAppointmentsByDoctorIdForDoctor(doctorId: number, hospi
     },
     include: {
         hospital: true,
+        patient: true,
     },
     orderBy: {
       appointmentDate: 'asc',
@@ -25,9 +26,15 @@ export async function getAppointmentsByDoctorIdForDoctor(doctorId: number, hospi
           ...a,
           appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd'),
           createdAt: a.createdAt.toISOString(),
-          appointmentSummary: a.symptoms, // Removed AI summary, just pass symptoms
+          appointmentSummary: a.symptoms,
+          patientName: a.patient.name, // Flatten patient data
+          patientAge: a.patient.age,
+          patientGender: a.patient.gender,
+          patientPhone: a.patient.phone,
         }
     });
 
   return processedAppointments as unknown as Appointment[];
 }
+
+    

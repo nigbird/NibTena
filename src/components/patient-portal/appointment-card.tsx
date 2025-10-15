@@ -33,8 +33,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 type AppointmentCardProps = {
-  appointment: Appointment;
-  doctor?: Doctor;
+  appointment: Appointment & { doctor: Doctor };
   onActionSuccess: (message: string) => void;
 };
 
@@ -47,12 +46,12 @@ const statusConfig = {
 
 export default function AppointmentCard({
   appointment,
-  doctor,
   onActionSuccess,
 }: AppointmentCardProps) {
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
   const [isRescheduleDrawerOpen, setIsRescheduleDrawerOpen] = useState(false);
 
+  const doctor = appointment.doctor;
   const doctorImage = placeholderImages.find(p => p.id === doctor?.imageId);
   const status = statusConfig[appointment.status] || statusConfig.confirmed;
 
@@ -156,3 +155,5 @@ export default function AppointmentCard({
     </>
   );
 }
+
+    

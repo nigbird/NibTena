@@ -28,7 +28,6 @@ export default async function HospitalAdminDashboard() {
   });
 
   if (!hospital) {
-    // This case should ideally be handled by the layout or middleware, but it's a good safeguard.
     return <div>Hospital not found. Please log out and try again.</div>;
   }
 
@@ -126,3 +125,5 @@ export default async function HospitalAdminDashboard() {
     </>
   );
 }
+
+    

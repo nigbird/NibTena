@@ -227,11 +227,22 @@ async function main() {
     ],
   });
 
+  // --- Create a patient for demonstration ---
+  const patient1 = await prisma.patient.upsert({
+    where: { phone: '912345678' },
+    update: {},
+    create: {
+      name: 'Hana Worku',
+      phone: '912345678',
+      age: 28,
+      gender: 'female',
+    },
+  });
+
   // --- Create an initial appointment for demonstration ---
-  // For seeding, it's often okay to just create one if the identifying data isn't unique
   const existingAppointment = await prisma.appointment.findFirst({
       where: {
-          patientName: 'Hana Worku',
+          patientId: patient1.id,
           doctorId: doctor2.id,
           hospitalId: hospital1.id,
       }
@@ -240,11 +251,8 @@ async function main() {
   if (!existingAppointment) {
       await prisma.appointment.create({
         data: {
-            patientName: 'Hana Worku',
-            patientPhone: '912345678',
-            patientAge: 28,
-            patientGender: 'female',
             symptoms: 'Annual check-up and consultation regarding recent fatigue.',
+            patientId: patient1.id, // Hana Worku
             doctorId: doctor2.id, // Dr. Selamawit Bekele
             hospitalId: hospital1.id, // Tikur Anbessa
             appointmentSlot: '10:30 AM',
@@ -267,3 +275,5 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+
+    

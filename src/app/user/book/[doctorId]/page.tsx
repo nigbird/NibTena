@@ -29,6 +29,7 @@ import { startBookingProcess, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -45,14 +46,6 @@ function SubmitButton() {
       )}
     </Button>
   );
-}
-
-// In a real app, this would come from an authentication session
-const LOGGED_IN_PATIENT_INFO = {
-    name: 'Hana Worku',
-    age: 28,
-    gender: 'female' as 'male' | 'female',
-    phone: '912345678',
 }
 
 export default function BookingPage() {
@@ -95,8 +88,9 @@ export default function BookingPage() {
       
       const params = new URLSearchParams({
         bookingData: JSON.stringify(bookingDetails),
+        phone: state.data.phone,
       });
-      router.push(`/user/verify/phone?${params.toString()}`);
+      router.push(`/user/verify/otp?${params.toString()}`);
 
     } else if (state?.success === false && state.message) {
       toast({
@@ -145,24 +139,24 @@ export default function BookingPage() {
                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Full Name</Label>
-                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf ? LOGGED_IN_PATIENT_INFO.name : ''} required />
+                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" required />
                             {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone Number</Label>
-                          <Input id="phone" name="phone" defaultValue={LOGGED_IN_PATIENT_INFO.phone} placeholder="(123) 456-7890" required />
+                          <Input id="phone" name="phone" placeholder="912345678" required />
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf ? String(LOGGED_IN_PATIENT_INFO.age) : ''} required />
+                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" required />
                             {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="gender">Gender</Label>
-                            <Select key={`gender-${bookingFor}`} name="gender" defaultValue={isBookingForSelf ? LOGGED_IN_PATIENT_INFO.gender : undefined} required>
+                            <Select key={`gender-${bookingFor}`} name="gender" required>
                                 <SelectTrigger id="gender">
                                     <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>
@@ -195,3 +189,5 @@ export default function BookingPage() {
     </div>
   );
 }
+
+    

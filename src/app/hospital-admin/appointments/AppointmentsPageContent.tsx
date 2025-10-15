@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
@@ -13,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import PaginationControls from '@/components/PaginationControls';
 import { Skeleton } from '@/components/ui/skeleton';
 
+type EnrichedAppointment = Appointment & { patient: { name: string; phone: string; age: number; gender: string; } };
 
 export default function AppointmentsPageContent({ hospitalId }: { hospitalId: number }) {
   const router = useRouter();
@@ -22,11 +24,11 @@ export default function AppointmentsPageContent({ hospitalId }: { hospitalId: nu
   const perPage = searchParams.get('per_page') ?? '10';
   const query = searchParams.get('query') ?? '';
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<EnrichedAppointment[]>([]);
   const [totalAppointments, setTotalAppointments] = useState(0);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<EnrichedAppointment | null>(null);
   const [searchTerm, setSearchTerm] = useState(query);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,7 +42,7 @@ export default function AppointmentsPageContent({ hospitalId }: { hospitalId: nu
         getAppointmentsCount(hospitalId, query),
         getDoctorsByHospitalId(hospitalId)
       ]);
-      setAppointments(appointmentsData);
+      setAppointments(appointmentsData as EnrichedAppointment[]);
       setTotalAppointments(count);
       setDoctors(doctorsData);
     } catch (error) {
@@ -67,7 +69,7 @@ export default function AppointmentsPageContent({ hospitalId }: { hospitalId: nu
     setIsDrawerOpen(true);
   };
 
-  const handleEditClick = (appointment: Appointment) => {
+  const handleEditClick = (appointment: EnrichedAppointment) => {
     setEditingAppointment(appointment);
     setIsDrawerOpen(true);
   };
@@ -145,3 +147,5 @@ export default function AppointmentsPageContent({ hospitalId }: { hospitalId: nu
     </div>
   );
 }
+
+    

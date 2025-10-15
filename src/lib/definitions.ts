@@ -27,7 +27,6 @@ export type Doctor = {
   id: number;
   name: string;
   specialty: string;
-  hospitalIds: number[];
   imageId: string;
   bio: string;
   consultationFee: number;
@@ -38,21 +37,24 @@ export type Doctor = {
   status?: 'active' | 'inactive';
 };
 
+export type Patient = {
+  id: number;
+  phone: string;
+  name: string;
+  email?: string | null;
+  age?: number | null;
+  gender?: string | null;
+};
+
 export type Appointment = {
   id: string;
-  hospitalId: number;
-  patientName: string;
-  patientPhone: string;
-  patientGender: 'male' | 'female';
-  patientAge: number;
+  patientId: number;
   symptoms: string;
-  appointmentSummary?: string;
   doctorId: number;
-  appointmentSlot: string; // This will now store the time window, e.g., "09:00 AM - 09:30 AM"
+  hospitalId: number;
+  appointmentSlot: string; // e.g., "09:00 AM - 09:30 AM"
   appointmentDate: Date;
   status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
-  bookedBy?: string;
-  relationship?: string;
   createdAt: string;
 };
 
@@ -71,3 +73,5 @@ export type DoctorSchedule = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+    

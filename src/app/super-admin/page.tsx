@@ -12,32 +12,27 @@ import { prisma } from '@/lib/prisma';
 import SuperAdminDashboardClient from './SuperAdminDashboardClient';
 
 export default async function SuperAdminDashboard() {
-  const [hospitals, doctors, appointments] = await Promise.all([
+  const [hospitals, doctors, appointments, patients] = await Promise.all([
     prisma.hospital.findMany({
       include: {
-        doctors: {
-          include: {
-            doctor: true
-          }
-        }
-      }
+        _count: {
+          select: { doctors: true },
+        },
+      },
     }),
-    prisma.doctor.findMany(),
+    prisma.doctor.count(),
     prisma.appointment.findMany(),
+    prisma.patient.count(),
   ]);
-
-  const uniquePatients = new Set(appointments.map(a => a.patientName));
-  // A simple user count: patients + doctors + hospital admins (assuming 1 per hospital)
-  const totalUsers = uniquePatients.size + doctors.length + hospitals.length;
+  
+  const totalUsers = patients + doctors + hospitals.length;
 
   const chartData = hospitals.map(hospital => {
-    const hospitalDoctorIds = hospital.doctors.map(d => d.doctorId);
-    const hospitalAppointments = appointments.filter(a => hospitalDoctorIds.includes(a.doctorId));
-
+    const hospitalAppointments = appointments.filter(a => a.hospitalId === hospital.id);
     return {
       name: hospital.name.split(' ')[0],
-      doctors: hospital.doctors.length,
-      appointments: hospitalAppointments.length
+      doctors: hospital._count.doctors,
+      appointments: hospitalAppointments.length,
     };
   });
 
@@ -84,7 +79,7 @@ export default async function SuperAdminDashboard() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctors.length}</div>
+            <div className="text-2xl font-bold">{doctors}</div>
             <p className="text-xs text-muted-foreground">doctors registered</p>
           </CardContent>
         </Card>
@@ -114,3 +109,5 @@ export default async function SuperAdminDashboard() {
     </>
   );
 }
+
+    

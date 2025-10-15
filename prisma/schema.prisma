@@ -1,62 +1,68 @@
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
+// ================================================= //
+//                 SUPER ADMIN                         //
+// ================================================= //
 model SuperAdmin {
   id       Int    @id @default(autoincrement())
   email    String @unique
+  name     String
   password String
 }
 
+
+// =https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#model-field-scalar-types================================================= //
+//                 HOSPITAL RELATED MODELS             //
+// ================================================= //
 model Hospital {
-  id              Int      @id @default(autoincrement())
+  id              Int                @id @default(autoincrement())
   name            String
-  description     String   @db.Text
+  description     String             @db.Text
   city            String
   imageId         String
-  contactEmail    String   @unique
+  contactEmail    String             @unique
   contactPhone    String
   password        String
-  accountNumber   String
-  status          String   @default("active") // "active" | "inactive"
-  startTime       String
-  endTime         String
-  bookingWindow   Int // Number of days in advance patients can book
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  accountNumber   String? // For payment integrations
+  status          String             @default("active") // active, inactive
+  startTime       String // e.g., "08:00"
+  endTime         String // e.g., "18:00"
+  bookingWindow   Int                @default(30) // Days in advance patients can book
   doctors         DoctorsOnHospitals[]
   appointments    Appointment[]
   doctorSchedules DoctorSchedule[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model Doctor {
-  id              Int                  @id @default(autoincrement())
+  id              Int                @id @default(autoincrement())
   name            String
-  contact         String               @unique
+  contact         String             @unique
   password        String
   specialty       String
   imageId         String
-  bio             String?              @db.Text
+  bio             String             @db.Text
   consultationFee Int
   rating          Float
   experience      Int?
-  status          String               @default("active") // "active" | "inactive"
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  status          String             @default("active") // active, inactive
   hospitals       DoctorsOnHospitals[]
   appointments    Appointment[]
   doctorSchedules DoctorSchedule[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model DoctorsOnHospitals {
@@ -69,12 +75,51 @@ model DoctorsOnHospitals {
   @@id([doctorId, hospitalId])
 }
 
+model DoctorSchedule {
+  id           Int      @id @default(autoincrement())
+  doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     Int
+  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId   Int
+  dayOfWeek    String // e.g., 'Monday', 'Tuesday'
+  workingHours Json     @default("[]") // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  breakHours   Json     @default("[]") // Array of { startTime: "HH:mm", endTime: "HH:mm" }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([doctorId, hospitalId, dayOfWeek])
+}
+
+// ================================================= //
+//                 PATIENT & APPOINTMENTS            //
+// ================================================= //
+
+model Patient {
+  id           Int           @id @default(autoincrement())
+  phone        String        @unique
+  name         String
+  email        String?
+  age          Int?
+  gender       String? // "male", "female"
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, code])
+}
+
 model Appointment {
   id              String   @id @default(cuid())
-  patientName     String
-  patientPhone    String
-  patientGender   String // "male" | "female"
-  patientAge      Int
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId       Int
   symptoms        String   @db.Text
   doctor          Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId        Int
@@ -82,22 +127,9 @@ model Appointment {
   hospitalId      Int
   appointmentSlot String
   appointmentDate DateTime
-  status          String   @default("confirmed") // "confirmed" | "cancelled" | "completed" | "rescheduled"
+  status          String   @default("confirmed") // confirmed, completed, cancelled, rescheduled
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
-model DoctorSchedule {
-  id           Int      @id @default(autoincrement())
-  doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId     Int
-  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  hospitalId   Int
-  dayOfWeek    String // e.g., "Monday", "Tuesday"
-  workingHours Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
-  breakHours   Json     // Array of { startTime: "HH:mm", endTime: "HH:mm" }
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([doctorId, hospitalId, dayOfWeek])
-}
+    

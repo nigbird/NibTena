@@ -10,7 +10,7 @@ import { isTimeInRanges, isBefore, isEqual, isAfter } from '@/lib/time-utils';
 
 const AppointmentFormSchema = z.object({
   patientName: z.string().min(2, { message: 'Patient name must be at least 2 characters.' }),
-  patientPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
+  patientPhone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
   patientAge: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   patientGender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
   doctorId: z.coerce.number({required_error: 'Please select a doctor.'}),
@@ -34,6 +34,14 @@ export type AppointmentFormState = {
   success?: boolean;
 };
 
+async function findOrCreatePatient(phone: string, defaults: { name: string, age: number, gender: 'male' | 'female' }) {
+    return await prisma.patient.upsert({
+        where: { phone },
+        update: { name: defaults.name, age: defaults.age, gender: defaults.gender },
+        create: { phone, name: defaults.name, age: defaults.age, gender: defaults.gender },
+    });
+}
+
 export async function saveAppointment(
   hospitalId: number,
   appointmentId: string | null, // null for add, string for edit
@@ -50,7 +58,7 @@ export async function saveAppointment(
     };
   }
   
-  const { appointmentDate, doctorId, appointmentSlot, ...rest } = validatedFields.data;
+  const { appointmentDate, doctorId, appointmentSlot, patientName, patientPhone, patientAge, patientGender, ...rest } = validatedFields.data;
   
   const appointmentDay = getDay(new Date(appointmentDate)); // Sunday - 0, Monday - 1, etc.
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -87,12 +95,14 @@ export async function saveAppointment(
         return { success: false, message: "This doctor does not have a schedule for the selected day." };
     }
 
+    const patient = await findOrCreatePatient(patientPhone, { name: patientName, age: patientAge, gender: patientGender });
 
     const dataToSave = {
       ...rest,
       doctorId,
       appointmentSlot,
       hospitalId,
+      patientId: patient.id,
       appointmentDate: new Date(appointmentDate),
       symptoms: validatedFields.data.symptoms || '',
     };
@@ -142,7 +152,7 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
         hospitalId,
         ...(query && {
           OR: [
-            { patientName: { contains: query, mode: 'insensitive' } },
+            { patient: { name: { contains: query, mode: 'insensitive' } } },
             { doctor: { name: { contains: query, mode: 'insensitive' } } },
           ],
         }),
@@ -150,7 +160,7 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
 
     const appointments = await prisma.appointment.findMany({
         where,
-        include: { doctor: true },
+        include: { doctor: true, patient: true },
         orderBy: { appointmentDate: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -163,7 +173,7 @@ export async function getAppointmentsCount(hospitalId: number, query: string) {
         hospitalId,
         ...(query && {
           OR: [
-            { patientName: { contains: query, mode: 'insensitive' } },
+            { patient: { name: { contains: query, mode: 'insensitive' } } },
             { doctor: { name: { contains: query, mode: 'insensitive' } } },
           ],
         }),
@@ -197,3 +207,5 @@ export async function getDoctorScheduleForDate(doctorId: number, date: string, h
     }
   });
 }
+
+    

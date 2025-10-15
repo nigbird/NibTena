@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -24,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Appointment, Doctor } from '@/lib/definitions';
+import type { Appointment, Doctor, Patient } from '@/lib/definitions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,19 +41,21 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+type EnrichedAppointment = Appointment & { patient: Patient };
+
 type AppointmentListProps = {
-  appointments: Appointment[];
+  appointments: EnrichedAppointment[];
   doctors: Doctor[];
-  onEdit: (appointment: Appointment) => void;
+  onEdit: (appointment: EnrichedAppointment) => void;
   onActionSuccess: () => void;
 };
 
 export default function AppointmentList({ appointments, doctors, onEdit, onActionSuccess }: AppointmentListProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<EnrichedAppointment | null>(null);
   const { toast } = useToast();
 
-  const handleDeleteClick = (appointment: Appointment) => {
+  const handleDeleteClick = (appointment: EnrichedAppointment) => {
     setSelectedAppointment(appointment);
     setIsAlertOpen(true);
   };
@@ -70,7 +73,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     setSelectedAppointment(null);
   };
 
-  const handleStatusChange = async (appointment: Appointment, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') => {
+  const handleStatusChange = async (appointment: EnrichedAppointment, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') => {
     const result = await updateAppointmentStatus(appointment.id, status);
      if (result.success) {
       toast({ title: "Success", description: result.message });
@@ -110,8 +113,8 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
             {appointments.map((appointment) => (
               <TableRow key={appointment.id}>
                 <TableCell>
-                  <div className="font-medium">{appointment.patientName}</div>
-                  <div className="text-sm text-muted-foreground">{appointment.patientPhone}</div>
+                  <div className="font-medium">{appointment.patient.name}</div>
+                  <div className="text-sm text-muted-foreground">{appointment.patient.phone}</div>
                 </TableCell>
                 <TableCell>{getDoctorName(appointment.doctorId)}</TableCell>
                 <TableCell>
@@ -181,8 +184,8 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
           <div key={appointment.id} className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3">
               <div className="flex justify-between items-start">
                   <div>
-                      <p className="font-semibold">{appointment.patientName}</p>
-                      <p className="text-sm text-muted-foreground">{appointment.patientPhone}</p>
+                      <p className="font-semibold">{appointment.patient.name}</p>
+                      <p className="text-sm text-muted-foreground">{appointment.patient.phone}</p>
                   </div>
                   <Badge variant={statusBadgeVariant[appointment.status]} className="capitalize">{appointment.status}</Badge>
               </div>
@@ -205,7 +208,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the appointment for {selectedAppointment?.patientName}.
+              This action cannot be undone. This will permanently delete the appointment for {selectedAppointment?.patient.name}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -219,3 +222,5 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     </>
   );
 }
+
+    

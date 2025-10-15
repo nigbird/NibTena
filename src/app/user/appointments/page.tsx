@@ -1,38 +1,35 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import type { Appointment, Doctor } from '@/lib/definitions';
-import {
-  getMyAppointments,
-  getDoctors,
-} from './actions';
+import { getMyAppointments } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileX } from 'lucide-react';
+import { Search, FileX, ShieldCheck } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ToastAction } from '@/components/ui/toast';
+import PatientAuth from './PatientAuth';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_PATIENT_NAME = 'Hana Worku';
-
-export default function MyAppointmentsPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+function AppointmentsContent() {
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+  const pathname = usePathname();
+
+  const patientId = searchParams.get('patientId');
+
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
     if (isSuccess) {
@@ -41,50 +38,27 @@ export default function MyAppointmentsPage() {
         description: 'Your appointment has been successfully booked.',
       });
 
-      const profileComplete = typeof window !== 'undefined' ? localStorage.getItem('profileComplete') === 'true' : false;
-      if (!profileComplete) {
-         setTimeout(() => {
-            toast({
-                title: 'Complete Your Profile',
-                description: 'Let’s make your next booking faster.',
-                duration: 10000, // Keep toast visible longer
-                action: (
-                  <div className="flex flex-col gap-2 w-full">
-                    <ToastAction asChild altText="Complete now" className="w-full">
-                        <Button onClick={() => router.push('/user/profile/setup')} variant="accent" size="sm">
-                            Yes, complete now
-                        </Button>
-                    </ToastAction>
-                    <ToastAction asChild altText="Maybe later" className="w-full">
-                         <Button onClick={() => {}} variant="outline" size="sm">
-                            Maybe later
-                        </Button>
-                    </ToastAction>
-                  </div>
-                ),
-            });
-        }, 1500);
-      }
-      
-      // Clean up the URL
-      window.history.replaceState(null, '', '/user/appointments');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('success');
+      router.replace(`${pathname}?${newParams.toString()}`);
     }
-  }, [searchParams, toast, router]);
+  }, [searchParams, toast, router, pathname]);
 
   const fetchData = async () => {
+    if (!patientId) return;
     setIsLoading(true);
-    const [appointmentData, doctorData] = await Promise.all([
-      getMyAppointments(LOGGED_IN_PATIENT_NAME),
-      getDoctors(),
-    ]);
-    setAppointments(appointmentData as Appointment[]);
-    setDoctors(doctorData as Doctor[]);
+    const appointmentData = await getMyAppointments(Number(patientId));
+    setAppointments(appointmentData as any[]);
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (patientId) {
+      fetchData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [patientId]);
 
   const handleActionSuccess = (message: string) => {
     fetchData();
@@ -106,16 +80,22 @@ export default function MyAppointmentsPage() {
     if (searchTerm) {
         const lowercasedFilter = searchTerm.toLowerCase();
         filtered = filtered.filter(appointment => {
-            const doctor = doctors.find(d => d.id === appointment.doctorId);
-            return (
-                (doctor && doctor.name.toLowerCase().includes(lowercasedFilter)) ||
-                new Date(appointment.appointmentDate).toLocaleDateString().toLowerCase().includes(lowercasedFilter)
-            );
+            const doctorName = appointment.doctor?.name.toLowerCase() || '';
+            const hospitalName = appointment.hospital?.name.toLowerCase() || '';
+            const appointmentDate = new Date(appointment.appointmentDate).toLocaleDateString().toLowerCase();
+
+            return doctorName.includes(lowercasedFilter) || 
+                   hospitalName.includes(lowercasedFilter) || 
+                   appointmentDate.includes(lowercasedFilter);
         });
     }
 
     return filtered.sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
-  }, [appointments, doctors, activeFilter, searchTerm]);
+  }, [appointments, activeFilter, searchTerm]);
+
+  if (!patientId) {
+    return <PatientAuth />;
+  }
 
   const renderContent = () => {
     if (isLoading) {
@@ -135,7 +115,7 @@ export default function MyAppointmentsPage() {
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
-              doctor={doctors.find(d => d.id === appointment.doctorId)}
+              doctor={appointment.doctor}
               onActionSuccess={handleActionSuccess}
             />
           ))}
@@ -166,7 +146,7 @@ export default function MyAppointmentsPage() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by doctor or date..."
+            placeholder="Search by doctor, hospital or date..."
             className="w-full appearance-none bg-background pl-8"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -191,3 +171,14 @@ export default function MyAppointmentsPage() {
     </>
   );
 }
+
+
+export default function MyAppointmentsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AppointmentsContent />
+        </Suspense>
+    )
+}
+
+    

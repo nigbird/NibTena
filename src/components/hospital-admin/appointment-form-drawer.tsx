@@ -19,17 +19,19 @@ import { Calendar as CalendarIcon, Loader2, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
-import type { Appointment, Doctor, DoctorSchedule } from '@/lib/definitions';
+import type { Appointment, Doctor, DoctorSchedule, Patient } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '../ui/badge';
 
+type EnrichedAppointment = Appointment & { patient: Patient };
+
 type AppointmentFormDrawerProps = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onAppointmentSaved: () => void;
-  appointmentToEdit?: Appointment | null;
+  appointmentToEdit?: EnrichedAppointment | null;
   doctors: Doctor[];
   hospitalId: number;
 };
@@ -54,7 +56,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const [isPending, startTransition] = useTransition();
 
   const [date, setDate] = useState<Date | undefined>(
-    appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : new Date()
+    appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate as unknown as string) : new Date()
   );
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(appointmentToEdit?.doctorId?.toString());
   const [doctorSchedule, setDoctorSchedule] = useState<DoctorSchedule | null>(null);
@@ -92,7 +94,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   useEffect(() => {
     if (isOpen) {
       setFormKey(Date.now());
-      setDate(appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate) : new Date());
+      setDate(appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate as unknown as string) : new Date());
       setSelectedDoctorId(appointmentToEdit?.doctorId.toString());
     }
   }, [isOpen, appointmentToEdit]);
@@ -151,24 +153,24 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="patientName">Patient Name</Label>
-                  <Input id="patientName" name="patientName" defaultValue={appointmentToEdit?.patientName} required />
+                  <Input id="patientName" name="patientName" defaultValue={appointmentToEdit?.patient.name} required />
                   {state.errors?.patientName && <p className="text-sm font-medium text-destructive">{state.errors.patientName[0]}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="patientPhone">Patient Phone</Label>
-                  <Input id="patientPhone" name="patientPhone" defaultValue={appointmentToEdit?.patientPhone} required />
+                  <Input id="patientPhone" name="patientPhone" defaultValue={appointmentToEdit?.patient.phone} required />
                   {state.errors?.patientPhone && <p className="text-sm font-medium text-destructive">{state.errors.patientPhone[0]}</p>}
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="patientAge">Age</Label>
-                  <Input id="patientAge" name="patientAge" type="number" defaultValue={appointmentToEdit?.patientAge} required />
+                  <Input id="patientAge" name="patientAge" type="number" defaultValue={appointmentToEdit?.patient.age} required />
                   {state.errors?.patientAge && <p className="text-sm font-medium text-destructive">{state.errors.patientAge[0]}</p>}
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="patientGender">Gender</Label>
-                    <Select name="patientGender" defaultValue={appointmentToEdit?.patientGender} required>
+                    <Select name="patientGender" defaultValue={appointmentToEdit?.patient.gender} required>
                         <SelectTrigger id="patientGender"><SelectValue placeholder="Select gender" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="male">Male</SelectItem>
@@ -246,3 +248,5 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
     </Sheet>
   );
 }
+
+    

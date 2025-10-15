@@ -28,15 +28,22 @@ export const DoctorPortalProvider = ({ children, doctor, doctorHospitals }: Doct
   const [activeHospitalId, setActiveHospitalIdState] = useState<number | null>(null);
 
   useEffect(() => {
-    if (doctorHospitals.length > 0 && !activeHospitalId) {
+    // This effect runs on the client after the initial server render
+    if (doctorHospitals.length > 0) {
         const storedHospitalId = localStorage.getItem('activeHospitalId');
-        if (storedHospitalId && doctorHospitals.some(h => h.id === Number(storedHospitalId))) {
+        // Ensure the stored ID is valid for the current doctor
+        const isValidStoredId = storedHospitalId && doctorHospitals.some(h => h.id === Number(storedHospitalId));
+        
+        if (isValidStoredId) {
           setActiveHospitalIdState(Number(storedHospitalId));
         } else {
-          setActiveHospitalIdState(doctorHospitals[0].id);
+          // If no valid stored ID, default to the first hospital in the list
+          const defaultHospitalId = doctorHospitals[0].id;
+          setActiveHospitalIdState(defaultHospitalId);
+          localStorage.setItem('activeHospitalId', defaultHospitalId.toString());
         }
     }
-  }, [doctorHospitals, activeHospitalId]);
+  }, [doctorHospitals]);
 
   const setActiveHospitalId = (id: number) => {
     localStorage.setItem('activeHospitalId', id.toString());

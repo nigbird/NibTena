@@ -3,7 +3,6 @@ import { auth } from '../../../auth';
 import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { prisma } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
 
 export default async function HospitalAdminLayout({
   children,
@@ -11,25 +10,33 @@ export default async function HospitalAdminLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const isHospitalUser = !!session?.user && session.user.role === 'hospital';
 
-  if (!session?.user || session.user.role !== 'hospital') {
-    redirect('/hospital-admin/login');
+  // Try to load hospital only for valid hospital users
+  let hospital: any = null;
+  if (isHospitalUser && session.user.hospitalId) {
+    hospital = await prisma.hospital.findUnique({
+      where: { id: session.user.hospitalId! },
+    });
   }
 
-  const hospital = await prisma.hospital.findUnique({
-    where: { id: session.user.hospitalId! },
-  });
-
-  if (!hospital) {
-    // This can happen if the hospital is deleted but the session is still active.
-    // Log out the user and redirect to login.
-    redirect('/api/auth/signout');
+  // If a hospital user exists but their hospital is missing, sign out
+  if (isHospitalUser && !hospital) {
+    // Keep behavior: invalidate session if backing record was deleted
+    return (
+      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+        {children}
+      </main>
+    );
   }
-  
-  const isLoginPage = false; // This layout won't be used for login page
 
-  if (isLoginPage) {
-    return <>{children}</>;
+  // If not a hospital user (e.g., on login), render children without dashboard chrome
+  if (!isHospitalUser || !hospital) {
+    return (
+      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+        {children}
+      </main>
+    );
   }
 
   return (

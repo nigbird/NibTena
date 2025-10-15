@@ -78,52 +78,48 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const role = auth?.user?.role;
+      const role = auth?.user?.role as string | undefined;
       const { pathname } = nextUrl;
-      
-      const isLoginPage = pathname.endsWith('/login');
+
+      const isSuperAdminLogin = pathname === '/super-admin/login';
+      const isHospitalAdminLogin = pathname === '/hospital-admin/login';
+      const isDoctorPortalLogin = pathname === '/doctor-portal/login';
+      const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
 
       const isSuperAdminRoute = pathname.startsWith('/super-admin');
       const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
       const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
-
-      // Define which routes are protected
       const isProtected = isSuperAdminRoute || isHospitalAdminRoute || isDoctorPortalRoute;
-      
-      // If user is logged in
+
       if (isLoggedIn) {
-        // If they are on a login page, redirect them to their dashboard
-        if (isLoginPage) {
-          if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
-          if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
-          if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
-          return Response.redirect(new URL('/', nextUrl)); // Fallback
+        // On a role-specific login page: only redirect if role matches that portal
+        if (isAnyLogin) {
+          if (isSuperAdminLogin && role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
+          if (isHospitalAdminLogin && role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
+          if (isDoctorPortalLogin && role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+          // Different role visiting another role's login page: allow showing the login page (no redirect)
+          return true;
         }
 
-        // If they are on a protected route, check their role
-        if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/', nextUrl));
-        if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/', nextUrl));
-        if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/', nextUrl));
-        
-        // If all checks pass, allow access
+        // Protected areas: enforce role
+        if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/super-admin/login', nextUrl));
+        if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/hospital-admin/login', nextUrl));
+        if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/doctor-portal/login', nextUrl));
         return true;
       }
 
-      // If user is not logged in and trying to access a protected route (that isn't a login page)
-      if (!isLoggedIn && isProtected && !isLoginPage) {
-        let loginUrl;
+      // Not logged in: redirect only when trying to access protected areas (not login pages)
+      if (!isLoggedIn && isProtected && !isAnyLogin) {
+        let loginUrl = '/login';
         if (isSuperAdminRoute) loginUrl = '/super-admin/login';
         else if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
         else if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
 
-        if (loginUrl) {
-          const redirectUrl = new URL(loginUrl, nextUrl);
-          redirectUrl.searchParams.set('callbackUrl', nextUrl.pathname);
-          return Response.redirect(redirectUrl);
-        }
+        const redirectUrl = new URL(loginUrl, nextUrl);
+        redirectUrl.searchParams.set('callbackUrl', nextUrl.toString());
+        return Response.redirect(redirectUrl);
       }
-      
-      // Allow access to all other pages by default (including login pages for unauthenticated users)
+
       return true;
     },
   },

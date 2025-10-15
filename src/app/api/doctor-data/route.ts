@@ -33,6 +33,7 @@ export async function GET(request: Request) {
 
     const doctorHospitals = doctor.hospitals.map(h => h.hospital);
 
+    // We are returning the full doctor object and the list of hospitals
     return NextResponse.json({ doctor, doctorHospitals });
 
   } catch (error) {

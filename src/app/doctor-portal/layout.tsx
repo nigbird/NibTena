@@ -9,21 +9,6 @@ import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-c
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { useEffect, useState } from 'react';
 
-async function getDoctorData(userId: string): Promise<{ doctor: Doctor | null; doctorHospitals: Hospital[] }> {
-  if (!userId) return { doctor: null, doctorHospitals: [] };
-
-  const doctorId = parseInt(userId, 10);
-  if (isNaN(doctorId)) return { doctor: null, doctorHospitals: [] };
-
-  // This function will be called from the client, so we need to fetch
-  const res = await fetch(`/api/doctor-data?id=${doctorId}`);
-  if (!res.ok) {
-    return { doctor: null, doctorHospitals: [] };
-  }
-  const data = await res.json();
-  return data;
-}
-
 export default function DoctorPortalLayout({
   children,
 }: {
@@ -38,15 +23,27 @@ export default function DoctorPortalLayout({
     if (session?.user?.id) {
       setIsLoadingData(true);
       fetch(`/api/doctor-data?id=${session.user.id}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                // Throw an error to be caught by the catch block
+                throw new Error('Failed to fetch doctor data');
+            }
+            return res.json();
+        })
         .then(data => {
           setDoctorData(data);
           setIsLoadingData(false);
+        })
+        .catch(error => {
+            console.error("Error fetching doctor data:", error);
+            setIsLoadingData(false);
+            // Optionally, handle the error state in the UI
         });
-    } else {
+    } else if (status !== 'loading') {
+      // If there's no session and not loading, we can stop loading
       setIsLoadingData(false);
     }
-  }, [session]);
+  }, [session, status]);
 
   if (pathname === '/doctor-portal/login') {
     return <>{children}</>;
@@ -61,6 +58,8 @@ export default function DoctorPortalLayout({
   }
 
   if (!session || !doctorData.doctor) {
+    // This will protect routes if the session is gone or data fetching fails
+    // The middleware should handle the redirect, but this is a safeguard.
     return (
        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
         {children}

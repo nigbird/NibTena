@@ -78,48 +78,60 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const role = auth?.user?.role as string | undefined;
+      const role = auth?.user?.role;
       const { pathname } = nextUrl;
-
-      const isSuperAdminLogin = pathname === '/super-admin/login';
-      const isHospitalAdminLogin = pathname === '/hospital-admin/login';
-      const isDoctorPortalLogin = pathname === '/doctor-portal/login';
-      const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
 
       const isSuperAdminRoute = pathname.startsWith('/super-admin');
       const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
       const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
-      const isProtected = isSuperAdminRoute || isHospitalAdminRoute || isDoctorPortalRoute;
 
-      if (isLoggedIn) {
-        // On a role-specific login page: only redirect if role matches that portal
+      const isSuperAdminLogin = pathname === '/super-admin/login';
+      const isHospitalAdminLogin = pathname === '/hospital-admin/login';
+      const isDoctorPortalLogin = pathname === '/doctor-portal/login';
+
+      const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
+
+      if (!isLoggedIn) {
+        // If not logged in and trying to access a login page, allow it.
         if (isAnyLogin) {
-          if (isSuperAdminLogin && role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
-          if (isHospitalAdminLogin && role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
-          if (isDoctorPortalLogin && role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
-          // Different role visiting another role's login page: allow showing the login page (no redirect)
           return true;
         }
-
-        // Protected areas: enforce role
-        if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/super-admin/login', nextUrl));
-        if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/hospital-admin/login', nextUrl));
-        if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/doctor-portal/login', nextUrl));
+        // If not logged in and trying to access any other protected route, redirect to the correct login page.
+        let loginUrl = '/user'; // Default redirect, though middleware shouldn't hit this for /user
+        if (isSuperAdminRoute) loginUrl = '/super-admin/login';
+        if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
+        if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
+        
+        // For non-login protected routes, perform the redirect
+        if (isSuperAdminRoute || isHospitalAdminRoute || isDoctorPortalRoute) {
+             return Response.redirect(new URL(loginUrl, nextUrl));
+        }
         return true;
       }
 
-      // Not logged in: redirect only when trying to access protected areas (not login pages)
-      if (!isLoggedIn && isProtected && !isAnyLogin) {
-        let loginUrl = '/login';
-        if (isSuperAdminRoute) loginUrl = '/super-admin/login';
-        else if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
-        else if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
-
-        const redirectUrl = new URL(loginUrl, nextUrl);
-        redirectUrl.searchParams.set('callbackUrl', nextUrl.toString());
-        return Response.redirect(redirectUrl);
+      // --- At this point, user is logged in ---
+      
+      // If logged in, trying to access a login page
+      if (isAnyLogin) {
+        if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
+        if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
+        if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+        // Fallback if role is somehow mismatched, just allow to prevent loops
+        return true;
+      }
+      
+      // If logged in, verify role access for protected routes
+      if (isSuperAdminRoute && role !== 'superadmin') {
+        return Response.redirect(new URL('/super-admin/login', nextUrl));
+      }
+      if (isHospitalAdminRoute && role !== 'hospital') {
+        return Response.redirect(new URL('/hospital-admin/login', nextUrl));
+      }
+      if (isDoctorPortalRoute && role !== 'doctor') {
+        return Response.redirect(new URL('/doctor-portal/login', nextUrl));
       }
 
+      // If all checks pass, user is authorized.
       return true;
     },
   },

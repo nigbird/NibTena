@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext } from 'react';
@@ -14,7 +15,7 @@ import { Hospital } from 'lucide-react';
 export default function HospitalSwitcher() {
   const { doctorHospitals, activeHospitalId, setActiveHospitalId, doctor } = useContext(DoctorPortalContext);
 
-  if (!doctor || doctor.hospitalIds.length <= 1) {
+  if (!doctor || !doctorHospitals || doctorHospitals.length <= 1) {
     return null;
   }
 

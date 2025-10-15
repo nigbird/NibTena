@@ -29,6 +29,9 @@ export default async function DoctorPortalPage() {
     where: { doctorId: doctorId },
     orderBy: {
       appointmentDate: 'asc',
+    },
+    include: {
+        patient: true,
     }
   });
 
@@ -40,7 +43,7 @@ export default async function DoctorPortalPage() {
     return format(appointmentDate, 'yyyy-MM-dd') === todayStr;
   });
 
-  const uniquePatients = new Set(allAppointments.map(a => a.patientName));
+  const uniquePatients = new Set(allAppointments.map(a => a.patient?.name));
 
   const stats = {
     upcoming: upcomingAppointments.length,
@@ -122,8 +125,8 @@ export default async function DoctorPortalPage() {
                                     <span className="text-xs text-muted-foreground">{appointment.appointmentSlot.split(' ')[1]}</span>
                                 </div>
                                 <div>
-                                    <p className="font-semibold">{appointment.patientName}</p>
-                                    <p className="text-sm text-muted-foreground">Age: {appointment.patientAge}, {appointment.patientGender}</p>
+                                    <p className="font-semibold">{appointment.patient.name}</p>
+                                    <p className="text-sm text-muted-foreground">Age: {appointment.patient.age}, {appointment.patient.gender}</p>
                                 </div>
                              </div>
                              <Badge variant={appointment.status === 'rescheduled' ? 'secondary' : 'default'}>{appointment.status}</Badge>

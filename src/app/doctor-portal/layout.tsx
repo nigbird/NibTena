@@ -1,11 +1,13 @@
 
-import { auth } from '../../../auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import DoctorPortalSidebar from '@/components/doctor-portal-sidebar';
 import DoctorPortalHeader from '@/components/doctor-portal-header';
 import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-context';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { prisma } from '@/lib/prisma';
+import { useEffect, useState } from 'react';
 
 async function getDoctorData(userId: string): Promise<{ doctor: Doctor | null; doctorHospitals: Hospital[] }> {
   if (!userId) return { doctor: null, doctorHospitals: [] };
@@ -13,52 +15,63 @@ async function getDoctorData(userId: string): Promise<{ doctor: Doctor | null; d
   const doctorId = parseInt(userId, 10);
   if (isNaN(doctorId)) return { doctor: null, doctorHospitals: [] };
 
-  const doctor = await prisma.doctor.findUnique({
-    where: { id: doctorId },
-    include: {
-      hospitals: {
-        include: {
-          hospital: true,
-        },
-      },
-    },
-  });
-
-  if (!doctor) {
+  // This function will be called from the client, so we need to fetch
+  const res = await fetch(`/api/doctor-data?id=${doctorId}`);
+  if (!res.ok) {
     return { doctor: null, doctorHospitals: [] };
   }
-
-  const doctorHospitals = doctor.hospitals.map(h => h.hospital);
-
-  return { doctor: doctor as Doctor, doctorHospitals: doctorHospitals as Hospital[] };
+  const data = await res.json();
+  return data;
 }
 
-
-export default async function DoctorPortalLayout({
+export default function DoctorPortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const [doctorData, setDoctorData] = useState<{ doctor: Doctor | null; doctorHospitals: Hospital[] }>({ doctor: null, doctorHospitals: [] });
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  if (!session?.user || session.user.role !== 'doctor') {
-      // This is a server component, so middleware handles the redirect for protected routes.
-      // We just pass children through to allow the login page to render.
-      return <>{children}</>;
+  useEffect(() => {
+    if (session?.user?.id) {
+      setIsLoadingData(true);
+      fetch(`/api/doctor-data?id=${session.user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setDoctorData(data);
+          setIsLoadingData(false);
+        });
+    } else {
+      setIsLoadingData(false);
+    }
+  }, [session]);
+
+  if (pathname === '/doctor-portal/login') {
+    return <>{children}</>;
   }
 
-  const { doctor, doctorHospitals } = await getDoctorData(session.user.id);
-  
-  if (!doctor) {
-      // This could happen if the user exists in auth but not in the doctor table.
-      // Redirecting to login might be the safest option.
-      redirect('/doctor-portal/login');
+  if (status === 'loading' || isLoadingData) {
+    return (
+       <div className="flex min-h-screen w-full items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!session || !doctorData.doctor) {
+    return (
+       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+        {children}
+      </main>
+    );
   }
 
   return (
     <DoctorPortalProvider
-      doctor={doctor}
-      doctorHospitals={doctorHospitals}
+      doctor={doctorData.doctor}
+      doctorHospitals={doctorData.doctorHospitals}
     >
       <div className="flex min-h-screen w-full">
         <DoctorPortalSidebar />

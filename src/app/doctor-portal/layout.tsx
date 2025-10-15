@@ -35,14 +35,15 @@ export default async function DoctorPortalLayout({
 }) {
   const session = await auth();
 
+  // If there's no session and the user isn't already on the login page, redirect them.
   if (!session?.user || session.user.role !== 'doctor') {
-    redirect('/doctor-portal/login');
+    return redirect('/doctor-portal/login');
   }
 
   const { doctor, doctorHospitals } = await getDoctorData(session.user.id);
   
   if (!doctor) {
-     redirect('/doctor-portal/login');
+     return redirect('/doctor-portal/login');
   }
 
   return (

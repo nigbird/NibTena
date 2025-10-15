@@ -14,10 +14,8 @@ import PaginationControls from '@/components/PaginationControls';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
 
-function DoctorsPageContent() {
+function DoctorsPageContent({ hospitalId }: { hospitalId: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,8 +36,8 @@ function DoctorsPageContent() {
     const perPageAsNumber = Number(perPage);
     try {
       const [data, count] = await Promise.all([
-        getDoctors(LOGGED_IN_HOSPITAL_ID, pageAsNumber, perPageAsNumber, query),
-        getDoctorsCount(LOGGED_IN_HOSPITAL_ID, query),
+        getDoctors(hospitalId, pageAsNumber, perPageAsNumber, query),
+        getDoctorsCount(hospitalId, query),
       ]);
       setDoctors(data);
       setTotalDoctors(count);
@@ -48,7 +46,7 @@ function DoctorsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, query]);
+  }, [page, perPage, query, hospitalId]);
 
   useEffect(() => {
     fetchDoctorsAndCount();
@@ -94,7 +92,7 @@ function DoctorsPageContent() {
       <DoctorFormDrawer
         isOpen={isDrawerOpen}
         setIsOpen={setIsDrawerOpen}
-        hospitalId={LOGGED_IN_HOSPITAL_ID}
+        hospitalId={hospitalId}
         onDoctorSaved={handleFormActionSuccess}
         doctorToEdit={editingDoctor}
       />
@@ -145,10 +143,18 @@ function DoctorsPageContent() {
   );
 }
 
-export default function DoctorsPage() {
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
+
+export default async function DoctorsPage() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        redirect('/hospital-admin/login');
+    }
+
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <DoctorsPageContent />
+            <DoctorsPageContent hospitalId={session.hospitalId} />
         </Suspense>
     )
 }

@@ -11,13 +11,19 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 import { HospitalAdminDashboardClient } from '@/components/hospital-admin/HospitalAdminDashboardClient';
-
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
 export default async function HospitalAdminDashboard() {
+  const session = await getSession();
+  if (!session.isLoggedIn || !session.hospitalId) {
+    redirect('/hospital-admin/login');
+  }
+
+  const hospitalId = session.hospitalId;
+
   const hospital = await prisma.hospital.findUnique({
-    where: { id: LOGGED_IN_HOSPITAL_ID },
+    where: { id: hospitalId },
   });
 
   if (!hospital) {
@@ -27,16 +33,14 @@ export default async function HospitalAdminDashboard() {
   const doctors = await prisma.doctor.findMany({
     where: {
       hospitals: {
-        some: { hospitalId: LOGGED_IN_HOSPITAL_ID }
+        some: { hospitalId }
       }
     }
   });
 
-  const doctorIds = doctors.map(d => d.id);
-
   const appointments = await prisma.appointment.findMany({
     where: {
-      hospitalId: LOGGED_IN_HOSPITAL_ID,
+      hospitalId: hospitalId,
     }
   });
 

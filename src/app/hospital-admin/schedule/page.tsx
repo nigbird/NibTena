@@ -16,11 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
 
-
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
-
-export default function ScheduleSettingsPage() {
+export default function ScheduleSettingsPage({ hospitalId }: { hospitalId: number }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -35,8 +31,8 @@ export default function ScheduleSettingsPage() {
     setIsLoading(true);
     try {
       const [doctorsData, settingsData] = await Promise.all([
-          getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
-          getHospitalSettings(LOGGED_IN_HOSPITAL_ID)
+          getDoctorsByHospitalId(hospitalId),
+          getHospitalSettings(hospitalId)
       ]);
       setDoctors(doctorsData);
       if (settingsData) {
@@ -48,7 +44,7 @@ export default function ScheduleSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, hospitalId]);
 
   useEffect(() => {
     fetchDoctorsAndSettings();
@@ -94,7 +90,7 @@ export default function ScheduleSettingsPage() {
           isOpen={isEditDrawerOpen}
           setIsOpen={handleDrawerClose}
           doctor={selectedDoctor}
-          hospitalId={LOGGED_IN_HOSPITAL_ID}
+          hospitalId={hospitalId}
         />
       )}
       
@@ -102,7 +98,7 @@ export default function ScheduleSettingsPage() {
         isOpen={isAddDrawerOpen}
         setIsOpen={setIsAddDrawerOpen}
         doctors={doctors}
-        hospitalId={LOGGED_IN_HOSPITAL_ID}
+        hospitalId={hospitalId}
         onScheduleSaved={handleDrawerClose}
        />
 
@@ -200,4 +196,20 @@ export default function ScheduleSettingsPage() {
       </form>
     </div>
   );
+}
+
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
+export async function ScheduleSettingsPageWrapper() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        redirect('/hospital-admin/login');
+    }
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ScheduleSettingsPage hospitalId={session.hospitalId} />
+        </Suspense>
+    )
 }

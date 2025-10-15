@@ -12,10 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
+import { getSession } from '@/lib/session';
 
-export default function QueueProjectionPage() {
+export default function QueueProjectionPage({ hospitalId }: { hospitalId: number }) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,8 +24,8 @@ export default function QueueProjectionPage() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const [allAppointments, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
-        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+        getAppointmentsByHospitalId(hospitalId),
+        getDoctorsByHospitalId(hospitalId),
       ]);
 
       const todaysAppointments = allAppointments
@@ -51,7 +50,7 @@ export default function QueueProjectionPage() {
     } finally {
         setIsLoading(false);
     }
-  }, []);
+  }, [hospitalId]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -225,4 +224,15 @@ export default function QueueProjectionPage() {
   );
 }
 
-    
+export async function QueueProjectionPageWrapper() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        // This page is meant to be public-facing on a display, 
+        // but it still needs a hospital context.
+        // In a real app, you might use a URL parameter with a secret key
+        // or have a different way to associate a projection screen with a hospital.
+        // For now, we'll just block it if no session is found.
+        return <div className="p-8 text-center text-red-500">Error: No hospital context found. Cannot display queue.</div>
+    }
+    return <QueueProjectionPage hospitalId={session.hospitalId} />;
+}

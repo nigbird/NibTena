@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -26,13 +27,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
+import { getSession } from '@/lib/session';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#FF8042', '#00C49F'];
 
-export default function ReportsPage() {
+export default function ReportsPage({ hospitalId }: { hospitalId: number }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,8 +47,8 @@ export default function ReportsPage() {
     setIsLoading(true);
     try {
       const [appointmentsData, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
-        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
+        getAppointmentsByHospitalId(hospitalId),
+        getDoctorsByHospitalId(hospitalId)
       ]);
       setAppointments(appointmentsData as Appointment[]);
       setDoctors(doctorsData as Doctor[]);
@@ -59,7 +58,7 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [hospitalId]);
 
   useEffect(() => {
     fetchData();
@@ -330,4 +329,20 @@ export default function ReportsPage() {
 
     </div>
   );
+}
+
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
+export async function ReportsPageWrapper() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        redirect('/hospital-admin/login');
+    }
+
+    return (
+        <Suspense fallback={<div>Loading reports...</div>}>
+            <ReportsPage hospitalId={session.hospitalId} />
+        </Suspense>
+    )
 }

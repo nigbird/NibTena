@@ -1,10 +1,12 @@
 
+
 'use server';
 
 import { z } from 'zod';
 import { getSession } from './session';
 import { prisma } from './prisma';
 import { redirect } from 'next/navigation';
+import type { DoctorsOnHospitals } from '@prisma/client';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -37,9 +39,9 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
   // not secure.
   
   if (role === 'superadmin') {
-    // This is a mock implementation for the super admin.
-    if (email === 'super@mediverse.com' && password === 'password123') {
-        session.userId = 999;
+    const superAdmin = await prisma.superAdmin.findUnique({ where: { email } });
+    if (superAdmin && superAdmin.password === password) {
+        session.userId = superAdmin.id;
         session.name = 'Super Admin';
         session.role = 'superadmin';
         session.isLoggedIn = true;
@@ -53,12 +55,16 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
         session.userId = hospital.id;
         session.name = hospital.name;
         session.role = 'hospital';
+        session.hospitalId = hospital.id;
         session.isLoggedIn = true;
         await session.save();
         return { success: true, message: 'Logged in successfully' };
      }
   } else if (role === 'doctor') {
-    const doctor = await prisma.doctor.findUnique({ where: { contact: email } });
+    const doctor = await prisma.doctor.findUnique({ 
+        where: { contact: email },
+        include: { hospitals: true }
+    });
     
     // Mock password check. Replace with bcrypt.compare in a real app.
     if (doctor && doctor.password === password) {
@@ -66,6 +72,7 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
         session.name = doctor.name;
         session.role = 'doctor';
         session.isLoggedIn = true;
+        session.hospitalIds = doctor.hospitals.map((h: DoctorsOnHospitals) => h.hospitalId);
         await session.save();
         return { success: true, message: 'Logged in successfully' };
     }

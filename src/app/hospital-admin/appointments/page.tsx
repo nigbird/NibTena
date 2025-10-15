@@ -14,10 +14,7 @@ import { Input } from '@/components/ui/input';
 import PaginationControls from '@/components/PaginationControls';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
-
-function AppointmentsPageContent() {
+function AppointmentsPageContent({ hospitalId }: { hospitalId: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -39,9 +36,9 @@ function AppointmentsPageContent() {
     const perPageAsNumber = Number(perPage);
     try {
       const [appointmentsData, count, doctorsData] = await Promise.all([
-        getAppointments(LOGGED_IN_HOSPITAL_ID, pageAsNumber, perPageAsNumber, query),
-        getAppointmentsCount(LOGGED_IN_HOSPITAL_ID, query),
-        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID)
+        getAppointments(hospitalId, pageAsNumber, perPageAsNumber, query),
+        getAppointmentsCount(hospitalId, query),
+        getDoctorsByHospitalId(hospitalId)
       ]);
       setAppointments(appointmentsData);
       setTotalAppointments(count);
@@ -51,7 +48,7 @@ function AppointmentsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, query]);
+  }, [page, perPage, query, hospitalId]);
 
   useEffect(() => {
     fetchAppointmentsAndDoctors();
@@ -100,6 +97,7 @@ function AppointmentsPageContent() {
         onAppointmentSaved={handleFormActionSuccess}
         appointmentToEdit={editingAppointment}
         doctors={doctors}
+        hospitalId={hospitalId}
       />
 
       <Card>
@@ -148,11 +146,18 @@ function AppointmentsPageContent() {
   );
 }
 
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
-export default function AppointmentsPage() {
+export default async function AppointmentsPage() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        redirect('/hospital-admin/login');
+    }
+    
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <AppointmentsPageContent />
+            <AppointmentsPageContent hospitalId={session.hospitalId} />
         </Suspense>
     )
 }

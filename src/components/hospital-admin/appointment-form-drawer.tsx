@@ -31,6 +31,7 @@ type AppointmentFormDrawerProps = {
   onAppointmentSaved: () => void;
   appointmentToEdit?: Appointment | null;
   doctors: Doctor[];
+  hospitalId: number;
 };
 
 function formatTime(timeStr: string) {
@@ -41,7 +42,7 @@ function formatTime(timeStr: string) {
     return `${String(formattedHour).padStart(2, '0')}:${minute} ${ampm}`;
 }
 
-export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointmentSaved, appointmentToEdit, doctors }: AppointmentFormDrawerProps) {
+export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointmentSaved, appointmentToEdit, doctors, hospitalId }: AppointmentFormDrawerProps) {
   const isEditing = !!appointmentToEdit;
   const initialState: AppointmentFormState = { message: null, errors: {} };
   
@@ -60,18 +61,16 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
 
-  const LOGGED_IN_HOSPITAL_ID = 1; // In real app, get from session
-
   useEffect(() => {
     if (selectedDoctorId && date) {
       setIsLoadingSchedule(true);
-      getDoctorScheduleForDate(Number(selectedDoctorId), format(date, 'yyyy-MM-dd'), LOGGED_IN_HOSPITAL_ID)
+      getDoctorScheduleForDate(Number(selectedDoctorId), format(date, 'yyyy-MM-dd'), hospitalId)
         .then(schedule => setDoctorSchedule(schedule as DoctorSchedule | null))
         .finally(() => setIsLoadingSchedule(false));
     } else {
       setDoctorSchedule(null);
     }
-  }, [selectedDoctorId, date]);
+  }, [selectedDoctorId, date, hospitalId]);
 
   useEffect(() => {
     if (state.success && !isPending) {

@@ -1,4 +1,5 @@
 
+
 import { type SessionOptions } from 'iron-session';
 
 export type User = {
@@ -22,6 +23,7 @@ export type Hospital = {
   bookingWindow: number;
   startTime: string;
   endTime: string;
+  accountNumber: string;
 };
 
 export type Doctor = {
@@ -79,6 +81,8 @@ export type SessionData = {
   name?: string;
   role?: 'superadmin' | 'hospital' | 'doctor';
   isLoggedIn: boolean;
+  hospitalId?: number; // For hospital admins
+  hospitalIds?: number[]; // For doctors who can work at multiple hospitals
 };
 
 export const sessionOptions: SessionOptions = {

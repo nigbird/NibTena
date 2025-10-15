@@ -14,9 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_HOSPITAL_ID = 1;
-
 type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 
 export type QueueItem = Appointment & {
@@ -30,8 +27,11 @@ const statusConfig: Record<QueueStatus, { icon: React.ElementType, color: string
   'Completed': { icon: CheckCircle2, color: 'bg-gray-400 dark:bg-gray-600' },
 };
 
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
-export default function QueueManagementPage() {
+
+export default function QueueManagementPage({ hospitalId }: { hospitalId: number }) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,8 +44,8 @@ export default function QueueManagementPage() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const [allAppointments, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(LOGGED_IN_HOSPITAL_ID),
-        getDoctorsByHospitalId(LOGGED_IN_HOSPITAL_ID),
+        getAppointmentsByHospitalId(hospitalId),
+        getDoctorsByHospitalId(hospitalId),
       ]);
 
        const todaysAppointments = allAppointments
@@ -76,7 +76,7 @@ export default function QueueManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, hospitalId]);
   
   useEffect(() => {
     fetchTodaysAppointments();
@@ -269,4 +269,12 @@ export default function QueueManagementPage() {
       </Card>
     </div>
   );
+}
+
+export async function QueuePage() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.hospitalId) {
+        redirect('/hospital-admin/login');
+    }
+    return <QueueManagementPage hospitalId={session.hospitalId} />;
 }

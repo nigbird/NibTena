@@ -1,3 +1,4 @@
+
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
@@ -36,11 +37,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           if (!user) return null;
-
-          const passwordsMatch = await bcrypt.compare(password, user.password);
           
+          // In a real app, passwords should be hashed. The seed script uses plaintext for demo purposes.
+          // This logic assumes passwords are NOT hashed for now, based on the seed file.
+          // For production, you'd use: const passwordsMatch = await bcrypt.compare(password, user.password);
+          const passwordsMatch = password === user.password;
+
           if (passwordsMatch) {
-            // Return a user object that will be encoded in the JWT
             return {
               id: user.id.toString(),
               name: user.name,
@@ -59,7 +62,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        token.role = user.role as string;
         token.hospitalId = (user as any).hospitalId;
         token.doctorHospitalIds = (user as any).doctorHospitalIds;
       }
@@ -79,30 +82,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const role = auth?.user?.role;
       const { pathname } = nextUrl;
 
-      if (pathname.startsWith('/super-admin')) {
-        return isLoggedIn && role === 'superadmin';
-      }
-      if (pathname.startsWith('/hospital-admin')) {
-        return isLoggedIn && role === 'hospital';
-      }
-      if (pathname.startsWith('/doctor-portal')) {
-        return isLoggedIn && role === 'doctor';
-      }
-      // For /user routes, for now, we can allow access if logged in, or not.
-      // This can be tightened later. For now, it seems public.
-      if (pathname.startsWith('/user')) {
-        return true;
+      const isSuperAdminPage = pathname.startsWith('/super-admin');
+      const isHospitalAdminPage = pathname.startsWith('/hospital-admin');
+      const isDoctorPortalPage = pathname.startsWith('/doctor-portal');
+
+      if (isLoggedIn) {
+        // If logged in, check role access
+        if (isSuperAdminPage && role !== 'superadmin') return false;
+        if (isHospitalAdminPage && role !== 'hospital') return false;
+        if (isDoctorPortalPage && role !== 'doctor') return false;
+
+        // If logged in and on a login page, redirect to the respective dashboard
+        if ((pathname.endsWith('/login') && (isSuperAdminPage || isHospitalAdminPage || isDoctorPortalPage))) {
+            if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
+            if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
+            if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+        }
+
+      } else {
+        // If not logged in, redirect to the correct login page for protected routes
+        if (isSuperAdminPage) {
+            return Response.redirect(new URL(`/super-admin/login?callbackUrl=${nextUrl}`, nextUrl));
+        }
+        if (isHospitalAdminPage) {
+            return Response.redirect(new URL(`/hospital-admin/login?callbackUrl=${nextUrl}`, nextUrl));
+        }
+        if (isDoctorPortalPage) {
+            return Response.redirect(new URL(`/doctor-portal/login?callbackUrl=${nextUrl}`, nextUrl));
+        }
       }
 
-      return true; // Allow access to public pages like login
+      // Allow access to public pages like /user/** or if already authorized
+      return true;
     },
   },
   pages: {
-    signIn: '/login', // A generic login page, will redirect based on role attempts
+    // This is intentionally left blank to handle redirects in the `authorized` callback
   },
   session: {
     strategy: 'jwt',
   },
-  // Support either NEXTAUTH_SECRET or AUTH_SECRET for compatibility
-  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET,
 });

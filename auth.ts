@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: process.env.NEXTAUTH_TRUST_HOST === 'true',
   providers: [
     Credentials({
       name: 'Credentials',
@@ -133,16 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // If all checks pass, user is authorized.
       return true;
-      console.log('AUTHORIZED DEBUG:', {
-        pathname: nextUrl.pathname,
-        isLoggedIn,
-        role,
-      });
-      
     },
-  },
-  pages: {
-    // This is intentionally left blank to handle redirects in the `authorized` callback
   },
   session: {
     strategy: 'jwt',

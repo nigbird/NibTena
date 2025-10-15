@@ -98,8 +98,9 @@ export async function startBookingProcess(
 
 export async function completeBooking(bookingData: any) {
   let newAppointment;
+  let patient;
   try {
-    const patient = await prisma.patient.findUnique({
+    patient = await prisma.patient.findUnique({
         where: { phone: bookingData.phone }
     });
     
@@ -126,12 +127,12 @@ export async function completeBooking(bookingData: any) {
     };
   }
 
-  if (newAppointment) {
+  if (newAppointment && patient) {
     revalidatePath('/doctor-portal/appointments');
     revalidatePath('/hospital-admin/appointments');
     revalidatePath('/user/appointments');
     // Redirect must be called outside of try/catch
-    redirect(`/user/appointments?success=true&phone=${bookingData.phone}`);
+    redirect(`/user/appointments?success=true&patientId=${patient.id}`);
   } else {
     return {
         success: false,
@@ -139,5 +140,3 @@ export async function completeBooking(bookingData: any) {
     };
   }
 }
-
-    

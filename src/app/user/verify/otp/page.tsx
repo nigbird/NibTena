@@ -119,6 +119,8 @@ function OtpForm() {
 
             if (isBooking && bookingDataString) {
                 const bookingData = JSON.parse(bookingDataString);
+                // The completeBooking action now handles the redirect, so we just await it.
+                // It will redirect to the appointments page with the patientId.
                 await completeBooking(bookingData);
             } else {
                 // If not booking, redirect to appointments page with patientId
@@ -196,5 +198,3 @@ export default function OtpVerificationPage() {
         </Suspense>
     )
 }
-
-    

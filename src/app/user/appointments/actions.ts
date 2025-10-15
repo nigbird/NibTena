@@ -78,5 +78,3 @@ export async function verifyOtpAndGetPatient(phone: string, code: string) {
         return { success: false, message: "An error occurred during verification." };
     }
 }
-
-    

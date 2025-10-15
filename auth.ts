@@ -81,39 +81,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role;
       const { pathname } = nextUrl;
+      
+      const isLoginPage = pathname.endsWith('/login');
 
-      const isSuperAdminPage = pathname.startsWith('/super-admin');
-      const isHospitalAdminPage = pathname.startsWith('/hospital-admin');
-      const isDoctorPortalPage = pathname.startsWith('/doctor-portal');
+      const isSuperAdminRoute = pathname.startsWith('/super-admin');
+      const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
+      const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
 
-      if (isLoggedIn) {
-        // If logged in, check role access
-        if (isSuperAdminPage && role !== 'superadmin') return false;
-        if (isHospitalAdminPage && role !== 'hospital') return false;
-        if (isDoctorPortalPage && role !== 'doctor') return false;
+      const isProtected = isSuperAdminRoute || isHospitalAdminRoute || isDoctorPortalRoute;
 
-        // If logged in and on a login page, redirect to the respective dashboard
-        if ((pathname.endsWith('/login') && (isSuperAdminPage || isHospitalAdminPage || isDoctorPortalPage))) {
-            if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
-            if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
-            if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
-        }
+      if (isProtected) {
+          if (isLoggedIn) {
+              // User is logged in, check their role and redirect if they are on the wrong portal
+              if (isSuperAdminRoute && role !== 'superadmin') return Response.redirect(new URL('/', nextUrl));
+              if (isHospitalAdminRoute && role !== 'hospital') return Response.redirect(new URL('/', nextUrl));
+              if (isDoctorPortalRoute && role !== 'doctor') return Response.redirect(new URL('/', nextUrl));
 
-      } else {
-        // If not logged in, redirect to the correct login page for protected routes
-        if (isSuperAdminPage) {
-            return Response.redirect(new URL(`/super-admin/login?callbackUrl=${nextUrl}`, nextUrl));
-        }
-        if (isHospitalAdminPage) {
-            return Response.redirect(new URL(`/hospital-admin/login?callbackUrl=${nextUrl}`, nextUrl));
-        }
-        if (isDoctorPortalPage) {
-            return Response.redirect(new URL(`/doctor-portal/login?callbackUrl=${nextUrl}`, nextUrl));
-        }
+              // If user is logged in and tries to access a login page, redirect them to their dashboard
+              if (isLoginPage) {
+                  if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
+                  if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
+                  if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+              }
+
+          } else {
+              // User is not logged in, redirect them to the correct login page if they are not already there
+              if (isLoginPage) {
+                return true; // Allow access to login page
+              }
+
+              let loginUrl;
+              if (isSuperAdminRoute) loginUrl = '/super-admin/login';
+              else if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
+              else if (isDoctorPortalRoute) loginUrl = '/doctor-portal/login';
+
+              if (loginUrl) {
+                const redirectUrl = new URL(loginUrl, nextUrl);
+                // Use pathname to avoid nested callbackUrls
+                redirectUrl.searchParams.set('callbackUrl', nextUrl.pathname); 
+                return Response.redirect(redirectUrl);
+              }
+          }
       }
-
-      // Allow access to public pages like /user/** or if already authorized
-      return true;
+      
+      return true; // Allow access by default
     },
   },
   pages: {

@@ -1,32 +1,25 @@
 
-'use client';
-
+import { redirect } from 'next/navigation';
 import SuperAdminSidebar from '@/components/super-admin-sidebar';
 import SuperAdminHeader from '@/components/super-admin-header';
-import { type SessionData } from '@/lib/definitions';
-import { usePathname } from 'next/navigation';
+import { getSession } from '@/lib/session';
 
-export default function SuperAdminLayout({
+export default async function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isLoginPage = pathname === '/super-admin/login';
-  
-  // This is a mock session for layout purposes on non-login pages.
-  // The actual session is handled by middleware.
-  const mockSession: SessionData = { isLoggedIn: !isLoginPage };
-  
-  if (isLoginPage) {
-    return <>{children}</>;
+  const session = await getSession();
+
+  if (!session.isLoggedIn || session.role !== 'superadmin') {
+    redirect('/super-admin/login');
   }
-  
+
   return (
     <div className="flex min-h-screen w-full">
-      <SuperAdminSidebar user={mockSession} />
+      <SuperAdminSidebar user={session} />
       <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
-        <SuperAdminHeader user={mockSession} />
+        <SuperAdminHeader user={session} />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           {children}
         </main>

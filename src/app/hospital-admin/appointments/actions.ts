@@ -52,24 +52,21 @@ export async function saveAppointment(
   
   const { appointmentDate, doctorId, appointmentSlot, ...rest } = validatedFields.data;
   
-  const appointmentDay = new Date(appointmentDate).getDay(); // Sunday - 0, Monday - 1, etc.
+  const appointmentDay = getDay(new Date(appointmentDate)); // Sunday - 0, Monday - 1, etc.
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeek = weekDays[appointmentDay];
 
   try {
-    const doctor = await prisma.doctor.findUnique({ 
-        where: { id: doctorId }, 
-        include: { 
-            schedules: { where: { dayOfWeek, hospitalId } }
-        } 
+    const doctorSchedule = await prisma.doctorSchedule.findUnique({
+      where: {
+        doctorId_hospitalId_dayOfWeek: {
+          doctorId,
+          hospitalId,
+          dayOfWeek,
+        },
+      },
     });
 
-    if (!doctor) {
-      throw new Error('Doctor not found');
-    }
-
-    // Server-side validation of the time slot
-    const doctorSchedule = doctor.schedules[0];
     if (doctorSchedule) {
       const workingHours = doctorSchedule.workingHours as { startTime: string, endTime: string }[];
       const breakHours = doctorSchedule.breakHours as { startTime: string, endTime: string }[];
@@ -182,7 +179,7 @@ export async function getDoctorsByHospitalId(hospitalId: number) {
 
 export async function getDoctorScheduleForDate(doctorId: number, date: string, hospitalId: number) {
   if (!doctorId || !date) return null;
-  const dayIndex = new Date(date).getDay();
+  const dayIndex = getDay(new Date(date));
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeek = weekDays[dayIndex];
 

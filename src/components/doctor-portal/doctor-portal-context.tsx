@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
@@ -19,31 +20,27 @@ export const DoctorPortalContext = createContext<DoctorPortalContextType>({
 
 type DoctorPortalProviderProps = {
     children: ReactNode;
-    doctor: Doctor | null;
+    doctor: Doctor;
     doctorHospitals: Hospital[];
 };
 
-export const DoctorPortalProvider = ({ children, doctor: initialDoctor, doctorHospitals: initialHospitals }: DoctorPortalProviderProps) => {
-  const [doctor, setDoctor] = useState<Doctor | null>(initialDoctor);
-  const [doctorHospitals, setDoctorHospitals] = useState<Hospital[]>(initialHospitals);
-  const [activeHospitalId, setActiveHospitalId] = useState<number | null>(null);
+export const DoctorPortalProvider = ({ children, doctor, doctorHospitals }: DoctorPortalProviderProps) => {
+  const [activeHospitalId, setActiveHospitalIdState] = useState<number | null>(null);
 
   useEffect(() => {
-    setDoctor(initialDoctor);
-    setDoctorHospitals(initialHospitals);
-    if (initialHospitals.length > 0 && !activeHospitalId) {
+    if (doctorHospitals.length > 0 && !activeHospitalId) {
         const storedHospitalId = localStorage.getItem('activeHospitalId');
-        if (storedHospitalId && initialHospitals.some(h => h.id === Number(storedHospitalId))) {
-          setActiveHospitalId(Number(storedHospitalId));
+        if (storedHospitalId && doctorHospitals.some(h => h.id === Number(storedHospitalId))) {
+          setActiveHospitalIdState(Number(storedHospitalId));
         } else {
-          setActiveHospitalId(initialHospitals[0].id);
+          setActiveHospitalIdState(doctorHospitals[0].id);
         }
     }
-  }, [initialDoctor, initialHospitals, activeHospitalId]);
+  }, [doctorHospitals, activeHospitalId]);
 
-  const handleSetActiveHospitalId = (id: number) => {
+  const setActiveHospitalId = (id: number) => {
     localStorage.setItem('activeHospitalId', id.toString());
-    setActiveHospitalId(id);
+    setActiveHospitalIdState(id);
   }
 
   return (
@@ -52,7 +49,7 @@ export const DoctorPortalProvider = ({ children, doctor: initialDoctor, doctorHo
         doctor,
         doctorHospitals,
         activeHospitalId,
-        setActiveHospitalId: handleSetActiveHospitalId,
+        setActiveHospitalId,
       }}
     >
       {children}

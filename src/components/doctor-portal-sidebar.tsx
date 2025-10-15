@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DoctorPortalContext } from './doctor-portal/doctor-portal-context';
 import { signOut } from 'next-auth/react';
+import { Skeleton } from './ui/skeleton';
 
 const navLinks = [
   { href: '/doctor-portal', label: 'Dashboard', icon: LayoutGrid },
@@ -36,7 +38,21 @@ export default function DoctorPortalSidebar() {
   const pathname = usePathname();
   const { doctor } = useContext(DoctorPortalContext);
 
-  const doctorImage = placeholderImages.find(p => p.id === doctor?.imageId);
+  if (!doctor) {
+     return (
+       <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full p-4">
+        <Skeleton className="h-[60px] w-full mb-4" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-12 w-full mt-auto" />
+      </aside>
+     )
+  }
+  
+  const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -65,12 +81,12 @@ export default function DoctorPortalSidebar() {
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor?.name} />}
-                        <AvatarFallback>{doctor?.name.charAt(0)}</AvatarFallback>
+                        {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                        <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{doctor?.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{doctor?.specialty}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{doctor.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>

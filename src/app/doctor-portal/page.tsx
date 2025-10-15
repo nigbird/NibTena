@@ -1,4 +1,6 @@
 
+import { auth } from '../../../auth';
+import { redirect } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -12,27 +14,29 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_DOCTOR_ID = 1;
-
 export default async function DoctorPortalPage() {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'doctor') {
+        redirect('/doctor-portal/login');
+    }
+    const doctorId = parseInt(session.user.id, 10);
+
   const doctor = await prisma.doctor.findUnique({
-    where: { id: LOGGED_IN_DOCTOR_ID },
+    where: { id: doctorId },
   });
 
-  const allAppointments = doctor ? await prisma.appointment.findMany({
-    where: { doctorId: LOGGED_IN_DOCTOR_ID },
+  const allAppointments = await prisma.appointment.findMany({
+    where: { doctorId: doctorId },
     orderBy: {
       appointmentDate: 'asc',
     }
-  }) : [];
+  });
 
   const upcomingAppointments = allAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   
   const todaysAppointments = upcomingAppointments.filter(a => {
     const appointmentDate = new Date(a.appointmentDate);
-    // Adjust for timezone differences by comparing formatted strings
     return format(appointmentDate, 'yyyy-MM-dd') === todayStr;
   });
 

@@ -58,7 +58,7 @@ export default async function Home() {
                     alt={heroImage.description}
                     width={1080}
                     height={720}
-                    className="object-cover w-full h-[400px] md:h-[500px]"
+                    className="object-cover w-full h-[320px] md:h-[400px]"
                     data-ai-hint={heroImage.imageHint}
                     priority
                 />
@@ -73,9 +73,9 @@ export default async function Home() {
                 </div>
             </div>
             
-            <div className="-mt-16 relative pb-4 z-20">
-                <section className="container mx-auto max-w-md">
-                    <div className="flex justify-around items-center bg-background p-4 rounded-2xl shadow-lg">
+            <div className="py-6 z-20">
+                 <section className="container mx-auto max-w-md">
+                    <div className="flex justify-around items-center">
                         {quickActions.map(({ href, label, icon, color }) => {
                             const Icon = actionIcons[icon] || Stethoscope;
                             return (

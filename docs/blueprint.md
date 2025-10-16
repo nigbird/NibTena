@@ -1,4 +1,4 @@
-# **App Name**: MediVerse
+# **App Name**: NibTena
 
 ## Core Features:
 

@@ -30,7 +30,7 @@ export default async function Home() {
     const specialties = allSpecialties.map(s => s.specialty);
     const allData = { doctors: allDoctors, hospitals: allHospitals, specialties };
 
-    const heroImage = placeholderImages.find(p => p.id === 'mediverse-hero');
+    const heroImage = placeholderImages.find(p => p.id === 'NibTena-hero');
 
     return (
         <UserHomepageClient

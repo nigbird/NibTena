@@ -5,7 +5,7 @@ import { AuthProvider } from './providers';
 import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'MediVerse',
+  title: 'NibTena',
   description: 'Your health, simplified.',
 };
 

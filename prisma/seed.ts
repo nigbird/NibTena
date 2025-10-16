@@ -68,11 +68,11 @@ async function main() {
 
   // --- Create Doctors ---
   const doctor1 = await prisma.doctor.upsert({
-    where: { contact: 'mulugeta.t@mediverse.com' },
+    where: { contact: 'mulugeta.t@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Mulugeta Tesfaye',
-      contact: 'mulugeta.t@mediverse.com',
+      contact: 'mulugeta.t@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Cardiology',
       imageId: 'doctor-1',
@@ -85,11 +85,11 @@ async function main() {
   });
 
   const doctor2 = await prisma.doctor.upsert({
-    where: { contact: 'selamawit.b@mediverse.com' },
+    where: { contact: 'selamawit.b@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Selamawit Bekele',
-      contact: 'selamawit.b@mediverse.com',
+      contact: 'selamawit.b@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Dermatology',
       imageId: 'doctor-2',
@@ -102,11 +102,11 @@ async function main() {
   });
 
   const doctor3 = await prisma.doctor.upsert({
-    where: { contact: 'tewodros.m@mediverse.com' },
+    where: { contact: 'tewodros.m@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Tewodros Mekonnen',
-      contact: 'tewodros.m@mediverse.com',
+      contact: 'tewodros.m@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Neurology',
       imageId: 'doctor-3',
@@ -119,11 +119,11 @@ async function main() {
   });
   
    const doctor4 = await prisma.doctor.upsert({
-    where: { contact: 'meron.a@mediverse.com' },
+    where: { contact: 'meron.a@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Meron Alemu',
-      contact: 'meron.a@mediverse.com',
+      contact: 'meron.a@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Pediatrics',
       imageId: 'doctor-4',
@@ -136,11 +136,11 @@ async function main() {
   });
 
   const doctor5 = await prisma.doctor.upsert({
-    where: { contact: 'yoseph.h@mediverse.com' },
+    where: { contact: 'yoseph.h@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Yoseph Hailemariam',
-      contact: 'yoseph.h@mediverse.com',
+      contact: 'yoseph.h@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Orthopedics',
       imageId: 'doctor-5',
@@ -153,11 +153,11 @@ async function main() {
   });
   
    const doctor6 = await prisma.doctor.upsert({
-    where: { contact: 'rahel.t@mediverse.com' },
+    where: { contact: 'rahel.t@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Rahel Tadesse',
-      contact: 'rahel.t@mediverse.com',
+      contact: 'rahel.t@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Dentistry',
       imageId: 'doctor-6',
@@ -170,11 +170,11 @@ async function main() {
   });
   
    const doctor7 = await prisma.doctor.upsert({
-    where: { contact: 'dawit.a@mediverse.com' },
+    where: { contact: 'dawit.a@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Dawit Abebe',
-      contact: 'dawit.a@mediverse.com',
+      contact: 'dawit.a@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Cardiology',
       imageId: 'doctor-7',
@@ -187,11 +187,11 @@ async function main() {
   });
   
    const doctor8 = await prisma.doctor.upsert({
-    where: { contact: 'liya.k@mediverse.com' },
+    where: { contact: 'liya.k@NibTena.com' },
     update: {},
     create: {
       name: 'Dr. Liya Kebede',
-      contact: 'liya.k@mediverse.com',
+      contact: 'liya.k@NibTena.com',
       password: 'password123', // In a real app, this should be a hashed password
       specialty: 'Pediatrics',
       imageId: 'doctor-4',

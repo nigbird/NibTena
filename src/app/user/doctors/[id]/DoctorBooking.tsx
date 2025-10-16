@@ -90,7 +90,7 @@ export default function DoctorBooking({
     }
     
     return (
-       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {timeWindows.map((window, i) => (
             <button
                 key={i}
@@ -149,15 +149,15 @@ export default function DoctorBooking({
                         key={index}
                         onClick={() => setSelectedDate(date)}
                         className={cn(
-                        'flex flex-col items-center justify-center p-3 rounded-lg border-2 w-20 h-24 transition-colors',
+                        'flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 w-20 h-24 sm:w-24 sm:h-28 transition-colors',
                         selectedDate.toDateString() === date.toDateString()
                             ? 'bg-primary text-primary-foreground border-2 border-primary'
                             : 'bg-card hover:bg-muted/50 border-border'
                         )}
                     >
-                        <span className="text-sm font-semibold">{format(date, 'EEE')}</span>
-                        <span className="text-2xl font-bold">{format(date, 'd')}</span>
-                        <span className="text-xs">{format(date, 'MMM')}</span>
+                        <span className="text-xs md:text-sm font-semibold">{format(date, 'EEE')}</span>
+                        <span className="text-xl md:text-2xl font-bold">{format(date, 'd')}</span>
+                        <span className="text-[10px] md:text-xs">{format(date, 'MMM')}</span>
                     </button>
                     ))}
                 </div>
@@ -174,7 +174,7 @@ export default function DoctorBooking({
       
       <Button
         size="lg"
-        className="w-full font-bold text-lg h-12"
+        className="w-full font-bold text-base md:text-lg h-12"
         onClick={handleBookNow}
         disabled={!selectedHospitalId || !selectedDate || !selectedSlot}
         variant="accent"

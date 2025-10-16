@@ -24,7 +24,7 @@ export default function BottomNavbar() {
 
 
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t">
+    <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t pb-[env(safe-area-inset-bottom)]">
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {navLinks.map(({ href, label, icon: Icon }) => {
           const isActive = (href === '/user' && pathname === '/user') || (href !== '/user' && pathname.startsWith(href));

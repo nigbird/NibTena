@@ -50,7 +50,7 @@ async function main() {
     where: { contactEmail: 'admin@hu.com' },
     update: {},
     create: {
-        name: 'Hawassa University Comprehensive Specialized Hospital',
+        name: 'Hawassa University Specialized Hospital',
         description: 'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
         city: 'Hawassa',
         imageId: 'hospital-3',

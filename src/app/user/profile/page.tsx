@@ -30,9 +30,8 @@ import { useRouter } from 'next/navigation';
     };
 
     return (
-      <>
-        <div className="p-4">
-          <Card>
+      <div className="flex min-h-[80vh] items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-lg">
             <CardHeader className="items-center text-center">
               <Avatar className="h-24 w-24 mb-4">
                 <AvatarImage src={LOGGED_IN_USER.avatarUrl} alt={LOGGED_IN_USER.name} />
@@ -50,7 +49,6 @@ import { useRouter } from 'next/navigation';
                 <Button variant="destructive" onClick={handleLogout}>Logout</Button>
             </CardContent>
           </Card>
-        </div>
-      </>
+      </div>
     )
   }

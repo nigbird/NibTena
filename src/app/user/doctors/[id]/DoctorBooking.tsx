@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format } from 'date-fns';
 import { Hospital as HospitalIcon, Clock, Loader2, Calendar } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 import { getAvailableTimeWindows } from './actions';
 
 type DoctorBookingProps = {
@@ -96,9 +96,9 @@ export default function DoctorBooking({
                 key={i}
                 onClick={() => setSelectedSlot(window)}
                 className={cn(
-                    'px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
+                    'px-3 py-2 rounded-full text-xs font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
                     selectedSlot === window
-                    ? 'bg-primary text-primary-foreground border-2 border-secondary'
+                    ? 'bg-primary text-white border border-secondary'
                     : 'bg-background text-foreground'
                 )}
             >
@@ -112,46 +112,47 @@ export default function DoctorBooking({
   return (
     <div className="space-y-6 md:space-y-8">
         <div>
-            {doctorHospitals.length > 0 && (
+            {doctorHospitals.length > 1 && (
                  <div className="space-y-3">
                     <h3 className="font-medium text-lg text-foreground/80 flex items-center gap-2">
                         <HospitalIcon className="h-5 w-5" />
                         Select Hospital
                     </h3>
-                    <ScrollArea className="w-full whitespace-nowrap">
-                        <div className="flex pb-2 space-x-2">
-                          {doctorHospitals.map((hospital) => (
+                    <Carousel opts={{align: 'start', dragFree: true}} className="w-full">
+                      <CarouselContent className="-ml-2">
+                        {doctorHospitals.map((hospital) => (
+                          <CarouselItem key={hospital.id} className="basis-auto pl-2">
                             <button
-                              key={hospital.id}
                               onClick={() => setSelectedHospitalId(hospital.id)}
                               className={cn(
                                 'px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors',
                                 selectedHospitalId === hospital.id
-                                ? 'bg-primary text-primary-foreground border-2 border-primary'
+                                ? 'bg-primary text-primary-foreground border-primary'
                                 : 'bg-card hover:bg-muted/50 border-border'
                               )}
                             >
                               {hospital.name}
                             </button>
-                          ))}
-                        </div>
-                    </ScrollArea>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                    </Carousel>
                 </div>
             )}
         </div>
 
         <div>
             <h3 className="font-medium text-lg text-foreground/80 mb-3">Select Date</h3>
-            <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex pb-2 space-x-2">
-                    {dates.map((date, index) => (
+            <Carousel opts={{align: 'start'}} className="w-full">
+              <CarouselContent className="-ml-2">
+                {dates.map((date, index) => (
+                  <CarouselItem key={index} className="basis-[22%] sm:basis-[18%] md:basis-[15%] pl-2">
                     <button
-                        key={index}
                         onClick={() => setSelectedDate(date)}
                         className={cn(
-                        'flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 w-20 h-24 sm:w-24 sm:h-28 transition-colors',
+                        'flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 w-full h-24 transition-colors',
                         selectedDate.toDateString() === date.toDateString()
-                            ? 'bg-primary text-primary-foreground border-2 border-primary'
+                            ? 'bg-primary text-primary-foreground border-primary'
                             : 'bg-card hover:bg-muted/50 border-border'
                         )}
                     >
@@ -159,9 +160,12 @@ export default function DoctorBooking({
                         <span className="text-xl md:text-2xl font-bold">{format(date, 'd')}</span>
                         <span className="text-[10px] md:text-xs">{format(date, 'MMM')}</span>
                     </button>
-                    ))}
-                </div>
-            </ScrollArea>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-[-10px] hidden sm:flex" />
+              <CarouselNext className="right-[-10px] hidden sm:flex"/>
+            </Carousel>
         </div>
       
         <div>

@@ -146,121 +146,116 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
 
   return (
     <div className="flex flex-col">
-      <div className="relative">
-        {heroImage && (
-          <Image
-            src={heroImage.imageUrl}
-            alt={heroImage.description}
-            fill
-            className="object-cover"
-            data-ai-hint={heroImage.imageHint}
-            priority
-          />
-        )}
-        <div className="relative p-6 space-y-8 bg-gradient-to-b from-black/60 to-transparent">
-        
-          <section className="space-y-4 pt-8 pb-16 text-white text-center">
-              <h1 className="text-3xl font-bold tracking-tight">
-                  How are you feeling today?
-              </h1>
-              <p className="text-white/90">Find the best doctors and hospitals near you.</p>
-              <div className="relative max-w-lg mx-auto">
-                <form onSubmit={handleSearchSubmit}>
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
-                    <Input
-                        type="search"
-                        placeholder="Search doctors, hospitals, or specialties…"
-                        className="w-full h-14 rounded-full bg-background/90 text-foreground pl-12 pr-4 text-base shadow-lg"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                        onFocus={() => { if (debouncedSearchQuery) setShowResults(true); }}
-                    />
-                </form>
-                {showResults && (
-                  <div className="absolute z-50 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
-                    {isSearching ? (
-                      <div className="p-4 text-center text-muted-foreground">Searching...</div>
-                    ) : hasResults ? (
-                      <ul className="divide-y max-h-96 overflow-y-auto">
-                        {searchResults.specialties.length > 0 && (
-                          <>
-                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Specialties</li>
-                            {searchResults.specialties.map(specialty => {
-                              const Icon = specialtyIcons[specialty] || Stethoscope;
-                              return (
-                                <li key={specialty}>
-                                  <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                    <Icon className="h-5 w-5 text-primary" />
-                                    <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
-                                  </button>
-                                </li>
-                              )
-                            })}
-                          </>
-                        )}
-                        {searchResults.hospitals.length > 0 && (
-                          <>
-                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Hospitals</li>
-                            {searchResults.hospitals.map(hospital => (
-                              <li key={`h-${hospital.id}`}>
-                                <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                  <Avatar className="h-8 w-8 rounded-md"><AvatarFallback><Building/></AvatarFallback></Avatar>
-                                  <div>
-                                    <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
-                                    <p className="text-xs text-muted-foreground">{hospital.city}</p>
-                                  </div>
+      {heroImage && (
+          <div className="relative h-64 w-full">
+            <Image
+                src={heroImage.imageUrl}
+                alt={heroImage.description}
+                fill
+                className="object-cover"
+                data-ai-hint={heroImage.imageHint}
+                priority
+            />
+          </div>
+      )}
+
+      <div className="bg-muted/30">
+        <section className="container text-center py-8 space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight">
+                How are you feeling today?
+            </h1>
+            <p className="text-muted-foreground">Find the best doctors and hospitals near you.</p>
+            <div className="relative max-w-lg mx-auto">
+              <form onSubmit={handleSearchSubmit}>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
+                  <Input
+                      type="search"
+                      placeholder="Search doctors, hospitals, or specialties…"
+                      className="w-full h-14 rounded-full bg-background text-foreground pl-12 pr-4 text-base shadow-lg"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                      onFocus={() => { if (debouncedSearchQuery) setShowResults(true); }}
+                  />
+              </form>
+              {showResults && (
+                <div className="absolute z-50 mt-2 w-full rounded-xl bg-background border shadow-lg overflow-hidden text-left">
+                  {isSearching ? (
+                    <div className="p-4 text-center text-muted-foreground">Searching...</div>
+                  ) : hasResults ? (
+                    <ul className="divide-y max-h-96 overflow-y-auto">
+                      {searchResults.specialties.length > 0 && (
+                        <>
+                          <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Specialties</li>
+                          {searchResults.specialties.map(specialty => {
+                            const Icon = specialtyIcons[specialty] || Stethoscope;
+                            return (
+                              <li key={specialty}>
+                                <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                  <Icon className="h-5 w-5 text-primary" />
+                                  <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
                                 </button>
                               </li>
-                            ))}
-                          </>
-                        )}
-                        {searchResults.doctors.length > 0 && (
-                          <>
-                            <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Doctors</li>
-                            {searchResults.doctors.map(doctor => (
-                              <li key={`d-${doctor.id}`}>
-                                <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                                  <Avatar className="h-8 w-8"><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
-                                  <div>
-                                    <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
-                                    <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
-                                  </div>
-                                </button>
-                              </li>
-                            ))}
-                          </>
-                        )}
-                      </ul>
-                    ) : (
-                      <div className="p-4 text-center text-sm text-muted-foreground">
-                        No results for "{debouncedSearchQuery}"
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-          </section>
-        </div>
+                            )
+                          })}
+                        </>
+                      )}
+                      {searchResults.hospitals.length > 0 && (
+                        <>
+                          <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Hospitals</li>
+                          {searchResults.hospitals.map(hospital => (
+                            <li key={`h-${hospital.id}`}>
+                              <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                <Avatar className="h-8 w-8 rounded-md"><AvatarFallback><Building/></AvatarFallback></Avatar>
+                                <div>
+                                  <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
+                                  <p className="text-xs text-muted-foreground">{hospital.city}</p>
+                                </div>
+                              </button>
+                            </li>
+                          ))}
+                        </>
+                      )}
+                      {searchResults.doctors.length > 0 && (
+                        <>
+                          <li className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground bg-muted/50">Doctors</li>
+                          {searchResults.doctors.map(doctor => (
+                            <li key={`d-${doctor.id}`}>
+                              <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                                <Avatar className="h-8 w-8"><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
+                                <div>
+                                  <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
+                                  <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
+                                </div>
+                              </button>
+                            </li>
+                          ))}
+                        </>
+                      )}
+                    </ul>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No results for "{debouncedSearchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-center items-center pt-4 gap-8">
+                {quickActions.map(({ href, label, icon, color }) => {
+                    const Icon = actionIcons[icon] || Stethoscope;
+                    return (
+                    <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
+                        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-primary/10", color)}>
+                            <Icon className="h-8 w-8" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
+                    </Link>
+                )})}
+            </div>
+        </section>
       </div>
       
-       <div className="-mt-12 relative pb-4 z-20">
-          <section className="container mx-auto max-w-md">
-              <div className="flex justify-around items-center">
-                  {quickActions.map(({ href, label, icon, color }) => {
-                      const Icon = actionIcons[icon] || Stethoscope;
-                      return (
-                      <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                          <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-primary/20 hover:border-primary/60", color)}>
-                              <Icon className="h-8 w-8 z-10" />
-                          </div>
-                          <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
-                      </Link>
-                  )})}
-              </div>
-          </section>
-      </div>
-
       <section className="py-8 space-y-4">
           <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
               <h2 className="font-headline text-2xl font-bold">Top Hospitals</h2>

@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
-import { auth } from '../auth';
+import { NextResponse, type NextRequest } from 'next/server';
+import { auth } from '@/auth';
 
-export default auth((req) => {
-  // Use Edge-compatible Web Crypto API
+export default auth((req: NextRequest) => {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   const cspHeader = `
@@ -22,6 +21,7 @@ export default auth((req) => {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', cspHeader);
 
   const response = NextResponse.next({
     request: {
@@ -29,6 +29,7 @@ export default auth((req) => {
     },
   });
 
+  // Also set the CSP header on the response
   response.headers.set('Content-Security-Policy', cspHeader);
 
   return response;

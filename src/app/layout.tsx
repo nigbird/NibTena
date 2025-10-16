@@ -15,6 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = headers().get('x-nonce') || '';
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -28,6 +29,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=PT+Sans:wght@400;700&display=swap"
           rel="stylesheet"
         />
+        <meta name="csp-nonce" content={nonce} />
       </head>
       <body className="font-body antialiased">
         <AuthProvider>

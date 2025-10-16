@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { auth } from '@/auth';
+import { auth } from '@/../../auth';
 
 export default auth((req: NextRequest) => {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -7,7 +7,8 @@ export default auth((req: NextRequest) => {
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
-    style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com;
+    style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    style-src-attr 'unsafe-inline';
     img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
     font-src 'self' https://fonts.gstatic.com;
     connect-src 'self';

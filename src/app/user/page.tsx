@@ -52,42 +52,45 @@ export default async function Home() {
     return (
         <div className="flex flex-col">
             <div className="relative">
-                {heroImage && (
-                <Image
-                    src={heroImage.imageUrl}
-                    alt={heroImage.description}
-                    width={1080}
-                    height={720}
-                    className="object-cover w-full h-[320px] md:h-[400px]"
-                    data-ai-hint={heroImage.imageHint}
-                    priority
-                />
-                )}
-                 <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-background/10 to-black/60" />
-                <div className="absolute inset-0 p-6 flex flex-col justify-center items-center text-center space-y-4 text-white">
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-shadow-lg">
-                        How are you feeling today?
-                    </h1>
-                    <p className="text-white/90 max-w-lg text-shadow">Find the best doctors and hospitals near you.</p>
-                   <UserHomepageClient allData={allData} />
-                </div>
-            </div>
-            
-            <div className="py-6 z-20">
-                 <section className="container mx-auto max-w-md">
-                    <div className="flex justify-around items-center">
-                        {quickActions.map(({ href, label, icon, color }) => {
-                            const Icon = actionIcons[icon] || Stethoscope;
-                            return (
-                            <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
-                                <div className={cn("relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg border-2 border-primary/20 hover:border-primary/60", color)}>
-                                    <Icon className="h-8 w-8 z-10" />
-                                </div>
-                                <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
-                            </Link>
-                        )})}
+                <div className="relative">
+                    {heroImage && (
+                    <Image
+                        src={heroImage.imageUrl}
+                        alt={heroImage.description}
+                        width={1080}
+                        height={720}
+                        className="object-cover w-full h-[320px] md:h-[400px]"
+                        data-ai-hint={heroImage.imageHint}
+                        priority
+                    />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-background/10 to-black/60" />
+                    <div className="absolute inset-0 p-6 flex flex-col justify-center items-center text-center space-y-4 text-white">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-shadow-lg">
+                            How are you feeling today?
+                        </h1>
+                        <p className="text-white/90 max-w-lg text-shadow">Find the best doctors and hospitals near you.</p>
+                       <UserHomepageClient allData={allData} />
                     </div>
-                </section>
+                </div>
+
+                <div className="relative z-10 -mt-12 pb-8">
+                     <section className="container mx-auto">
+                        <div className="flex justify-center items-center gap-4">
+                            {quickActions.map(({ href, label, icon, color }) => {
+                                const Icon = actionIcons[icon] || Stethoscope;
+                                return (
+                                <Link href={href} key={label} className="flex flex-col items-center gap-2 group text-center p-2">
+                                    <div className={cn("relative flex h-20 w-20 items-center justify-center rounded-2xl bg-background shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl border-2 border-primary/20 hover:border-primary/60", color)}>
+                                        <div className={cn("absolute inset-0 opacity-20", color)} />
+                                        <Icon className="h-8 w-8 z-10" />
+                                    </div>
+                                    <p className="text-xs font-semibold text-foreground transition-transform group-hover:-translate-y-0.5">{label}</p>
+                                </Link>
+                            )})}
+                        </div>
+                    </section>
+                </div>
             </div>
 
              <section className="py-8 space-y-4">

@@ -98,7 +98,7 @@ export default function DoctorBooking({
                 className={cn(
                     'px-3 py-2 rounded-full text-xs font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
                     selectedSlot === window
-                    ? 'bg-primary text-white border border-secondary'
+                    ? 'bg-primary text-secondary'
                     : 'bg-background text-foreground'
                 )}
             >

@@ -279,7 +279,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                       const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
                       return (
                           <CarouselItem key={hospital.id} className="md:basis-1/2 lg:basis-1/3 group">
-                              <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl">
+                              <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl flex flex-col h-full">
                                   {hospitalImage && (
                                       <div className="aspect-video relative overflow-hidden">
                                           <Image
@@ -290,10 +290,10 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                                           />
                                       </div>
                                   )}
-                                  <CardContent className="p-4">
-                                      <h3 className="font-bold font-headline">{hospital.name}</h3>
-                                      <p className="text-sm text-muted-foreground">{hospital.city} | Multi-Specialty Care</p>
-                                      <Button asChild variant="link" className="p-0 h-auto mt-2">
+                                  <CardContent className="p-4 flex flex-col flex-grow">
+                                      <h3 className="font-bold font-headline truncate">{hospital.name}</h3>
+                                      <p className="text-sm text-muted-foreground flex-grow">{hospital.city} | Multi-Specialty Care</p>
+                                      <Button asChild variant="link" className="p-0 h-auto mt-2 self-start">
                                           <Link href={`/user/hospitals/${hospital.id}`}>
                                               View Details <ArrowRight className="ml-1 h-4 w-4" />
                                           </Link>

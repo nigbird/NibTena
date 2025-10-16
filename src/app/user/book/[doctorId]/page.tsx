@@ -144,7 +144,12 @@ export default function BookingPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone Number</Label>
-                          <Input id="phone" name="phone" placeholder="912345678" required />
+                          <div className="flex items-center">
+                            <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+                              +251
+                            </span>
+                            <Input id="phone" name="phone" placeholder="912345678" required className="rounded-l-none" />
+                          </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
                     </div>
@@ -189,5 +194,3 @@ export default function BookingPage() {
     </div>
   );
 }
-
-    

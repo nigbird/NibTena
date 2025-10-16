@@ -35,12 +35,12 @@ function OtpForm() {
 
     useEffect(() => {
         if (!phone) {
-            router.push('/user'); // Or a more appropriate page
+            router.push('/user/appointments');
             toast({ variant: 'destructive', title: 'Error', description: 'Phone number is missing.' });
         } else {
             toast({
                 title: 'Check your console for OTP',
-                description: `For testing, the OTP for ${phone} will be logged to the server console.`,
+                description: `For testing, the OTP for your number will be logged to the server console.`,
                 duration: 10000,
             });
         }
@@ -142,7 +142,7 @@ function OtpForm() {
                     </div>
                     <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
                     <CardDescription>
-                        We've sent a 6-digit code to {phone}. Check your server console for the code.
+                        We've sent a 6-digit code to +251{phone}. Check your server console for the code.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

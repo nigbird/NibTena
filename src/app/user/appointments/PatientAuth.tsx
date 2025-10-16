@@ -22,19 +22,17 @@ export default function PatientAuth() {
     const formData = new FormData(event.currentTarget);
     const phoneInput = formData.get('phone') as string;
 
-    if (!phoneInput) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a phone number.' });
+    if (!phoneInput || phoneInput.length !== 9) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid 9-digit phone number.' });
       return;
     }
-    
-    const phone = `+251${phoneInput}`;
 
     startTransition(async () => {
-      const result = await generateAndSendOtp(phone);
+      const result = await generateAndSendOtp(phoneInput);
       if (result.success) {
         toast({ title: 'OTP Sent', description: result.message });
         const params = new URLSearchParams(searchParams);
-        params.set('phone', phone);
+        params.set('phone', phoneInput);
         router.push(`/user/verify/otp?${params.toString()}`);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });

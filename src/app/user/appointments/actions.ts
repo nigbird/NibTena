@@ -28,6 +28,9 @@ export async function getMyAppointments(patientId: number) {
 }
 
 export async function generateAndSendOtp(phone: string) {
+    if (!phone || phone.length !== 9) {
+        return { success: false, message: 'Invalid 9-digit phone number.' };
+    }
     try {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
@@ -37,7 +40,7 @@ export async function generateAndSendOtp(phone: string) {
         });
 
         console.log(`OTP for ${phone} is: ${code}`); // For testing purposes.
-        return { success: true, message: `An OTP has been sent to ${phone}.` };
+        return { success: true, message: `An OTP has been sent to your phone.` };
     } catch (error) {
         console.error("OTP generation failed:", error);
         return { success: false, message: "Could not send OTP. Please try again." };
@@ -45,6 +48,9 @@ export async function generateAndSendOtp(phone: string) {
 }
 
 export async function verifyOtpAndGetPatient(phone: string, code: string) {
+    if (!phone || phone.length !== 9) {
+        return { success: false, message: 'Invalid phone number format for verification.' };
+    }
     try {
         const otpRecord = await prisma.otp.findFirst({
             where: {

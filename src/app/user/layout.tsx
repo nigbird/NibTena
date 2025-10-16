@@ -9,12 +9,9 @@ import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
+import { useSession } from 'next-auth/react';
 
-// In a real app, this would come from an authentication session
-const LOGGED_IN_USER = {
-    name: 'Hana Worku',
-    avatarUrl: 'https://picsum.photos/seed/user1/200/200'
-};
+// Remove hardcoded placeholder; we'll render dynamically from session
 
 const pageTitles: { [key: string]: string } = {
     '/user': 'Home',
@@ -45,6 +42,7 @@ export default function UserLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
@@ -55,12 +53,16 @@ export default function UserLayout({
             {isHomePage ? (
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border">
-                        <AvatarImage src={LOGGED_IN_USER.avatarUrl} alt={LOGGED_IN_USER.name} />
+                        {session?.user?.image ? (
+                          <AvatarImage src={session.user.image} alt={session.user.name || 'User'} />
+                        ) : null}
                         <AvatarFallback><User /></AvatarFallback>
                     </Avatar>
                     <div>
-                        <p className="text-xs text-muted-foreground">Hi, Welcome Back!</p>
-                        <p className="font-semibold text-foreground">{LOGGED_IN_USER.name}</p>
+                        <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
+                        <p className="font-semibold text-foreground">
+                          {session?.user?.name || 'Guest'}
+                        </p>
                     </div>
                 </div>
             ) : (

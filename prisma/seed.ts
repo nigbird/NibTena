@@ -6,7 +6,16 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log(`Start seeding ...`);
-
+  // --- Create Super Admin ---
+  const superAdmin = await prisma.superAdmin.upsert({
+    where: { email: 'superadmin@NibTena.com' },
+    update: {},
+    create: {
+      email: 'superadmin@NibTena.com',
+      name: 'Super Admin',
+      password: 'Admin@123',
+    },
+  });
   // --- Create Hospitals ---
   const hospital1 = await prisma.hospital.upsert({
     where: { contactEmail: 'admin@tikuranbessa.com' },

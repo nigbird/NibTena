@@ -1,7 +1,7 @@
 
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { placeholderImages } from '@/lib/placeholder-images';
+import { Hospital as HospitalIcon } from 'lucide-react';
 import type { Doctor } from '@/lib/definitions';
 import { getHospitalData } from './actions';
 import HospitalDoctorsList from '@/components/patient-portal/hospital-doctors-list';
@@ -13,22 +13,21 @@ export default async function HospitalDetailsPage({ params }: { params: { id: st
   if (!hospital) {
     notFound();
   }
-
-  const hospitalImage = placeholderImages.find(
-    (p) => p.id === hospital.imageId
-  );
   
   return (
     <div className="flex flex-col">
-        <div className="relative h-48 w-full">
-          {hospitalImage && (
+        <div className="relative h-48 w-full bg-muted">
+          {hospital.imageUrl ? (
             <Image
-              src={hospitalImage.imageUrl}
+              src={hospital.imageUrl}
               alt={hospital.name}
               fill
               className="object-cover"
-              data-ai-hint={hospitalImage.imageHint}
             />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <HospitalIcon className="w-16 h-16 text-muted-foreground" />
+            </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
            <div className="absolute bottom-0 left-0 p-4">

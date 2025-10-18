@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { placeholderImages } from '@/lib/placeholder-images';
 
 async function getHospitals() {
     return await prisma.hospital.findMany();
@@ -26,20 +25,22 @@ export default async function HospitalsPage() {
       <div className="p-4">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {hospitals.map((hospital) => {
-            const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
             return (
             <Card key={hospital.id} className="flex flex-col overflow-hidden shadow-lg">
-                {hospitalImage && (
-                    <div className="aspect-video relative overflow-hidden">
+                <div className="aspect-video relative overflow-hidden bg-muted">
+                    {hospital.imageUrl ? (
                         <Image
-                            src={hospitalImage.imageUrl}
-                            alt={hospitalImage.description}
+                            src={hospital.imageUrl}
+                            alt={hospital.name}
                             fill
                             className="object-cover"
-                            data-ai-hint={hospitalImage.imageHint}
                         />
-                    </div>
-                )}
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <HospitalIcon className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
+                </div>
                 <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <HospitalIcon className="h-5 w-5 text-primary-foreground" />

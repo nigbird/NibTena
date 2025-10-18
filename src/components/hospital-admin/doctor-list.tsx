@@ -126,15 +126,15 @@ export default function DoctorList({ doctors, onEdit, onDelete, onStatusChange }
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => onEdit(doctor)}>
-                        <Edit className="mr-2" /> Edit
+                        <Edit className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleToggleStatus(doctor)}>
-                        {doctor.status === 'active' ? <PowerOff className="mr-2 text-orange-500" /> : <Power className="mr-2 text-green-500" />}
+                        {doctor.status === 'active' ? <PowerOff className="mr-2 h-4 w-4 text-orange-500" /> : <Power className="mr-2 h-4 w-4 text-green-500" />}
                         {doctor.status === 'active' ? 'Deactivate' : 'Activate'}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleDeleteClick(doctor)} className="text-destructive">
-                         <Trash2 className="mr-2" /> Delete
+                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

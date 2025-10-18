@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { placeholderImages } from '@/lib/placeholder-images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +50,6 @@ export default function HospitalAdminSidebar() {
   // As hospital data is not passed down, we use session name as a placeholder.
   // A better solution would involve a global state or context provider for hospital data.
   const hospitalName = session?.user?.name || 'Hospital Admin';
-  const hospitalImage = placeholderImages.find(p => p.id === 'hospital-1'); // Placeholder image
 
   if (!session) {
     return (
@@ -109,7 +107,6 @@ export default function HospitalAdminSidebar() {
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {hospitalImage && <AvatarImage src={hospitalImage.imageUrl} alt={hospitalName} />}
                         <AvatarFallback>{hospitalName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">

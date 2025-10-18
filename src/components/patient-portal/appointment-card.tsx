@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Bookmark,
 } from 'lucide-react';
-import { placeholderImages } from '@/lib/placeholder-images';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +51,6 @@ export default function AppointmentCard({
   const [isRescheduleDrawerOpen, setIsRescheduleDrawerOpen] = useState(false);
 
   const doctor = appointment.doctor;
-  const doctorImage = placeholderImages.find(p => p.id === doctor?.imageId);
   const status = statusConfig[appointment.status] || statusConfig.confirmed;
 
   const handleConfirmCancel = async () => {
@@ -77,7 +75,7 @@ export default function AppointmentCard({
         <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
                 <Avatar className="h-16 w-16 border">
-                    {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor?.name} />}
+                    {doctor?.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor?.name} />}
                     <AvatarFallback><User /></AvatarFallback>
                 </Avatar>
                 <div>
@@ -155,5 +153,3 @@ export default function AppointmentCard({
     </>
   );
 }
-
-    

@@ -7,7 +7,6 @@ import { User, Stethoscope } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { placeholderImages } from '@/lib/placeholder-images';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -56,20 +55,16 @@ export default function HospitalDoctorsList({
       {filteredDoctors.length > 0 ? (
         <div className="space-y-4">
           {filteredDoctors.map((doctor) => {
-            const doctorImage = placeholderImages.find(
-              (p) => p.id === doctor.imageId
-            );
             return (
               <Card
                 key={doctor.id}
                 className="flex items-start p-4 gap-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
               >
                 <Avatar className="h-20 w-20 border-2 border-primary/20">
-                  {doctorImage && (
+                  {doctor.imageUrl && (
                     <AvatarImage
-                      src={doctorImage.imageUrl}
+                      src={doctor.imageUrl}
                       alt={doctor.name}
-                      data-ai-hint={doctorImage.imageHint}
                     />
                   )}
                   <AvatarFallback>

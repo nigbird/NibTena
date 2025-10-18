@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useDebounce } from '@/hooks/use-debounce';
 import Autoplay from "embla-carousel-autoplay";
-import { placeholderImages, type ImagePlaceholder } from '@/lib/placeholder-images';
+import { type ImagePlaceholder } from '@/lib/placeholder-images';
 
 const actionIcons: { [key: string]: React.ElementType } = {
   Hospital: Hospital,
@@ -276,20 +276,23 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
           >
               <CarouselContent className="-ml-4 px-6">
                   {topHospitals.map(hospital => {
-                      const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
                       return (
                           <CarouselItem key={hospital.id} className="md:basis-1/2 lg:basis-1/3 group">
                               <Card className="overflow-hidden shadow-lg transition-shadow hover:shadow-xl flex flex-col h-full">
-                                  {hospitalImage && (
-                                      <div className="aspect-video relative overflow-hidden">
+                                  <div className="aspect-video relative overflow-hidden bg-muted">
+                                      {hospital.imageUrl ? (
                                           <Image
-                                              src={hospitalImage.imageUrl}
+                                              src={hospital.imageUrl}
                                               alt={hospital.name}
                                               fill
                                               className="object-cover transition-transform duration-300 group-hover:scale-105"
                                           />
-                                      </div>
-                                  )}
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <Hospital className="w-12 h-12 text-muted-foreground" />
+                                        </div>
+                                      )}
+                                  </div>
                                   <CardContent className="p-4 flex flex-col flex-grow">
                                       <h3 className="font-bold font-headline truncate">{hospital.name}</h3>
                                       <p className="text-sm text-muted-foreground flex-grow">{hospital.city} | Multi-Specialty Care</p>
@@ -336,13 +339,12 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
           >
               <CarouselContent className="-ml-4 px-6">
                   {featuredDoctors.map(doctor => {
-                      const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
                       return (
                             <CarouselItem key={doctor.id} className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
                               <Card className="overflow-hidden text-center transition-transform hover:-translate-y-1 hover:shadow-lg flex flex-col items-center p-4 h-full">
                                   <Avatar className="h-24 w-24 mb-4 border-2 shadow-md" style={{ borderColor: 'hsl(var(--accent))' }}>
-                                      {doctorImage && (
-                                          <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />
+                                      {doctor.imageUrl && (
+                                          <AvatarImage src={doctor.imageUrl} alt={doctor.name} />
                                       )}
                                       <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                                   </Avatar>

@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Logo } from './icons';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { placeholderImages } from '@/lib/placeholder-images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,8 +54,6 @@ export default function DoctorPortalSidebar() {
       </aside>
      )
   }
-  
-  const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -85,7 +82,7 @@ export default function DoctorPortalSidebar() {
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                        {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
                         <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left overflow-hidden">

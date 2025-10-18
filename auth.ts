@@ -55,7 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return {
               id: user.id.toString(),
               name: user.name,
-              email: role === 'hospital' ? user.contactEmail : user.contact || user.email,
+              email: role === 'hospital' ? user.contactEmail : (role === 'doctor' ? user.contact : user.email),
               role: role,
               hospitalId: role === 'hospital' ? user.id : null,
               doctorHospitalIds: role === 'doctor' ? user.hospitals?.map((h: any) => h.hospitalId) : null,

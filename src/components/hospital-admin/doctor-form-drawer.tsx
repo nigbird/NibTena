@@ -20,6 +20,7 @@ import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
+import Image from 'next/image';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -40,6 +41,8 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const [specialties, setSpecialties] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [imagePreview, setImagePreview] = useState<string | null>(doctorToEdit?.imageUrl || null);
+
 
   useEffect(() => {
     getSpecialties().then(setSpecialties);
@@ -62,9 +65,9 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   }, [state, onDoctorSaved, toast]);
 
   useEffect(() => {
-    // Reset form fields when the drawer is opened for a different doctor or for adding a new one.
     if (isOpen) {
       formRef.current?.reset();
+      setImagePreview(doctorToEdit?.imageUrl || null);
     }
   }, [isOpen, doctorToEdit]);
 
@@ -75,6 +78,13 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         formAction(formData);
     });
   }
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -87,6 +97,22 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
             <form ref={formRef} onSubmit={handleSubmit} id="doctor-form" className="grid gap-4 py-4">
+              {imagePreview && (
+                <div className="space-y-2">
+                    <Label>Image Preview</Label>
+                    <div className="w-24 h-24 relative rounded-full overflow-hidden border-2 border-primary">
+                        <Image src={imagePreview} alt="Doctor preview" fill style={{ objectFit: 'cover' }} />
+                    </div>
+                </div>
+              )}
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="image" className="text-right">
+                Profile Photo
+                </Label>
+                <div className="col-span-3">
+                <Input id="image" name="image" type="file" accept="image/*" className="w-full" onChange={handleImageChange}/>
+                </div>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
                 Full Name
@@ -128,14 +154,6 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                         </SelectContent>
                     </Select>
                 {state.errors?.specialty && <p className="text-sm font-medium text-destructive">{state.errors.specialty[0]}</p>}
-                </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="photo" className="text-right">
-                Profile Photo
-                </Label>
-                <div className="col-span-3">
-                <Input id="photo" name="photo" type="file" className="w-full" />
                 </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

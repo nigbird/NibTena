@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -26,7 +27,6 @@ import {
   AvatarImage,
 } from '@/components/ui/avatar';
 import type { Doctor } from '@/lib/definitions';
-import { placeholderImages } from '@/lib/placeholder-images';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,13 +100,12 @@ export default function DoctorList({ doctors, onEdit, onDelete, onStatusChange }
         </TableHeader>
         <TableBody>
           {doctors.map((doctor) => {
-            const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
             const isInactive = doctor.status === 'inactive';
             return (
               <TableRow key={doctor.id} className={isInactive ? 'bg-muted/50' : ''}>
                 <TableCell className="hidden sm:table-cell">
                   <Avatar className="h-12 w-12">
-                      {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                      {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
                       <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                 </TableCell>

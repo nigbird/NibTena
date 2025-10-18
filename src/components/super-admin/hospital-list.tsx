@@ -27,7 +27,6 @@ import {
   AvatarImage,
 } from '@/components/ui/avatar';
 import type { Hospital } from '@/lib/definitions';
-import { placeholderImages } from '@/lib/placeholder-images';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,13 +100,12 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
           </TableHeader>
           <TableBody>
             {hospitals.map((hospital) => {
-              const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
               const isInactive = hospital.status === 'inactive';
               return (
                 <TableRow key={hospital.id} className={isInactive ? 'bg-muted/50' : ''}>
                   <TableCell className="hidden sm:table-cell">
                     <Avatar className="h-12 w-12 rounded-md">
-                        {hospitalImage && <AvatarImage src={hospitalImage.imageUrl} alt={hospital.name} />}
+                        {hospital.imageUrl && <AvatarImage src={hospital.imageUrl} alt={hospital.name} />}
                         <AvatarFallback className="rounded-md">{hospital.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </TableCell>

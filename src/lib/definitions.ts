@@ -11,7 +11,7 @@ export type Hospital = {
   id: number;
   name: string;
   city: string;
-  imageId: string;
+  imageUrl: string | null;
   description: string;
   contactEmail: string;
   contactPhone: string;
@@ -27,7 +27,7 @@ export type Doctor = {
   id: number;
   name: string;
   specialty: string;
-  imageId: string;
+  imageUrl: string | null;
   bio: string;
   consultationFee: number;
   rating: number;

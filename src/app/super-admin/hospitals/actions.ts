@@ -3,9 +3,9 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { placeholderImages } from '@/lib/placeholder-images';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { saveImage } from '@/lib/image-upload';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -14,6 +14,7 @@ const HospitalFormSchema = z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters.' }).or(z.literal('')),
+  image: z.instanceof(File).optional(),
 });
 
 export type HospitalFormState = {
@@ -24,7 +25,7 @@ export type HospitalFormState = {
     contactEmail?: string[];
     contactPhone?: string[];
     password?: string[];
-    status?: string[];
+    image?: string[];
   };
   message?: string | null;
   success?: boolean;
@@ -32,6 +33,7 @@ export type HospitalFormState = {
 
 export async function saveHospital(
   hospitalId: number | null,
+  prevState: HospitalFormState,
   formData: FormData
 ): Promise<HospitalFormState> {
 
@@ -39,6 +41,11 @@ export async function saveHospital(
 
   if (hospitalId && !rawData.password) {
       delete rawData.password;
+  }
+   // Handle file upload
+  const imageFile = formData.get('image') as File | null;
+  if (!imageFile || imageFile.size === 0) {
+    delete rawData.image;
   }
 
   const validatedFields = HospitalFormSchema.safeParse(rawData);
@@ -51,27 +58,29 @@ export async function saveHospital(
     };
   }
   
-  const { password, ...hospitalData } = validatedFields.data;
+  const { password, image, ...hospitalData } = validatedFields.data;
 
   const dataToSave: any = {
     ...hospitalData,
-    status: formData.get('status') === 'active' ? 'active' : ('inactive' as 'active' | 'inactive'),
+    status: formData.get('status') === 'on' ? 'active' : 'inactive',
   };
   
   if (password) {
       dataToSave.password = await bcrypt.hash(password, 10);
   }
 
-
   try {
+     if (image) {
+      dataToSave.imageUrl = await saveImage(image);
+    }
+    
     if (hospitalId) {
       await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
     } else {
       if (!password) {
           return { success: false, message: 'Password is required for new hospitals.' };
       }
-      const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
-      await prisma.hospital.create({ data: { ...dataToSave, imageId, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+      await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
     }
 
     revalidatePath('/super-admin/hospitals');

@@ -3,10 +3,9 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import type { Doctor } from '@/lib/definitions';
-import { placeholderImages } from '@/lib/placeholder-images';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { saveImage } from '@/lib/image-upload';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -16,6 +15,7 @@ const DoctorFormSchema = z.object({
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
+  image: z.instanceof(File).optional(),
 });
 
 export type DoctorFormState = {
@@ -27,6 +27,7 @@ export type DoctorFormState = {
     experience?: string[];
     consultationFee?: string[];
     bio?: string[];
+    image?: string[];
   };
   message?: string | null;
   success?: boolean;
@@ -43,6 +44,11 @@ export async function saveDoctor(
   if (doctorId && !rawData.password) {
     delete rawData.password;
   }
+  // Handle file upload
+  const imageFile = formData.get('image') as File | null;
+  if (!imageFile || imageFile.size === 0) {
+    delete rawData.image;
+  }
 
   const validatedFields = DoctorFormSchema.safeParse(rawData);
 
@@ -54,11 +60,16 @@ export async function saveDoctor(
     };
   }
 
-  const { password, ...doctorData } = validatedFields.data;
+  const { password, image, ...doctorData } = validatedFields.data;
 
   try {
+    const dataToUpdate: any = { ...doctorData };
+    
+    if (image) {
+      dataToUpdate.imageUrl = await saveImage(image);
+    }
+    
     if (doctorId) {
-      const dataToUpdate: any = { ...doctorData };
       if (password) {
         dataToUpdate.password = await bcrypt.hash(password, 10);
       }
@@ -68,12 +79,11 @@ export async function saveDoctor(
         return { message: 'Password is required for new doctors.', success: false };
       }
       const hashedPassword = await bcrypt.hash(password, 10);
-      const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
+      
       await prisma.doctor.create({
         data: {
-          ...doctorData,
+          ...dataToUpdate,
           password: hashedPassword,
-          imageId,
           rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
           hospitals: { create: { hospitalId } },
         },

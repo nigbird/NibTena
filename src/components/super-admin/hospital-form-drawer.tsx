@@ -1,15 +1,13 @@
 
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
-  SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { saveHospital } from '@/app/super-admin/hospitals/actions';
+import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
 import { Switch } from '../ui/switch';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import Image from 'next/image';
 
 type HospitalFormDrawerProps = {
   isOpen: boolean;
@@ -38,40 +38,43 @@ export default function HospitalFormDrawer({
   const isEditing = !!hospitalToEdit;
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const [isPending, startTransition] = useTransition();
-  const [isActive, setIsActive] = useState(
-    isEditing ? hospitalToEdit.status === 'active' : true
-  );
+  
+  const initialState: HospitalFormState = { message: null, errors: {} };
+  const action = saveHospital.bind(null, hospitalToEdit?.id ?? null);
+  const [state, formAction] = useActionState(action, initialState);
+
+  const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
+  
+  useEffect(() => {
+    if (state.success) {
+      toast({
+        title: "Success",
+        description: state.message,
+      });
+      onActionSuccess();
+    } else if (state.message) {
+      toast({
+        variant: "destructive",
+        title: "Error saving hospital",
+        description: Object.values(state.errors || {}).flat().join('\n') || state.message,
+      });
+    }
+  }, [state, onActionSuccess, toast]);
 
   useEffect(() => {
     if (isOpen) {
-      setIsActive(isEditing ? hospitalToEdit.status === 'active' : true);
       formRef.current?.reset();
+      setImagePreview(hospitalToEdit?.imageUrl || null);
     }
-  }, [isOpen, isEditing, hospitalToEdit]);
+  }, [isOpen, hospitalToEdit]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    formData.set('status', isActive ? 'active' : 'inactive');
-
-    startTransition(async () => {
-      const result = await saveHospital(hospitalToEdit?.id ?? null, formData);
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: result.message,
-        });
-        onActionSuccess();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error saving hospital",
-          description: Object.values(result.errors || {}).flat().join('\\n') || result.message,
-        });
-      }
-    });
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
+
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -87,13 +90,27 @@ export default function HospitalFormDrawer({
         <ScrollArea className="flex-1 -mx-6 px-6">
           <form
             ref={formRef}
-            onSubmit={handleSubmit}
+            action={formAction}
             id="hospital-form"
             className="grid gap-6 py-4"
           >
+            {imagePreview && (
+                <div className="space-y-2">
+                    <Label>Image Preview</Label>
+                    <div className="w-full h-48 relative rounded-md overflow-hidden border">
+                        <Image src={imagePreview} alt="Hospital preview" fill style={{ objectFit: 'cover' }} />
+                    </div>
+                </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="image">Hospital Photo</Label>
+              <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Hospital Name</Label>
               <Input id="name" name="name" defaultValue={hospitalToEdit?.name} required />
+              {state.errors?.name && <p className="text-destructive text-sm">{state.errors.name[0]}</p>}
             </div>
 
             <div className="space-y-2">
@@ -104,12 +121,14 @@ export default function HospitalFormDrawer({
                 defaultValue={hospitalToEdit?.description}
                 required
               />
+              {state.errors?.description && <p className="text-destructive text-sm">{state.errors.description[0]}</p>}
             </div>
             
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
+                  {state.errors?.city && <p className="text-destructive text-sm">{state.errors.city[0]}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Admin Password</Label>
@@ -120,6 +139,7 @@ export default function HospitalFormDrawer({
                   placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Enter password'}
                   required={!isEditing}
                 />
+                 {state.errors?.password && <p className="text-destructive text-sm">{state.errors.password[0]}</p>}
               </div>
             </div>
 
@@ -133,6 +153,7 @@ export default function HospitalFormDrawer({
                   defaultValue={hospitalToEdit?.contactEmail}
                   required
                 />
+                 {state.errors?.contactEmail && <p className="text-destructive text-sm">{state.errors.contactEmail[0]}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="contactPhone">Contact Phone</Label>
@@ -143,41 +164,28 @@ export default function HospitalFormDrawer({
                   defaultValue={hospitalToEdit?.contactPhone}
                   required
                 />
+                 {state.errors?.contactPhone && <p className="text-destructive text-sm">{state.errors.contactPhone[0]}</p>}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="photo">Hospital Photo</Label>
-              <Input id="photo" name="photo" type="file" />
             </div>
             
             <div className="flex items-center space-x-2">
               <Switch
-                id="status-switch"
-                checked={isActive}
-                onCheckedChange={setIsActive}
+                id="status"
+                name="status"
+                defaultChecked={hospitalToEdit?.status === 'active' || !isEditing}
               />
-              <Label htmlFor="status-switch">Active</Label>
+              <Label htmlFor="status">Active</Label>
             </div>
           </form>
         </ScrollArea>
-        <SheetFooter className="mt-auto border-t pt-4 -mx-6 px-6">
-          <SheetClose asChild>
-            <Button type="button" variant="outline">
-              Cancel
+        <div className="flex justify-end space-x-2 pt-4 border-t -mx-6 px-6">
+          <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+           <Button type="submit" form="hospital-form" variant="accent">
+              {isEditing ? 'Save Changes' : 'Add Hospital'}
             </Button>
-          </SheetClose>
-           <Button type="submit" form="hospital-form" disabled={isPending} variant="accent">
-              {isPending ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" />
-                  {isEditing ? 'Saving...' : 'Adding...'}
-                </>
-              ) : (
-                isEditing ? 'Save Changes' : 'Add Hospital'
-              )}
-            </Button>
-        </SheetFooter>
+        </div>
       </SheetContent>
     </Sheet>
   );

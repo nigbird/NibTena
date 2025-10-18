@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { saveImage } from '@/lib/image-upload';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -11,6 +12,7 @@ const DoctorProfileSchema = z.object({
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
+  image: z.instanceof(File).optional(),
 });
 
 export type DoctorProfileState = {
@@ -20,6 +22,7 @@ export type DoctorProfileState = {
     experience?: string[];
     consultationFee?: string[];
     bio?: string[];
+    image?: string[];
   };
   message?: string | null;
   success?: boolean;
@@ -30,13 +33,14 @@ export async function updateDoctorProfile(
   prevState: DoctorProfileState,
   formData: FormData
 ): Promise<DoctorProfileState> {
-  const validatedFields = DoctorProfileSchema.safeParse({
-    name: formData.get('name'),
-    specialty: formData.get('specialty'),
-    experience: formData.get('experience'),
-    consultationFee: formData.get('consultationFee'),
-    bio: formData.get('bio'),
-  });
+
+  const rawData = Object.fromEntries(formData.entries());
+  const imageFile = formData.get('image') as File | null;
+  if (!imageFile || imageFile.size === 0) {
+    delete rawData.image;
+  }
+
+  const validatedFields = DoctorProfileSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
     return {
@@ -46,15 +50,23 @@ export async function updateDoctorProfile(
     };
   }
 
+  const { image, ...doctorData } = validatedFields.data;
+
   try {
+    const dataToUpdate: any = doctorData;
+
+    if (image) {
+      dataToUpdate.imageUrl = await saveImage(image);
+    }
+    
     const updatedDoctor = await prisma.doctor.update({
         where: { id: doctorId },
-        data: validatedFields.data,
+        data: dataToUpdate,
     });
     
     if (updatedDoctor) {
       revalidatePath('/doctor-portal/profile');
-      revalidatePath(`/doctors/${doctorId}`); // Revalidate public profile
+      revalidatePath(`/user/doctors/${doctorId}`); // Revalidate public profile
       return {
         success: true,
         message: 'Your profile has been updated successfully.',

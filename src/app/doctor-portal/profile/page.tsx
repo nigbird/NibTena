@@ -4,7 +4,6 @@
 import { useActionState, useEffect, useState, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { updateDoctorProfile, type DoctorProfileState, getSpecialties } from './actions';
-import type { Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -26,9 +25,9 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { placeholderImages } from '@/lib/placeholder-images';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -50,6 +49,7 @@ function SubmitButton() {
 export default function DoctorProfilePage() {
   const { doctor } = useContext(DoctorPortalContext);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(doctor?.imageUrl || null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,12 +59,16 @@ export default function DoctorProfilePage() {
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (doctor) {
+      setImagePreview(doctor.imageUrl);
+    }
+  }, [doctor]);
   
   const initialState: DoctorProfileState = { message: null, errors: {} };
   const updateDoctorAction = doctor ? updateDoctorProfile.bind(null, doctor.id) : null;
   
-  // This check is necessary because useActionState cannot be called conditionally.
-  // We provide a dummy action if the main action isn't available yet.
   const [state, dispatch] = useActionState(updateDoctorAction || (async () => initialState), initialState);
 
   useEffect(() => {
@@ -81,6 +85,13 @@ export default function DoctorProfilePage() {
       });
     }
   }, [state, toast]);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   if (!doctor) {
     return (
@@ -100,8 +111,6 @@ export default function DoctorProfilePage() {
     );
   }
 
-  const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
-
   return (
     <div className="container mx-auto max-w-4xl py-2">
       <Card className="shadow-lg">
@@ -115,12 +124,12 @@ export default function DoctorProfilePage() {
           <form action={dispatch} className="space-y-8">
             <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24 border-4 border-primary/20">
-                    {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                    {imagePreview && <AvatarImage src={imagePreview} alt={doctor.name} />}
                     <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="picture">Change Profile Photo</Label>
-                    <Input id="picture" type="file" name="photo" />
+                    <Label htmlFor="image">Change Profile Photo</Label>
+                    <Input id="image" type="file" name="image" accept="image/*" onChange={handleImageChange} />
                     <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
                 </div>
             </div>

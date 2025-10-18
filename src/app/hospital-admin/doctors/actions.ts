@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import type { Doctor } from '@/lib/definitions';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { revalidatePath } from 'next/cache';
+import bcrypt from 'bcryptjs';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -39,7 +40,6 @@ export async function saveDoctor(
 ): Promise<DoctorFormState> {
   const rawData = Object.fromEntries(formData.entries());
   
-  // If password is not being updated, remove it from validation.
   if (doctorId && !rawData.password) {
     delete rawData.password;
   }
@@ -60,20 +60,19 @@ export async function saveDoctor(
     if (doctorId) {
       const dataToUpdate: any = { ...doctorData };
       if (password) {
-        // In a real app, hash the password here before saving
-        // dataToUpdate.password = await bcrypt.hash(password, 10);
-        dataToUpdate.password = password;
+        dataToUpdate.password = await bcrypt.hash(password, 10);
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
       if (!password) {
         return { message: 'Password is required for new doctors.', success: false };
       }
+      const hashedPassword = await bcrypt.hash(password, 10);
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
       await prisma.doctor.create({
         data: {
           ...doctorData,
-          password: password, // In a real app, hash this password
+          password: hashedPassword,
           imageId,
           rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
           hospitals: { create: { hospitalId } },

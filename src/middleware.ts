@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { auth } from '@/../../auth';
+import { auth } from '../auth';
 
 export default auth((req: NextRequest) => {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');

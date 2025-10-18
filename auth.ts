@@ -47,11 +47,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             user = await prisma.doctor.findUnique({ where: { contact: email } });
           }
 
-          if (!user) return null;
+          if (!user || !user.password) return null;
           
-          // In a real app, passwords should be hashed. The seed script uses plaintext for demo purposes.
-          // For production, you'd use: const passwordsMatch = await bcrypt.compare(password, user.password);
-          const passwordsMatch = password === user.password;
+          const passwordsMatch = await bcrypt.compare(password, user.password);
 
           if (passwordsMatch) {
             return {

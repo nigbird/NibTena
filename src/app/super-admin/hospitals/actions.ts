@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -57,10 +58,8 @@ export async function saveHospital(
     status: formData.get('status') === 'active' ? 'active' : ('inactive' as 'active' | 'inactive'),
   };
   
-  // In a real app, you would hash the password here before saving.
-  // Example: data.password = await bcrypt.hash(data.password, 10);
   if (password) {
-      dataToSave.password = password; // Storing plain text for demo purposes
+      dataToSave.password = await bcrypt.hash(password, 10);
   }
 
 
@@ -72,7 +71,6 @@ export async function saveHospital(
           return { success: false, message: 'Password is required for new hospitals.' };
       }
       const imageId = placeholderImages[Math.floor(Math.random() * placeholderImages.length)].id;
-      // startTime, endTime, and bookingWindow have been removed from here as they are not on the form
       await prisma.hospital.create({ data: { ...dataToSave, imageId, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
     }
 

@@ -27,7 +27,7 @@ async function main() {
   const hospitalPassword = await bcrypt.hash('password123', saltRounds);
   const hospital1 = await prisma.hospital.upsert({
     where: { contactEmail: 'admin@tikuranbessa.com' },
-    update: {},
+    update: { password: hospitalPassword },
     create: {
       name: 'Tikur Anbessa Specialized Hospital',
       description: 'A leading public hospital in Addis Ababa, providing comprehensive healthcare services and medical education. It is the largest specialized hospital in Ethiopia.',
@@ -46,7 +46,7 @@ async function main() {
 
   const hospital2 = await prisma.hospital.upsert({
     where: { contactEmail: 'admin@sphmmc.com' },
-    update: {},
+    update: { password: hospitalPassword },
     create: {
       name: 'St. Paul\'s Hospital Millennium Medical College',
       description: 'A specialized teaching hospital in Addis Ababa, known for its advanced medical training and patient care services in various fields.',
@@ -65,7 +65,7 @@ async function main() {
   
   const hospital3 = await prisma.hospital.upsert({
     where: { contactEmail: 'admin@hu.com' },
-    update: {},
+    update: { password: hospitalPassword },
     create: {
         name: 'Hawassa University Specialized Hospital',
         description: 'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
@@ -87,7 +87,7 @@ async function main() {
   const doctorPassword = await bcrypt.hash('password123', saltRounds);
   const doctor1 = await prisma.doctor.upsert({
     where: { contact: 'mulugeta.t@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Mulugeta Tesfaye',
       contact: 'mulugeta.t@NibTena.com',
@@ -104,7 +104,7 @@ async function main() {
 
   const doctor2 = await prisma.doctor.upsert({
     where: { contact: 'selamawit.b@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Selamawit Bekele',
       contact: 'selamawit.b@NibTena.com',
@@ -121,7 +121,7 @@ async function main() {
 
   const doctor3 = await prisma.doctor.upsert({
     where: { contact: 'tewodros.m@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Tewodros Mekonnen',
       contact: 'tewodros.m@NibTena.com',
@@ -138,7 +138,7 @@ async function main() {
   
    const doctor4 = await prisma.doctor.upsert({
     where: { contact: 'meron.a@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Meron Alemu',
       contact: 'meron.a@NibTena.com',
@@ -155,7 +155,7 @@ async function main() {
 
   const doctor5 = await prisma.doctor.upsert({
     where: { contact: 'yoseph.h@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Yoseph Hailemariam',
       contact: 'yoseph.h@NibTena.com',
@@ -172,7 +172,7 @@ async function main() {
   
    const doctor6 = await prisma.doctor.upsert({
     where: { contact: 'rahel.t@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Rahel Tadesse',
       contact: 'rahel.t@NibTena.com',
@@ -189,7 +189,7 @@ async function main() {
   
    const doctor7 = await prisma.doctor.upsert({
     where: { contact: 'dawit.a@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Dawit Abebe',
       contact: 'dawit.a@NibTena.com',
@@ -206,7 +206,7 @@ async function main() {
   
    const doctor8 = await prisma.doctor.upsert({
     where: { contact: 'liya.k@NibTena.com' },
-    update: {},
+    update: { password: doctorPassword },
     create: {
       name: 'Dr. Liya Kebede',
       contact: 'liya.k@NibTena.com',

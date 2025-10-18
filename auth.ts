@@ -26,6 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         role: { label: 'Role', type: 'text' },
       },
       async authorize(credentials) {
+        console.log('[Auth] Authorize function triggered');
         const parsedCredentials = z
           .object({
             email: z.string().email(),
@@ -36,32 +37,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password, role } = parsedCredentials.data;
+          console.log(`[Auth] Attempting login for role: ${role} with email: ${email}`);
 
           let user: any = null;
 
           if (role === 'superadmin') {
             user = await prisma.superAdmin.findUnique({ where: { email } });
+            if (!user) console.log('[Auth] Super admin not found');
           } else if (role === 'hospital') {
             user = await prisma.hospital.findUnique({ where: { contactEmail: email } });
+             if (!user) console.log('[Auth] Hospital not found');
           } else if (role === 'doctor') {
             user = await prisma.doctor.findUnique({ where: { contact: email } });
+             if (!user) console.log('[Auth] Doctor not found');
           }
 
-          if (!user || !user.password) return null;
+          if (!user || !user.password) {
+            console.error('[Auth] User not found or user has no password.');
+            return null;
+          }
           
           const passwordsMatch = await bcrypt.compare(password, user.password);
+          if (!passwordsMatch) {
+            console.error('[Auth] Password mismatch for user:', email);
+            return null;
+          }
 
+          console.log('[Auth] Passwords match for user:', email);
+          
           if (passwordsMatch) {
+            const userEmail = role === 'hospital' ? user.contactEmail : (role === 'doctor' ? user.contact : user.email);
+            const userName = role === 'hospital' ? user.name : user.name;
+            const doctorHospitalIds = role === 'doctor' 
+                ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
+                : null;
+            
             return {
               id: user.id.toString(),
-              name: user.name,
-              email: role === 'hospital' ? user.contactEmail : (role === 'doctor' ? user.contact : user.email),
+              name: userName,
+              email: userEmail,
               role: role,
               hospitalId: role === 'hospital' ? user.id : null,
-              doctorHospitalIds: role === 'doctor' ? user.hospitals?.map((h: any) => h.hospitalId) : null,
+              doctorHospitalIds,
             };
           }
+        } else {
+            console.error('[Auth] Parsed credentials failed:', parsedCredentials.error);
         }
+        
+        console.log('[Auth] Returning null from authorize');
         return null;
       },
     }),

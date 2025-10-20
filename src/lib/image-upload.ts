@@ -1,13 +1,14 @@
 
 'use server';
 
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 /**
- * Saves an uploaded file to the public/uploads directory.
+ * Saves an uploaded file to the root /uploads directory.
  * @param file The File object to save.
- * @returns The public URL of the saved file (e.g., /uploads/filename.jpg).
+ * @returns The dynamic API URL of the saved file (e.g., /api/uploads/filename.jpg).
  */
 export async function saveImage(file: File): Promise<string> {
   const bytes = await file.arrayBuffer();
@@ -15,9 +16,17 @@ export async function saveImage(file: File): Promise<string> {
 
   // Use a timestamp to make the filename unique
   const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-  const path = join(process.cwd(), 'public/uploads', filename);
+  
+  // Save to a directory at the root of the project, NOT in /public
+  const uploadsDir = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+  }
+
+  const path = join(uploadsDir, filename);
   
   await writeFile(path, buffer);
 
-  return `/uploads/${filename}`;
+  // Return the path to the API route that will serve the image
+  return `/api/uploads/${filename}`;
 }

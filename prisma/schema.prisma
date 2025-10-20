@@ -31,6 +31,7 @@ model Hospital {
   description     String             @db.Text
   city            String
   imageId         String
+  imageUrl        String?            // URL to the uploaded image
   contactEmail    String             @unique
   contactPhone    String
   password        String
@@ -53,6 +54,7 @@ model Doctor {
   password        String
   specialty       String
   imageId         String
+  imageUrl        String?            // URL to the uploaded image
   bio             String             @db.Text
   consultationFee Int
   rating          Float

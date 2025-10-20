@@ -80,7 +80,7 @@ export async function saveHospital(
       if (!password) {
           return { success: false, message: 'Password is required for new hospitals.' };
       }
-      await prisma.hospital.create({ data: { ...dataToSave, imageId: 'hospital-1', startTime: '08:00', endTime: '18:00', bookingWindow: 30, accountNumber: `ACCT-NEW-${Date.now()}` } });
+      await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30, accountNumber: `ACCT-NEW-${Date.now()}` } });
     }
 
     revalidatePath('/super-admin/hospitals');

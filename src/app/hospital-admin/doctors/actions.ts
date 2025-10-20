@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
-import { placeholderImages } from '@/lib/placeholder-images';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -81,15 +80,11 @@ export async function saveDoctor(
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       
-      const doctorImages = placeholderImages.filter(p => p.id.startsWith('doctor-'));
-      const randomImageId = doctorImages[Math.floor(Math.random() * doctorImages.length)].id;
-
       await prisma.doctor.create({
         data: {
           ...dataToUpdate,
           password: hashedPassword,
           rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
-          imageId: randomImageId,
           hospitals: { create: { hospitalId } },
         },
       });

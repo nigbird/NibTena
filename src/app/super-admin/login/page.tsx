@@ -13,11 +13,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Shield, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Shield, Loader2, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -33,21 +34,11 @@ export default function SuperAdminLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/super-admin';
-  const [error, setError] = useState<string | null>(searchParams.get('error'));
-
-  useEffect(() => {
-    if (error) {
-        toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: 'Invalid email or password. Please try again.',
-        })
-        setError(null); // Clear error after showing toast
-    }
-  }, [error, toast]);
+  const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        setError(null);
         const formData = new FormData(event.currentTarget);
         const email = formData.get('email') as string;
         const password = formData.get('password') as string;
@@ -61,7 +52,7 @@ export default function SuperAdminLoginPage() {
         });
 
         if (result?.error) {
-           router.push(`/super-admin/login?error=CredentialsSignin`);
+           setError("Invalid email or password. Please try again.");
         } else if (result?.url) {
             toast({
                 title: 'Login Successful',
@@ -99,6 +90,14 @@ export default function SuperAdminLoginPage() {
                             <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
                             <Input id="password" name="password" type="password" required />
                         </div>
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>
+                                    {error}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         <SubmitButton />
                     </form>
                 </CardContent>

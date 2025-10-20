@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -38,6 +38,7 @@ export default function HospitalFormDrawer({
   const isEditing = !!hospitalToEdit;
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
   
   const initialState: HospitalFormState = { message: null, errors: {} };
   const action = saveHospital.bind(null, hospitalToEdit?.id ?? null);
@@ -75,6 +76,14 @@ export default function HospitalFormDrawer({
     }
   };
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => {
+        formAction(formData);
+    });
+  };
+
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -90,7 +99,7 @@ export default function HospitalFormDrawer({
         <ScrollArea className="flex-1 -mx-6 px-6">
           <form
             ref={formRef}
-            action={formAction}
+            onSubmit={handleSubmit}
             id="hospital-form"
             className="grid gap-6 py-4"
           >
@@ -182,8 +191,8 @@ export default function HospitalFormDrawer({
           <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
-           <Button type="submit" form="hospital-form" variant="accent">
-              {isEditing ? 'Save Changes' : 'Add Hospital'}
+           <Button type="submit" form="hospital-form" variant="accent" disabled={isPending}>
+              {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : isEditing ? 'Save Changes' : 'Add Hospital'}
             </Button>
         </div>
       </SheetContent>

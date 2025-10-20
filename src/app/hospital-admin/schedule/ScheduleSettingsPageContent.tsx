@@ -10,7 +10,7 @@ import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId, getHospitalSettings } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { placeholderImages } from '@/lib/placeholder-images';
+// removed placeholder images; use uploaded imageUrl with fallback
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
@@ -118,12 +118,11 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
             </div>
            ) : doctors.length > 0 ? (
                 doctors.map(doctor => {
-                    const doctorImage = placeholderImages.find(p => p.id === doctor.imageId);
                     return (
                     <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
-                            {doctorImage && <AvatarImage src={doctorImage.imageUrl} alt={doctor.name} />}
+                            {doctor.imageUrl ? <AvatarImage src={doctor.imageUrl} alt={doctor.name} /> : null}
                             <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>

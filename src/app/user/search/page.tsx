@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Hospital as HospitalIcon, Search as SearchIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { placeholderImages } from '@/lib/placeholder-images';
+// removed placeholder images; use uploaded imageUrl with fallback
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -72,20 +72,18 @@ function SearchResults() {
                 <h2 className="text-xl font-bold mb-4 font-headline">Hospitals</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredHospitals.map((hospital) => {
-                    const hospitalImage = placeholderImages.find(p => p.id === hospital.imageId);
                     return (
                        <Card key={hospital.id} className="flex flex-col overflow-hidden shadow-lg">
-                          {hospitalImage && (
+                          {hospital.imageUrl ? (
                               <div className="aspect-video relative overflow-hidden">
                                   <Image
-                                      src={hospitalImage.imageUrl}
-                                      alt={hospitalImage.description}
+                                      src={hospital.imageUrl}
+                                      alt={hospital.name}
                                       fill
                                       className="object-cover"
-                                      data-ai-hint={hospitalImage.imageHint}
                                   />
                               </div>
-                          )}
+                          ) : null}
                           <CardHeader>
                             <CardTitle className="font-headline flex items-center gap-2">
                                 <HospitalIcon className="h-5 w-5 text-primary-foreground" />
@@ -112,17 +110,12 @@ function SearchResults() {
                 <h2 className="text-xl font-bold mb-4 font-headline">Doctors</h2>
                 <div className="space-y-4">
                   {filteredDoctors.map((doctor) => {
-                    const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
                     return (
                         <Card key={doctor.id} className="flex items-start p-4 gap-4 shadow-md">
                            <Avatar className="h-20 w-20 border-2 border-primary/20">
-                              {doctorImage && (
-                                <AvatarImage
-                                  src={doctorImage.imageUrl}
-                                  alt={doctor.name}
-                                  data-ai-hint={doctorImage.imageHint}
-                                />
-                              )}
+                              {doctor.imageUrl ? (
+                                <AvatarImage src={doctor.imageUrl} alt={doctor.name} />
+                              ) : null}
                               <AvatarFallback><User /></AvatarFallback>
                             </Avatar>
                             <div className="flex-1">

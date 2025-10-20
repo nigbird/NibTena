@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { placeholderImages } from '@/lib/placeholder-images';
+// removed placeholder images; use uploaded imageUrl with fallback
 import DoctorSearch from './DoctorSearch';
 
 async function getDoctorsWithHospitals() {
@@ -35,19 +35,14 @@ async function getSpecialties() {
 }
 
 function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {
-  const doctorImage = placeholderImages.find((p) => p.id === doctor.imageId);
   const hospital = doctor.hospitals[0]?.hospital;
 
   return (
     <Card className="flex items-start p-4 gap-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
        <Avatar className="h-20 w-20 border-2 border-primary/20">
-          {doctorImage && (
-            <AvatarImage
-              src={doctorImage.imageUrl}
-              alt={doctor.name}
-              data-ai-hint={doctorImage.imageHint}
-            />
-          )}
+          {doctor.imageUrl ? (
+            <AvatarImage src={doctor.imageUrl} alt={doctor.name} />
+          ) : null}
           <AvatarFallback>
             <User />
           </AvatarFallback>

@@ -14,6 +14,7 @@ const HospitalFormSchema = z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters.' }).or(z.literal('')),
+  accountNumber: z.string().min(1, 'Account number is required.'),
   image: z.instanceof(File).optional(),
 });
 
@@ -25,6 +26,7 @@ export type HospitalFormState = {
     contactEmail?: string[];
     contactPhone?: string[];
     password?: string[];
+    accountNumber?: string[];
     image?: string[];
   };
   message?: string | null;
@@ -80,7 +82,7 @@ export async function saveHospital(
       if (!password) {
           return { success: false, message: 'Password is required for new hospitals.' };
       }
-      await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30, accountNumber: `ACCT-NEW-${Date.now()}` } });
+      await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
     }
 
     revalidatePath('/super-admin/hospitals');

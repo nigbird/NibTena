@@ -19,7 +19,6 @@ import { ScrollArea } from '../ui/scroll-area';
 import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
 import { Switch } from '../ui/switch';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import Image from 'next/image';
 
 type HospitalFormDrawerProps = {
@@ -47,20 +46,20 @@ export default function HospitalFormDrawer({
   const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
   
   useEffect(() => {
-    if (state.success) {
+    if (state.success && !isPending) {
       toast({
         title: "Success",
         description: state.message,
       });
       onActionSuccess();
-    } else if (state.message) {
+    } else if (state.message && !isPending && !state.success) {
       toast({
         variant: "destructive",
         title: "Error saving hospital",
         description: Object.values(state.errors || {}).flat().join('\n') || state.message,
       });
     }
-  }, [state, onActionSuccess, toast]);
+  }, [state, onActionSuccess, toast, isPending]);
 
   useEffect(() => {
     if (isOpen) {
@@ -175,6 +174,12 @@ export default function HospitalFormDrawer({
                 />
                  {state.errors?.contactPhone && <p className="text-destructive text-sm">{state.errors.contactPhone[0]}</p>}
               </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="accountNumber">Account Number</Label>
+                <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
+                {state.errors?.accountNumber && <p className="text-destructive text-sm">{state.errors.accountNumber[0]}</p>}
             </div>
             
             <div className="flex items-center space-x-2">

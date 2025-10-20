@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     // Generate public URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const publicUrl = `${baseUrl}/api/upload/${filename}`;
 
     console.log(`File uploaded successfully: ${filename}`);

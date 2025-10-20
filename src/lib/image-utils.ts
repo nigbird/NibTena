@@ -52,7 +52,7 @@ export async function uploadImage(file: File): Promise<UploadResponse> {
  * @returns string - The public URL
  */
 export function getImageUrl(filename: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   return `${baseUrl}/api/upload/${filename}`;
 }
 

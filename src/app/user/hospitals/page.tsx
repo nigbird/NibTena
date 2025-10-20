@@ -23,7 +23,7 @@ export default async function HospitalsPage() {
   return (
     <>
       <div className="p-4">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {hospitals.map((hospital) => {
             return (
             <Card key={hospital.id} className="flex flex-col overflow-hidden shadow-lg">
@@ -43,13 +43,13 @@ export default async function HospitalsPage() {
                 </div>
                 <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
-                    <HospitalIcon className="h-5 w-5 text-primary-foreground" />
-                    {hospital.name}
+                    <HospitalIcon className="h-5 w-5 text-accent flex-shrink-0" />
+                    <span className="truncate">{hospital.name}</span>
                 </CardTitle>
                 <CardDescription>{hospital.city}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground line-clamp-2">
                     A leading healthcare provider in {hospital.city}, offering a wide range of medical services.
                 </p>
                 </CardContent>

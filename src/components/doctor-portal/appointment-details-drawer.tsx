@@ -18,7 +18,6 @@ import type { Appointment, Hospital as HospitalType } from '@/lib/definitions';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { updateAppointment } from '@/lib/actions';
-import RescheduleDrawer from './reschedule-drawer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +41,6 @@ type AppointmentDetailsDrawerProps = {
 export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointment, onActionSuccess }: AppointmentDetailsDrawerProps) {
   const { toast } = useToast();
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
-  const [isRescheduleDrawerOpen, setIsRescheduleDrawerOpen] = useState(false);
 
   const statusBadgeVariant = {
     confirmed: 'default',
@@ -55,12 +53,6 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
     await updateAppointment(appointment.id, { status: 'cancelled' });
     onActionSuccess();
     setIsCancelAlertOpen(false);
-  };
-
-  const handleRescheduleSave = async (date: string, slot: string) => {
-    await updateAppointment(appointment.id, { appointmentDate: date, appointmentSlot: slot, status: 'rescheduled' });
-    onActionSuccess();
-    setIsRescheduleDrawerOpen(false);
   };
 
   return (
@@ -110,14 +102,10 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
           </div>
           <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
              {appointment.status === 'confirmed' && (
-                <div className="flex w-full justify-between gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsRescheduleDrawerOpen(true)}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Reschedule
-                    </Button>
+                <div className="flex w-full justify-end gap-2">
                     <Button variant="destructive" size="sm" onClick={() => setIsCancelAlertOpen(true)}>
                         <X className="mr-2 h-4 w-4" />
-                        Cancel
+                        Cancel Appointment
                     </Button>
                 </div>
               )}
@@ -149,15 +137,6 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {appointment && (
-        <RescheduleDrawer
-            isOpen={isRescheduleDrawerOpen}
-            setIsOpen={setIsRescheduleDrawerOpen}
-            appointment={appointment}
-            onReschedule={handleRescheduleSave}
-        />
-      )}
     </>
   );
 }

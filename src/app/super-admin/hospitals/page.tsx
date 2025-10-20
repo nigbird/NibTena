@@ -69,10 +69,10 @@ function HospitalsPageContent() {
     setIsDrawerOpen(true);
   };
 
-  const handleActionSuccess = () => {
+  const handleActionSuccess = useCallback(() => {
     fetchHospitalsAndCount();
     setIsDrawerOpen(false);
-  }
+  }, [fetchHospitalsAndCount])
 
   return (
     <div className="space-y-6">

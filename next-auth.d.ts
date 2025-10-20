@@ -10,11 +10,13 @@ declare module 'next-auth' {
       role: string;
       hospitalId?: number | null;
       doctorHospitalIds?: number[] | null;
+      image?: string | null;
     };
   }
 
   interface User {
       role?: string;
+      imageUrl?: string | null;
   }
 }
 

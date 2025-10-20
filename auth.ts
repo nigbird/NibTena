@@ -68,6 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (passwordsMatch) {
             const userEmail = role === 'hospital' ? user.contactEmail : (role === 'doctor' ? user.contact : user.email);
             const userName = role === 'hospital' ? user.name : user.name;
+            const userImage = role === 'hospital' ? user.imageUrl : (role === 'doctor' ? user.imageUrl : null);
             const doctorHospitalIds = role === 'doctor' 
                 ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
                 : null;
@@ -79,6 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               role: role,
               hospitalId: role === 'hospital' ? user.id : null,
               doctorHospitalIds,
+              imageUrl: userImage,
             };
           }
         } else {
@@ -97,6 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role as string;
         token.hospitalId = (user as any).hospitalId;
         token.doctorHospitalIds = (user as any).doctorHospitalIds;
+        token.picture = (user as any).imageUrl;
       }
       return token;
     },
@@ -106,6 +109,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as string;
         session.user.hospitalId = token.hospitalId as number | null;
         session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
+        session.user.image = token.picture as string | null;
       }
       return session;
     },

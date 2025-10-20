@@ -27,7 +27,7 @@ export async function getMyAppointments(patientId: number) {
   }
 }
 
-export async function generateAndSendOtp(phone: string) {
+export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {
     if (!phone || phone.length !== 9) {
         return { success: false, message: 'Invalid 9-digit phone number.' };
     }
@@ -40,7 +40,7 @@ export async function generateAndSendOtp(phone: string) {
         });
 
         console.log(`OTP for ${phone} is: ${code}`); // For testing purposes.
-        return { success: true, message: `An OTP has been sent to your phone.` };
+        return { success: true, message: `An OTP has been sent.`, otp: code };
     } catch (error) {
         console.error("OTP generation failed:", error);
         return { success: false, message: "Could not send OTP. Please try again." };

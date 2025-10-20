@@ -73,6 +73,14 @@ export default function BookingPage() {
   
   useEffect(() => {
     if (state?.success === true && state.data) {
+      if (state.otp) {
+        toast({
+          title: 'OTP For Testing',
+          description: `Your verification code is: ${state.otp}`,
+          duration: 10000,
+        });
+      }
+
       const bookingDetails = {
         patientName: state.data.fullName,
         patientAge: state.data.age,

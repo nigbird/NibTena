@@ -24,6 +24,7 @@ export type State = {
   message?: string | null;
   success?: boolean;
   data?: z.infer<typeof AppointmentFormSchema>;
+  otp?: string;
 };
 
 async function findOrCreatePatient(phone: string, defaults: { name: string, age: number, gender: 'male' | 'female' }) {
@@ -75,6 +76,7 @@ export async function startBookingProcess(
     };
   }
 
+  let otpCode;
   try {
      await findOrCreatePatient(validatedFields.data.phone, {
          name: validatedFields.data.fullName,
@@ -82,7 +84,7 @@ export async function startBookingProcess(
          gender: validatedFields.data.gender
      });
 
-     await generateAndSaveOtp(validatedFields.data.phone);
+     otpCode = await generateAndSaveOtp(validatedFields.data.phone);
 
   } catch(error) {
       console.error("Error during patient creation or OTP generation:", error);
@@ -93,6 +95,7 @@ export async function startBookingProcess(
     success: true,
     message: 'Booking validated successfully.',
     data: validatedFields.data,
+    otp: otpCode,
   };
 }
 

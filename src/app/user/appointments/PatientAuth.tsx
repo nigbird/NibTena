@@ -30,7 +30,13 @@ export default function PatientAuth() {
     startTransition(async () => {
       const result = await generateAndSendOtp(phoneInput);
       if (result.success) {
-        toast({ title: 'OTP Sent', description: result.message });
+        if (result.otp) {
+            toast({
+              title: 'OTP For Testing',
+              description: `Your verification code is: ${result.otp}`,
+              duration: 10000,
+            });
+        }
         const params = new URLSearchParams(searchParams);
         params.set('phone', phoneInput);
         router.push(`/user/verify/otp?${params.toString()}`);

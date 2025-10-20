@@ -37,12 +37,6 @@ function OtpForm() {
         if (!phone) {
             router.push('/user/appointments');
             toast({ variant: 'destructive', title: 'Error', description: 'Phone number is missing.' });
-        } else {
-            toast({
-                title: 'Check your console for OTP',
-                description: `For testing, the OTP for your number will be logged to the server console.`,
-                duration: 10000,
-            });
         }
     }, [phone, router, toast]);
 
@@ -83,7 +77,8 @@ function OtpForm() {
              if (result.success) {
                 toast({
                     title: 'OTP Resent',
-                    description: 'A new OTP has been generated. Check the console.',
+                    description: `A new OTP has been generated: ${result.otp}`,
+                    duration: 10000,
                 });
                 setCountdown(30);
             } else {
@@ -142,7 +137,7 @@ function OtpForm() {
                     </div>
                     <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
                     <CardDescription>
-                        We've sent a 6-digit code to +251{phone}. Check your server console for the code.
+                        We've sent a 6-digit code to +251{phone}. Please check the notification.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

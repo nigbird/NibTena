@@ -45,10 +45,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: process.env.NEXTAUTH_TRUST_HOST === 'true',
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 60, // 30 minutes
+    maxAge: 2 * 60, // 2 minutes
   },
   jwt: {
-    maxAge: 30 * 60,
+    maxAge: 2 * 60, // 2 minutes
   },
   providers: [
     Credentials({

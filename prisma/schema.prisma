@@ -1,83 +1,58 @@
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// --- ENUMS ---
-enum UserRole {
-  superadmin
-  hospital
-  doctor
-  patient
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-enum AppointmentStatus {
-  confirmed
-  cancelled
-  completed
-  rescheduled
-}
-
-enum DoctorStatus {
-  active
-  inactive
-}
-
-enum HospitalStatus {
-  active
-  inactive
-}
-
-// --- MODELS ---
+// USER ROLES
 
 model SuperAdmin {
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
+  id       Int    @id @default(autoincrement())
+  email    String @unique
   name     String
   password String
-  role     UserRole @default(superadmin)
 }
 
 model Hospital {
-  id              Int           @id @default(autoincrement())
-  name            String
-  description     String        @db.Text
-  city            String
-  imageUrl        String?
-  contactEmail    String        @unique
-  contactPhone    String
-  password        String
-  status          HospitalStatus @default(active)
-  startTime       String        // e.g., "08:00"
-  endTime         String        // e.g., "19:00"
-  bookingWindow   Int           @default(30) // Days in advance
-  accountNumber   String        @unique
-  doctors         DoctorsOnHospitals[]
-  appointments    Appointment[]
-  doctorSchedules DoctorSchedule[]
+  id                  Int               @id @default(autoincrement())
+  name                String
+  description         String            @db.Text
+  city                String
+  imageUrl            String?
+  contactEmail        String            @unique
+  contactPhone        String
+  password            String
+  status              String            @default("active") // "active", "inactive"
+  startTime           String
+  endTime             String
+  bookingWindow       Int
+  accountNumber       String
+  doctors             DoctorsOnHospitals[]
+  appointments        Appointment[]
+  doctorSchedules     DoctorSchedule[]
 }
 
 model Doctor {
-  id              Int           @id @default(autoincrement())
+  id              Int               @id @default(autoincrement())
   name            String
+  contact         String            @unique
+  password        String
   specialty       String
   imageUrl        String?
-  bio             String        @db.Text
+  bio             String            @db.Text
   consultationFee Int
   rating          Float
   experience      Int?
-  contact         String        @unique
-  password        String
-  status          DoctorStatus  @default(active)
+  status          String            @default("active") // "active", "inactive"
   hospitals       DoctorsOnHospitals[]
   appointments    Appointment[]
-  doctorSchedules DoctorSchedule[]
+  schedules       DoctorSchedule[]
 }
 
 model Patient {
@@ -86,51 +61,8 @@ model Patient {
   name         String
   email        String?
   age          Int?
-  gender       String? // "male" or "female"
+  gender       String? // "male", "female"
   appointments Appointment[]
-}
-
-model Appointment {
-  id              String            @id @default(cuid())
-  symptoms        String            @dbText
-  appointmentSlot String
-  appointmentDate DateTime
-  status          AppointmentStatus @default(confirmed)
-  createdAt       DateTime          @default(now())
-  
-  patient         Patient           @relation(fields: [patientId], references: [id])
-  patientId       Int
-  
-  doctor          Doctor            @relation(fields: [doctorId], references: [id])
-  doctorId        Int
-  
-  hospital        Hospital          @relation(fields: [hospitalId], references: [id])
-  hospitalId      Int
-}
-
-model DoctorsOnHospitals {
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  doctorId   Int
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  hospitalId Int
-
-  @@id([doctorId, hospitalId])
-}
-
-model DoctorSchedule {
-  id           Int      @id @default(autoincrement())
-  doctorId     Int
-  hospitalId   Int
-  dayOfWeek    String   // e.g., "Monday"
-  workingHours Json     // [{ startTime: "09:00", endTime: "12:00" }]
-  breakHours   Json     // [{ startTime: "12:00", endTime: "13:00" }]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  doctor   Doctor   @relation(fields: [doctorId], references: [id])
-  hospital Hospital @relation(fields: [hospitalId], references: [id])
-
-  @@unique([doctorId, hospitalId, dayOfWeek])
 }
 
 model Otp {
@@ -139,4 +71,54 @@ model Otp {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// JOIN TABLE for Many-to-Many between Doctor and Hospital
+model DoctorsOnHospitals {
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId   Int
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId Int
+
+  @@id([doctorId, hospitalId])
+}
+
+
+// APPOINTMENTS AND SCHEDULES
+
+enum AppointmentStatus {
+  confirmed
+  cancelled
+  completed
+  rescheduled
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patient         Patient           @relation(fields: [patientId], references: [id])
+  patientId       Int
+  symptoms        String
+  doctor          Doctor            @relation(fields: [doctorId], references: [id])
+  doctorId        Int
+  hospital        Hospital          @relation(fields: [hospitalId], references: [id])
+  hospitalId      Int
+  appointmentSlot String
+  appointmentDate DateTime
+  status          AppointmentStatus @default(confirmed)
+  createdAt       DateTime          @default(now())
+}
+
+model DoctorSchedule {
+  id           Int      @id @default(autoinracrement())
+  doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     Int
+  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospitalId   Int
+  dayOfWeek    String // e.g., "Monday", "Tuesday"
+  workingHours Json
+  breakHours   Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([doctorId, hospitalId, dayOfWeek])
 }

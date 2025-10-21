@@ -63,8 +63,6 @@ export async function GET(
     headers.set('Content-Length', fileBuffer.length.toString());
     headers.set('Cache-Control', 'public, max-age=31536000, immutable'); // Cache aggressively
 
-    console.log(`Serving file: ${filename} (${mimeType})`);
-
     return new NextResponse(fileBuffer, {
       status: 200,
       headers,

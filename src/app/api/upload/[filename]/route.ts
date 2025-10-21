@@ -62,8 +62,6 @@ export async function GET(
     headers.set('Content-Length', fileBuffer.length.toString());
     headers.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
 
-    console.log(`Serving file: ${filename} (${mimeType})`);
-
     return new NextResponse(fileBuffer, {
       status: 200,
       headers,

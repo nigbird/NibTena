@@ -49,6 +49,7 @@ const ScheduleDaySchema = z.object({
   dayOfWeek: z.string(),
   workingHours: z.array(TimeSlotSchema),
   breakHours: z.array(TimeSlotSchema),
+  patientsPerHour: z.number().min(1),
 });
 
 const ScheduleFormSchema = z.object({
@@ -169,6 +170,7 @@ export async function saveDoctorSchedule(
                 update: {
                     workingHours: daySchedule.workingHours,
                     breakHours: daySchedule.breakHours,
+                    patientsPerHour: daySchedule.patientsPerHour,
                 },
                 create: {
                     doctorId,
@@ -176,6 +178,7 @@ export async function saveDoctorSchedule(
                     dayOfWeek: daySchedule.dayOfWeek,
                     workingHours: daySchedule.workingHours,
                     breakHours: daySchedule.breakHours,
+                    patientsPerHour: daySchedule.patientsPerHour,
                 },
             });
         }

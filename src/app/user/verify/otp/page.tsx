@@ -16,7 +16,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { completeBooking } from '../../book/[doctorId]/actions';
-import { verifyOtpAndGetPatient, generateAndSendOtp } from '@/app/user/appointments/actions';
+import { generateAndSendOtp } from '@/app/user/appointments/actions';
+import { signIn } from 'next-auth/react';
 
 function OtpForm() {
     const searchParams = useSearchParams();
@@ -58,7 +59,6 @@ function OtpForm() {
             (element.nextSibling as HTMLInputElement).focus();
         }
         
-        // Auto-submit when all fields are filled
         if (newOtp.every(digit => digit !== "") && newOtp.length === 6) {
              handleSubmit(newOtp.join(""));
         }
@@ -92,17 +92,23 @@ function OtpForm() {
     }
     
     const handleSubmit = (enteredOtp: string) => {
-       if (!phone) return;
+       if (!phone || enteredOtp.length !== 6) return;
         
        startVerification(async () => {
-            const result = await verifyOtpAndGetPatient(phone, enteredOtp);
+            const result = await signIn('patient-otp', {
+                redirect: false,
+                phone: phone,
+                otp: enteredOtp,
+            });
 
-            if (!result.success) {
+            if (result?.error || !result?.ok) {
                 toast({
                     variant: "destructive",
                     title: "Invalid Code",
-                    description: result.message || "The code you entered is incorrect. Please try again.",
+                    description: "The code you entered is incorrect. Please try again.",
                 });
+                setOtp(new Array(6).fill("")); // Clear OTP input
+                inputRefs.current[0]?.focus();
                 return;
             }
             
@@ -113,12 +119,10 @@ function OtpForm() {
 
             if (isBooking && bookingDataString) {
                 const bookingData = JSON.parse(bookingDataString);
-                // The completeBooking action now handles the redirect, so we just await it.
-                // It will redirect to the appointments page with the patientId.
                 await completeBooking(bookingData);
+                // completeBooking handles the redirect
             } else {
-                // If not booking, redirect to appointments page with patientId
-                router.push(`/user/appointments?patientId=${result.patient?.id}`);
+                router.push(`/user/appointments`);
             }
        });
     }
@@ -137,7 +141,7 @@ function OtpForm() {
                     </div>
                     <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
                     <CardDescription>
-                        We've sent a 6-digit code to +251{phone}. Please check the notification.
+                        We've sent a 6-digit code to +251{phone}. Please check for it.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -26,5 +26,6 @@ declare module 'next-auth/jwt' {
     role: string;
     hospitalId?: number | null;
     doctorHospitalIds?: number[] | null;
+    name?: string;
   }
 }

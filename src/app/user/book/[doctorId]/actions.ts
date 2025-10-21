@@ -9,7 +9,7 @@ import { addMinutes } from 'date-fns';
 
 const PatientInfoSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
+  phone: z.string().length(9, { message: 'Please enter a valid 9-digit phone number.' }),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
 });
@@ -40,8 +40,10 @@ export async function generateAndSaveOtp(phone: string): Promise<string> {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
-    await prisma.otp.create({
-        data: { phone, code, expiresAt },
+    await prisma.otp.upsert({
+        where: { phone },
+        update: { code, expiresAt },
+        create: { phone, code, expiresAt },
     });
 
     console.log(`OTP for ${phone} is: ${code}`); // For testing purposes
@@ -95,7 +97,7 @@ export async function startBookingProcess(
     success: true,
     message: 'Booking validated successfully.',
     data: validatedFields.data,
-    otp: otpCode,
+    otp: otpCode, // For testing: send OTP to client
   };
 }
 
@@ -134,8 +136,9 @@ export async function completeBooking(bookingData: any) {
     revalidatePath('/doctor-portal/appointments');
     revalidatePath('/hospital-admin/appointments');
     revalidatePath('/user/appointments');
-    // Redirect must be called outside of try/catch
-    redirect(`/user/appointments?success=true&patientId=${patient.id}`);
+    // Redirect must be called outside of try/catch.
+    // The session should already be active from the OTP sign-in.
+    redirect(`/user/appointments?success=true`);
   } else {
     return {
         success: false,

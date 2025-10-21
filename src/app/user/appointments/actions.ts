@@ -35,8 +35,11 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
-        await prisma.otp.create({
-            data: { phone, code, expiresAt },
+        // Upsert OTP for the phone number
+        await prisma.otp.upsert({
+            where: { phone },
+            update: { code, expiresAt },
+            create: { phone, code, expiresAt },
         });
 
         console.log(`OTP for ${phone} is: ${code}`); // For testing purposes.
@@ -44,50 +47,5 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
     } catch (error) {
         console.error("OTP generation failed:", error);
         return { success: false, message: "Could not send OTP. Please try again." };
-    }
-}
-
-export async function verifyOtpAndGetPatient(phone: string, code: string) {
-    if (!phone || phone.length !== 9) {
-        return { success: false, message: 'Invalid phone number format for verification.' };
-    }
-    try {
-        const otpRecord = await prisma.otp.findFirst({
-            where: {
-                phone,
-                code,
-                expiresAt: {
-                    gt: new Date(),
-                },
-            },
-        });
-
-        if (!otpRecord) {
-            return { success: false, message: 'Invalid or expired OTP.' };
-        }
-
-        // OTP is valid, delete it so it can't be reused
-        await prisma.otp.delete({ where: { id: otpRecord.id } });
-        
-        const patient = await prisma.patient.findUnique({
-            where: { phone }
-        });
-        
-        if (!patient) {
-            // If patient doesn't exist, create one. This is for users who want to see appointments but haven't booked one yet.
-            const newPatient = await prisma.patient.create({
-                data: {
-                    phone,
-                    name: `Patient ${phone.substring(0,4)}`, // Default name
-                }
-            });
-             return { success: true, patient: newPatient };
-        }
-        
-        return { success: true, patient };
-
-    } catch (error) {
-        console.error("OTP verification failed:", error);
-        return { success: false, message: "An error occurred during verification." };
     }
 }

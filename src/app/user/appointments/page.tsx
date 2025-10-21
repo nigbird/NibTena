@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ToastAction } from '@/components/ui/toast';
 import PatientAuth from './PatientAuth';
+import { useSession } from 'next-auth/react';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
@@ -27,8 +28,9 @@ function AppointmentsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session, status } = useSession();
 
-  const patientId = searchParams.get('patientId');
+  const patientId = session?.user?.id;
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
@@ -38,7 +40,7 @@ function AppointmentsContent() {
         description: 'Your appointment has been successfully booked.',
       });
 
-      const newParams = new URLSearchParams(searchParams);
+      const newParams = new URLSearchParams(searchParams.toString());
       newParams.delete('success');
       router.replace(`${pathname}?${newParams.toString()}`);
     }
@@ -53,12 +55,12 @@ function AppointmentsContent() {
   };
 
   useEffect(() => {
-    if (patientId) {
+    if (status === 'authenticated' && patientId) {
       fetchData();
-    } else {
+    } else if (status !== 'loading') {
       setIsLoading(false);
     }
-  }, [patientId]);
+  }, [status, patientId]);
 
   const handleActionSuccess = (message: string) => {
     fetchData();
@@ -93,7 +95,17 @@ function AppointmentsContent() {
     return filtered.sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
   }, [appointments, activeFilter, searchTerm]);
 
-  if (!patientId) {
+  if (status === 'loading') {
+     return (
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      );
+  }
+
+  if (status === 'unauthenticated') {
     return <PatientAuth />;
   }
 

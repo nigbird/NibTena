@@ -74,7 +74,14 @@ export async function verifyOtpAndGetPatient(phone: string, code: string) {
         });
         
         if (!patient) {
-            return { success: false, message: "No patient record found for this number." };
+            // If patient doesn't exist, create one. This is for users who want to see appointments but haven't booked one yet.
+            const newPatient = await prisma.patient.create({
+                data: {
+                    phone,
+                    name: `Patient ${phone.substring(0,4)}`, // Default name
+                }
+            });
+             return { success: true, patient: newPatient };
         }
         
         return { success: true, patient };

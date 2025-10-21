@@ -180,5 +180,3 @@ export default function MyAppointmentsPage() {
         </Suspense>
     )
 }
-
-    

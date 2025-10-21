@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, User, Search } from 'lucide-react';
+import { User, Search } from 'lucide-react';
 import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -83,11 +83,7 @@ export default function UserLayout({
             )}
             
             <div className="ml-auto">
-                 <Button variant="ghost" size="icon" className="relative rounded-full">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-1 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-background" />
-                    <span className="sr-only">View notifications</span>
-                </Button>
+                {/* Notification Bell Removed */}
             </div>
         </div>
       </header>

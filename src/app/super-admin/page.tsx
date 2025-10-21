@@ -55,7 +55,7 @@ export default async function SuperAdminDashboard() {
           Super Admin Dashboard
         </h1>
         <p className="mt-1 text-lg text-muted-foreground">
-          Global overview of the NibTena platform.
+          Global overview of the nibappointment platform.
         </p>
       </div>
 

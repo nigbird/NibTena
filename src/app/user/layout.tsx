@@ -31,7 +31,7 @@ const getTitleForPath = (path: string) => {
     if (path.startsWith('/user/search')) return 'Search Results';
     if (path.startsWith('/user/confirmation')) return 'Confirmation';
     
-    return 'NibTena';
+    return 'nibappointment';
 };
 
 

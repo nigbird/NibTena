@@ -73,6 +73,15 @@ async function validateTokenWithSuperApp(
   }
 }
 
+// Add a declaration for the myJsChannel for TypeScript
+declare global {
+  interface Window {
+    myJsChannel?: {
+      postMessage: (message: { token: string }) => void;
+    };
+  }
+}
+
 function PaymentForm({ token }: { token: string }) {
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
@@ -82,15 +91,34 @@ function PaymentForm({ token }: { token: string }) {
         event.preventDefault();
         startTransition(async () => {
             const result: PaymentResult = await initiatePayment(token, Number(amount));
-            if (result.success) {
+            if (result.success && result.paymentToken) {
                 toast({
-                    title: 'Payment Request Sent',
-                    description: `Payment token received: ${result.paymentToken}`
+                    title: 'Step 3: Payment Request Sent',
+                    description: `Payment token received successfully.`
                 });
+
+                // --- Step 4: Send token back to Super App ---
+                if (typeof window !== 'undefined' && window.myJsChannel?.postMessage) {
+                    window.myJsChannel.postMessage({ token: result.paymentToken });
+                    toast({
+                      title: 'Step 4: Sent to Super App',
+                      description: 'Payment token has been sent back to the Super App.',
+                    });
+                    // startPolling(billingInfo.billId); // TODO: Implement polling logic when details are provided.
+                } else {
+                    console.error("NIB Super App channel (window.myJsChannel) not found.");
+                    toast({
+                        variant: 'destructive',
+                        title: 'Step 4: Communication Failed',
+                        description: 'Could not communicate with the payment super app.',
+                    });
+                }
+                // --- End Step 4 ---
+
             } else {
                 toast({
                     variant: 'destructive',
-                    title: 'Payment Failed',
+                    title: 'Step 3: Payment Failed',
                     description: result.message,
                 });
             }
@@ -100,8 +128,8 @@ function PaymentForm({ token }: { token: string }) {
     return (
         <Card className="mt-6">
             <CardHeader>
-                <CardTitle>Step 3: Make a Payment</CardTitle>
-                <CardDescription>Enter an amount to initiate a payment request.</CardDescription>
+                <CardTitle>Step 3 & 4: Payment & Callback</CardTitle>
+                <CardDescription>Enter an amount to initiate a payment and send the token back to the super app.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -124,7 +152,7 @@ function PaymentForm({ token }: { token: string }) {
                                 Processing...
                             </>
                         ) : (
-                            'Request Payment'
+                            'Run Payment Flow'
                         )}
                     </Button>
                 </form>
@@ -219,7 +247,7 @@ export default function MiniAppPage() {
             </>
           )}
 
-          {/* Step 3 UI */}
+          {/* Step 3 & 4 UI */}
           {validationResult?.status === 'success' && (
               <PaymentForm token={validationResult.token} />
           )}

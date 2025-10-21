@@ -1,4 +1,4 @@
-# **App Name**: NibTena
+# **App Name**: nibappointment
 
 ## Core Features:
 

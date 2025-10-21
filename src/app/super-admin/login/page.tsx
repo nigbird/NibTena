@@ -84,7 +84,7 @@ export default function SuperAdminLoginPage() {
                     <form onSubmit={handleSubmit} className="grid gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="email" className="text-[#2E2E2E]">Email</Label>
-                            <Input id="email" name="email" type="email" placeholder="super@NibTena.com" required />
+                            <Input id="email" name="email" type="email" placeholder="super@nibappointment.com" required />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>

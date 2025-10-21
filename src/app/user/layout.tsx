@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User, Search } from 'lucide-react';
+import { User, LogIn } from 'lucide-react';
 import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -82,8 +82,15 @@ export default function UserLayout({
                 </div>
             )}
             
-            <div className="ml-auto">
-                {/* Notification Bell Removed */}
+            <div className="ml-auto flex items-center gap-2">
+                {!session && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/user/appointments">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Link>
+                  </Button>
+                )}
             </div>
         </div>
       </header>

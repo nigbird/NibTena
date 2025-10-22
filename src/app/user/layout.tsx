@@ -42,9 +42,16 @@ export default function UserLayout({
 
   // ✅ Read "superapp" cookie on the client
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)superapp=([^;]*)/);
-    const cookieValue = match ? decodeURIComponent(match[1]) : '0';
-    setIsSuperApp(cookieValue === '1');
+    const readCookie = () => {
+      const match = document.cookie.match(/(?:^|;\s*)superapp=([^;]*)/);
+      const cookieValue = match ? decodeURIComponent(match[1]) : '0';
+      setIsSuperApp(cookieValue === '1');
+    };
+  
+    // Try immediately and again after a short delay
+    readCookie();
+    const timer = setTimeout(readCookie, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   const isHomePage = pathname === '/user';

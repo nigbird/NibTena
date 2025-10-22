@@ -25,6 +25,7 @@ export default auth((req: NextRequest) => {
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', cspHeader);
 
+  // Copy Authorization header if present
   const authHeader = req.headers.get('Authorization');
   if (authHeader) requestHeaders.set('Authorization', authHeader);
 
@@ -32,7 +33,7 @@ export default auth((req: NextRequest) => {
   const superAppQuery = url.searchParams.get('superApp');
   const xSuperApp = req.headers.get('x-super-app') || req.headers.get('x-superapp');
 
-  // Allow clearing manually
+  // 🧹 Allow clearing manually
   if (superAppQuery === '0') {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.cookies.set('superapp', '0', { path: '/', maxAge: 0 });
@@ -40,7 +41,7 @@ export default auth((req: NextRequest) => {
     return response;
   }
 
-  // Detect if running inside Super App
+  // 🚀 Detect Super App environment
   const superAppSignal =
     !!authHeader ||
     !!xSuperApp ||
@@ -51,7 +52,7 @@ export default auth((req: NextRequest) => {
 
   const isSecure = url.protocol === 'https:';
 
-  // ✅ Always set the cookie — "1" for super app, "0" for browser
+  // ✅ Always set cookie: "1" if from Super App, "0" otherwise
   response.cookies.set('superapp', superAppSignal ? '1' : '0', {
     path: '/',
     httpOnly: false,
@@ -59,7 +60,7 @@ export default auth((req: NextRequest) => {
     secure: isSecure,
   });
 
-  // ✅ Make it visible in this same request (for server components)
+  // ✅ Also reflect it in headers for same-request access
   requestHeaders.set('x-super-app', superAppSignal ? '1' : '0');
 
   return response;

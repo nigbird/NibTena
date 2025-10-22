@@ -40,15 +40,14 @@ export default function UserLayout({
 
   const [isSuperApp, setIsSuperApp] = useState(false);
 
-  // ✅ Read "superapp" cookie on the client
+  // ✅ Check the cookie client-side
   useEffect(() => {
     const readCookie = () => {
       const match = document.cookie.match(/(?:^|;\s*)superapp=([^;]*)/);
       const cookieValue = match ? decodeURIComponent(match[1]) : '0';
       setIsSuperApp(cookieValue === '1');
     };
-  
-    // Try immediately and again after a short delay
+
     readCookie();
     const timer = setTimeout(readCookie, 300);
     return () => clearTimeout(timer);
@@ -60,7 +59,7 @@ export default function UserLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* ✅ Hide header entirely if inside Super App */}
+      {/* ✅ Header hidden only inside Super App */}
       {!isSuperApp && (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
           <div className="container flex h-16 items-center">
@@ -96,7 +95,6 @@ export default function UserLayout({
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
-                    aria-hidden="true"
                   >
                     <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
                   </svg>

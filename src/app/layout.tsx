@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './providers';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { PatientProvider } from '@/components/patient-portal/patient-context';
 import { prisma } from '@/lib/prisma';
 
@@ -62,9 +62,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = headers().get('x-nonce') || '';
-  const authHeader = headers().get('Authorization');
+  // Some environments may send lowercase header keys; try both. Handle older types that return a Promise.
+  const maybeHeaders: any = headers() as any;
+  const hdrs: any = typeof maybeHeaders?.get === 'function' ? maybeHeaders : await maybeHeaders;
+  const nonce = hdrs.get('x-nonce') || '';
+  const authHeader = hdrs.get('Authorization') || hdrs.get('authorization');
   const superAppData = await getPatientIdFromToken(authHeader);
+  const maybeCookies: any = cookies() as any;
+  const cookieStore: any = typeof maybeCookies?.get === 'function' ? maybeCookies : await maybeCookies;
+  const isSuperApp = cookieStore.get('superapp')?.value === '1';
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -83,7 +89,7 @@ export default async function RootLayout({
         <meta name="csp-nonce" content={nonce} />
       </head>
       <body className="font-body antialiased">
-        <PatientProvider patientId={superAppData?.patientId ?? null} superAppToken={superAppData?.token ?? null}>
+        <PatientProvider patientId={superAppData?.patientId ?? null} superAppToken={superAppData?.token ?? null} isSuperApp={isSuperApp}>
           <AuthProvider>
             {children}
             <Toaster />

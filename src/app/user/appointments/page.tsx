@@ -27,7 +27,7 @@ function AppointmentsContent() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { patientId: superAppPatientId } = useContext(PatientContext);
+  const { patientId: superAppPatientId, isSuperApp } = useContext(PatientContext);
   const standalonePatientId = searchParams.get('patientId');
   const patientId = superAppPatientId ?? standalonePatientId;
 
@@ -95,6 +95,14 @@ function AppointmentsContent() {
   }, [appointments, activeFilter, searchTerm]);
 
   if (!patientId) {
+    // In Super App mode, suppress OTP screen even if patientId isn't yet resolved
+    if (isSuperApp) {
+      return (
+        <div className="p-6 text-center text-muted-foreground">
+          Initializing your appointments...
+        </div>
+      );
+    }
     return <PatientAuth />;
   }
 

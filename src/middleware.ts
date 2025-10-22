@@ -11,7 +11,7 @@ export default auth((req: NextRequest) => {
     style-src-attr 'unsafe-inline';
     img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' http://nib-pre-production.nibbank.com.et:8086;
+    connect-src 'self' http://nib-pre-production.nibbank.com.et:8086 ${process.env.NEXT_PUBLIC_VALIDATE_TOKEN_URL ?? ''};
     frame-ancestors 'none';
     object-src 'none';
     base-uri 'self';
@@ -38,6 +38,24 @@ export default auth((req: NextRequest) => {
 
   // Also set the CSP header on the response
   response.headers.set('Content-Security-Policy', cspHeader);
+
+  // Persist Super App detection in a cookie if any signal is present
+  const url = new URL(req.url);
+  const superAppSignal =
+    !!authHeader ||
+    !!req.headers.get('x-super-app') ||
+    url.searchParams.get('superApp') === '1';
+
+  if (superAppSignal) {
+    // session cookie; mark secure if the request is https
+    const isSecure = url.protocol === 'https:';
+    response.cookies.set('superapp', '1', {
+      path: '/',
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: isSecure,
+    });
+  }
 
   return response;
 });

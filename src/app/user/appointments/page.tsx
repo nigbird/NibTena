@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, Suspense, useContext } from 'react';
 import Link from 'next/link';
-import { getMyAppointments, getSuperAppPatient } from './actions';
+import type { Appointment, Doctor, Patient } from '@/lib/definitions';
+import { getMyAppointments } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, FileX } from 'lucide-react';
@@ -44,47 +45,24 @@ function AppointmentsContent() {
     }
   }, [searchParams, toast, router, pathname]);
 
-  // 🔹 Load appointments automatically when inside Super App
-  useEffect(() => {
-    async function init() {
-      if (patientId) {
-        await fetchData(Number(patientId));
-        return;
-      }
-
-      if (isSuperApp) {
-        try {
-          const authHeader =
-            typeof window !== 'undefined'
-              ? localStorage.getItem('superapp-auth') || ''
-              : '';
-
-          const superPatient = await getSuperAppPatient(authHeader);
-
-          if (superPatient) {
-            const data = await getMyAppointments(superPatient.id);
-            setAppointments(data);
-          }
-        } catch (err) {
-          console.error('Super App patient load failed:', err);
-        }
-      }
-
-      setIsLoading(false);
-    }
-
-    init();
-  }, [isSuperApp, patientId]);
-
-  const fetchData = async (id: number) => {
+  const fetchData = async () => {
+    if (!patientId) return;
     setIsLoading(true);
-    const appointmentData = await getMyAppointments(id);
+    const appointmentData = await getMyAppointments(Number(patientId));
     setAppointments(appointmentData as any[]);
     setIsLoading(false);
   };
 
+  useEffect(() => {
+    if (patientId) {
+      fetchData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [patientId]);
+
   const handleActionSuccess = (message: string) => {
-    if (patientId) fetchData(Number(patientId));
+    fetchData();
     toast({
       title: 'Success',
       description: message,
@@ -95,39 +73,36 @@ function AppointmentsContent() {
     let filtered = appointments;
 
     if (activeFilter === 'upcoming') {
-      filtered = filtered.filter(
-        (a) => a.status === 'confirmed' || a.status === 'rescheduled'
-      );
+      filtered = filtered.filter(a => a.status === 'confirmed' || a.status === 'rescheduled');
     } else {
-      filtered = filtered.filter((a) => a.status === activeFilter);
+      filtered = filtered.filter(a => a.status === activeFilter);
     }
-
+    
     if (searchTerm) {
-      const lowercasedFilter = searchTerm.toLowerCase();
-      filtered = filtered.filter((appointment) => {
-        const doctorName = appointment.doctor?.name?.toLowerCase() || '';
-        const hospitalName = appointment.hospital?.name?.toLowerCase() || '';
-        const appointmentDate = new Date(
-          appointment.appointmentDate
-        ).toLocaleDateString().toLowerCase();
+        const lowercasedFilter = searchTerm.toLowerCase();
+        filtered = filtered.filter(appointment => {
+            const doctorName = appointment.doctor?.name.toLowerCase() || '';
+            const hospitalName = appointment.hospital?.name.toLowerCase() || '';
+            const appointmentDate = new Date(appointment.appointmentDate).toLocaleDateString().toLowerCase();
 
-        return (
-          doctorName.includes(lowercasedFilter) ||
-          hospitalName.includes(lowercasedFilter) ||
-          appointmentDate.includes(lowercasedFilter)
-        );
-      });
+            return doctorName.includes(lowercasedFilter) || 
+                   hospitalName.includes(lowercasedFilter) || 
+                   appointmentDate.includes(lowercasedFilter);
+        });
     }
 
-    return filtered.sort(
-      (a, b) =>
-        new Date(b.appointmentDate).getTime() -
-        new Date(a.appointmentDate).getTime()
-    );
+    return filtered.sort((a,b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
   }, [appointments, activeFilter, searchTerm]);
 
-  if (!patientId && !isSuperApp) {
-    // Normal browser flow → OTP screen
+  if (!patientId) {
+    // In Super App mode, suppress OTP screen even if patientId isn't yet resolved
+    if (isSuperApp) {
+      return (
+        <div className="p-6 text-center text-muted-foreground">
+          Initializing your appointments...
+        </div>
+      );
+    }
     return <PatientAuth />;
   }
 
@@ -145,7 +120,7 @@ function AppointmentsContent() {
     if (filteredAppointments.length > 0) {
       return (
         <div className="space-y-4">
-          {filteredAppointments.map((appointment) => (
+          {filteredAppointments.map(appointment => (
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
@@ -165,48 +140,51 @@ function AppointmentsContent() {
         <p className="mt-2 text-sm text-muted-foreground">
           You don’t have any {activeFilter} appointments.
         </p>
-        <Button asChild className="mt-6" variant="accent">
-          <Link href="/user/doctors">Book an Appointment</Link>
+         <Button asChild className="mt-6" variant="accent">
+            <Link href="/user/doctors">Book an Appointment</Link>
         </Button>
       </div>
     );
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by doctor, hospital or date..."
-          className="w-full appearance-none bg-background pl-8"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+    <>
+      <div className="p-4 space-y-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by doctor, hospital or date..."
+            className="w-full appearance-none bg-background pl-8"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          {appointmentStatuses.map(status => (
+            <Button
+              key={status}
+              variant={activeFilter === status ? 'accent' : 'outline'}
+              onClick={() => setActiveFilter(status)}
+              className="capitalize flex-1"
+            >
+              {status}
+            </Button>
+          ))}
+        </div>
+        
+        {renderContent()}
 
-      <div className="flex items-center gap-2">
-        {appointmentStatuses.map((status) => (
-          <Button
-            key={status}
-            variant={activeFilter === status ? 'accent' : 'outline'}
-            onClick={() => setActiveFilter(status)}
-            className="capitalize flex-1"
-          >
-            {status}
-          </Button>
-        ))}
       </div>
-
-      {renderContent()}
-    </div>
+    </>
   );
 }
 
+
 export default function MyAppointmentsPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AppointmentsContent />
-    </Suspense>
-  );
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AppointmentsContent />
+        </Suspense>
+    )
 }

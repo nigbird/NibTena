@@ -20,42 +20,47 @@ export default auth((req: NextRequest) => {
     upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim();
 
+  const url = new URL(req.url);
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', cspHeader);
 
-  // Pass the original Authorization header to the server components
   const authHeader = req.headers.get('Authorization');
-  if (authHeader) {
-      requestHeaders.set('Authorization', authHeader);
+  if (authHeader) requestHeaders.set('Authorization', authHeader);
+
+  const existing = req.cookies.get('superapp')?.value;
+  const superAppQuery = url.searchParams.get('superApp');
+  const xSuperApp = req.headers.get('x-super-app') || req.headers.get('x-superapp');
+
+  // Allow clearing manually
+  if (superAppQuery === '0') {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.cookies.set('superapp', '0', { path: '/', maxAge: 0 });
+    response.headers.set('Content-Security-Policy', cspHeader);
+    return response;
   }
 
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  // Also set the CSP header on the response
-  response.headers.set('Content-Security-Policy', cspHeader);
-
-  // Persist Super App detection in a cookie if any signal is present
-  const url = new URL(req.url);
+  // Detect if running inside Super App
   const superAppSignal =
     !!authHeader ||
-    !!req.headers.get('x-super-app') ||
-    url.searchParams.get('superApp') === '1';
+    !!xSuperApp ||
+    superAppQuery === '1';
 
-  if (superAppSignal) {
-    // session cookie; mark secure if the request is https
-    const isSecure = url.protocol === 'https:';
-    response.cookies.set('superapp', '1', {
-      path: '/',
-      httpOnly: false,
-      sameSite: 'lax',
-      secure: isSecure,
-    });
-  }
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', cspHeader);
+
+  const isSecure = url.protocol === 'https:';
+
+  // ✅ Always set the cookie — "1" for super app, "0" for browser
+  response.cookies.set('superapp', superAppSignal ? '1' : '0', {
+    path: '/',
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: isSecure,
+  });
+
+  // ✅ Make it visible in this same request (for server components)
+  requestHeaders.set('x-super-app', superAppSignal ? '1' : '0');
 
   return response;
 });

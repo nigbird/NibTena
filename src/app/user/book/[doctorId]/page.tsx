@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useTransition, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Loader2, User, Users } from 'lucide-react';
@@ -25,13 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { startBookingProcess, type State } from './actions';
+import { startBookingProcess, initiateBookingAndPayment, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { useSession } from 'next-auth/react';
+import { PatientContext } from '@/components/patient-portal/patient-context';
 
-function SubmitButton() {
+function SubmitButton({ isSuperApp }: { isSuperApp: boolean }) {
   const { pending } = useFormStatus();
 
   return (
@@ -41,6 +40,8 @@ function SubmitButton() {
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Processing...
         </>
+      ) : isSuperApp ? (
+        'Proceed to Payment'
       ) : (
         'Proceed to Verification'
       )}
@@ -53,6 +54,9 @@ export default function BookingPage() {
   const doctorId = Number(params.doctorId);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { patientId, superAppToken } = useContext(PatientContext);
+  const isSuperAppMode = !!superAppToken;
+
   const slot = searchParams.get('slot') || 'Not specified';
   const hospitalId = Number(searchParams.get('hospitalId'));
   const dateParam = searchParams.get('date');
@@ -65,52 +69,78 @@ export default function BookingPage() {
     : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
+  const [isPaymentProcessing, startPaymentTransition] = useTransition();
 
   const initialState: State = { message: null, errors: {} };
-  const startBookingWithParams = startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
-  const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
+  
+  // Conditionally select the correct server action
+  const formAction = isSuperAppMode 
+    ? initiateBookingAndPayment.bind(null, doctorId, hospitalId, slot, date, superAppToken)
+    : startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
+
+  const [state, dispatch] = useActionState<State, FormData>(formAction, initialState);
   const { toast } = useToast();
   
   useEffect(() => {
-    if (state?.success === true && state.data) {
-      if (state.otp) {
+    if (!state.success) {
+      if (state.message) {
+        toast({
+          variant: 'destructive',
+          title: 'Booking Failed',
+          description: state.message,
+        });
+      }
+      return;
+    }
+
+    // Handle successful state
+    if (isSuperAppMode) {
+      // Step 3 & 4: Super App Payment Flow
+      if (state.paymentToken) {
+         if (typeof window !== 'undefined' && window.myJsChannel?.postMessage) {
+            window.myJsChannel.postMessage({ token: state.paymentToken });
+            // The super app will now handle the payment UI.
+            // On successful payment, the super app should notify us via callback.
+            // We can then redirect to a success page.
+            const bookingData = state.data;
+            const patient = state.patient;
+             if (bookingData && patient) {
+              const redirectUrl = `/user/confirmation/${state.appointmentId}?patientId=${patient.id}`;
+               router.push(redirectUrl);
+            }
+          } else {
+            console.error("NIB Super App channel (window.myJsChannel) not found.");
+            toast({
+              variant: 'destructive',
+              title: 'Communication Failed',
+              description: 'Could not communicate with the payment super app.',
+            });
+          }
+      }
+    } else {
+      // Standalone Flow: OTP verification
+      if (state.otp && state.data) {
         toast({
           title: 'OTP For Testing',
           description: `Your verification code is: ${state.otp}`,
           duration: 10000,
         });
+        const bookingDetails = {
+          ...state.data,
+          doctorId,
+          hospitalId,
+          appointmentSlot: slot,
+          appointmentDate: date,
+        };
+        const params = new URLSearchParams({
+          bookingData: JSON.stringify(bookingDetails),
+          phone: state.data.phone,
+        });
+        router.push(`/user/verify/otp?${params.toString()}`);
       }
-
-      const bookingDetails = {
-        patientName: state.data.fullName,
-        patientAge: state.data.age,
-        patientGender: state.data.gender,
-        phone: state.data.phone,
-        symptoms: state.data.symptoms,
-        bookingFor: state.data.bookingFor,
-        doctorId,
-        hospitalId,
-        appointmentSlot: slot,
-        appointmentDate: date,
-      };
-      
-      const params = new URLSearchParams({
-        bookingData: JSON.stringify(bookingDetails),
-        phone: state.data.phone,
-      });
-      router.push(`/user/verify/otp?${params.toString()}`);
-
-    } else if (state?.success === false && state.message) {
-      toast({
-        variant: 'destructive',
-        title: 'Booking Failed',
-        description: state.message,
-      });
     }
-  }, [state, toast, router, doctorId, hospitalId, slot, date]);
+  }, [state, toast, router, doctorId, hospitalId, slot, date, isSuperAppMode]);
   
-  const isBookingForSelf = bookingFor === 'myself';
-
   return (
     <div className="container mx-auto max-w-2xl py-12">
       <Card className="shadow-lg">
@@ -195,7 +225,7 @@ export default function BookingPage() {
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>
-            <SubmitButton />
+            <SubmitButton isSuperApp={isSuperAppMode} />
           </form>
         </CardContent>
       </Card>

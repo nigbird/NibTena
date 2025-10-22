@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
@@ -20,8 +19,8 @@ export async function GET(
       );
     }
 
-    // Construct file path to the root 'uploads' directory
-    const filePath = join(process.cwd(), 'uploads', filename);
+    // Construct file path to the root 'public/uploads' directory
+    const filePath = join(process.cwd(), 'public', 'uploads', filename);
 
     // Check if file exists
     if (!existsSync(filePath)) {

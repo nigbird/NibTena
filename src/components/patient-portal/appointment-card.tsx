@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -29,7 +28,6 @@ import {
 import { updateAppointment } from '@/lib/actions';
 import RescheduleDrawer from '@/components/doctor-portal/reschedule-drawer';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 type AppointmentCardProps = {
   appointment: Appointment & { doctor: Doctor };

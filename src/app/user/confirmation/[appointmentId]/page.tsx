@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { CheckCircle2, Calendar, Clock, User, Stethoscope } from 'lucide-react';
+import { CheckCircle2, Calendar, Clock, User, Stethoscope, Hospital } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
@@ -13,27 +13,25 @@ import { format } from 'date-fns';
 async function getConfirmationData(appointmentId: string) {
     const appointment = await prisma.appointment.findUnique({
         where: { id: appointmentId },
+        include: { doctor: true, hospital: true, patient: true }
     });
 
     if (!appointment) {
-        return { appointment: null, doctor: null };
+        return { appointment: null };
     }
-
-    const doctor = await prisma.doctor.findUnique({
-        where: { id: appointment.doctorId },
-    });
-
-    return { appointment, doctor };
+    return { appointment };
 }
 
 
-export default async function ConfirmationPage({ params, searchParams }: { params: { appointmentId: string }, searchParams?: { success?: string } }) {
+export default async function ConfirmationPage({ params, searchParams }: { params: { appointmentId: string }, searchParams?: { success?: string, patientId?: string } }) {
   const appointmentId = params.appointmentId;
-  const { appointment, doctor } = await getConfirmationData(appointmentId);
+  const { appointment } = await getConfirmationData(appointmentId);
 
-  if (!appointment || !doctor) {
+  if (!appointment) {
     notFound();
   }
+
+  const { doctor, hospital, patient } = appointment;
 
   const confirmationImage = placeholderImages.find(p => p.id === 'confirmation-image');
 
@@ -68,6 +66,13 @@ export default async function ConfirmationPage({ params, searchParams }: { param
               <CardContent className="mt-6 text-left">
                 <div className="space-y-4 text-muted-foreground">
                   <div className="flex items-start">
+                    <User className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold text-foreground">{patient.name}</span>
+                      <p className="text-sm">Age: {patient.age}, Gender: {patient.gender}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start">
                     <Stethoscope className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
                     <div>
                       <span className="font-semibold text-foreground">{doctor.name}</span>
@@ -75,10 +80,10 @@ export default async function ConfirmationPage({ params, searchParams }: { param
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <User className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
+                    <Hospital className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
                     <div>
-                      <span className="font-semibold text-foreground">{appointment.patientName}</span>
-                      <p className="text-sm">Age: {appointment.patientAge}, Gender: {appointment.patientGender}</p>
+                      <span className="font-semibold text-foreground">{hospital.name}</span>
+                      <p className="text-sm">{hospital.city}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -104,7 +109,7 @@ export default async function ConfirmationPage({ params, searchParams }: { param
           </Card>
           <div className="mt-6 text-center">
               <Button asChild>
-                  <Link href="/user">Back to Home</Link>
+                  <Link href="/user/appointments">View My Appointments</Link>
               </Button>
           </div>
         </div>

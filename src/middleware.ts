@@ -9,9 +9,9 @@ export default auth((req: NextRequest) => {
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
     style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
     style-src-attr 'unsafe-inline';
-    img-src 'self' data: blob: /api/uploads/ https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
+    img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self';
+    connect-src 'self' http://nib-pre-production.nibbank.com.et:8086;
     frame-ancestors 'none';
     object-src 'none';
     base-uri 'self';
@@ -23,6 +23,12 @@ export default auth((req: NextRequest) => {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', cspHeader);
+
+  // Pass the original Authorization header to the server components
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader) {
+      requestHeaders.set('Authorization', authHeader);
+  }
 
   const response = NextResponse.next({
     request: {

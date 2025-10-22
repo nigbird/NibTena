@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
     const filename = `${timestamp}_${randomString}.${fileExtension}`;
 
     // Ensure uploads directory exists at the project root
-    const uploadsDir = join(process.cwd(), 'uploads');
+    const uploadsDir = join(process.cwd(), 'public', 'uploads');
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
     }
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     // Generate public URL pointing to the new API route
-    const publicUrl = `/api/uploads/${filename}`;
+    const publicUrl = `/uploads/${filename}`;
 
     console.log(`File uploaded successfully: ${filename}`);
 

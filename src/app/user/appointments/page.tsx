@@ -97,11 +97,7 @@ function AppointmentsContent() {
   if (!patientId) {
     // In Super App mode, suppress OTP screen even if patientId isn't yet resolved
     if (isSuperApp) {
-      return (
-        <div className="p-6 text-center text-muted-foreground">
-          Initializing your appointments...
-        </div>
-      );
+      router.push('/user/appointments');
     }
     return <PatientAuth />;
   }

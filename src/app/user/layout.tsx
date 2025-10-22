@@ -40,7 +40,7 @@ export default function UserLayout({
 
   const [isSuperApp, setIsSuperApp] = useState(false);
 
-  // ✅ Check the cookie client-side
+  // ✅ Detect if inside Super App using cookie
   useEffect(() => {
     const readCookie = () => {
       const match = document.cookie.match(/(?:^|;\s*)superapp=([^;]*)/);
@@ -106,8 +106,9 @@ export default function UserLayout({
               </div>
             )}
 
+            {/* ✅ Hide Login button when inside Super App */}
             <div className="ml-auto flex items-center gap-2">
-              {!isLoggedIn && (
+              {!isLoggedIn && !isSuperApp && (
                 <Button asChild variant="outline" size="sm">
                   <Link href="/user/appointments">
                     <LogIn className="mr-2 h-4 w-4" />

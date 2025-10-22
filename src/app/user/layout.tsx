@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -10,8 +9,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
 import { useSession } from 'next-auth/react';
-
-// Remove hardcoded placeholder; we'll render dynamically from session
+import { useContext } from 'react';
+import { PatientContext } from '@/components/patient-portal/patient-context';
 
 const pageTitles: { [key: string]: string } = {
     '/user': 'Home',
@@ -43,8 +42,13 @@ export default function UserLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const { patientId: superAppPatientId } = useContext(PatientContext);
+
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
+  
+  // The user is logged in if they have a next-auth session OR a super-app patientId
+  const isLoggedIn = !!session || !!superAppPatientId;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -83,7 +87,7 @@ export default function UserLayout({
             )}
             
             <div className="ml-auto flex items-center gap-2">
-                {!session && (
+                {!isLoggedIn && (
                   <Button asChild variant="outline" size="sm">
                     <Link href="/user/appointments">
                       <LogIn className="mr-2 h-4 w-4" />

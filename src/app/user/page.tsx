@@ -1,4 +1,3 @@
-
 import { placeholderImages } from '@/lib/placeholder-images';
 import { prisma } from '@/lib/prisma';
 import UserHomepageClient from '@/components/UserHomepageClient';
@@ -7,7 +6,7 @@ const quickActions = [
     { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-blue-100 text-blue-600' },
     { href: '/user/doctors', label: 'Doctors', icon: 'Stethoscope', color: 'bg-green-100 text-green-600' },
     { href: '/user/appointments', label: 'Bookings', icon: 'CalendarCheck', color: 'bg-violet-100 text-violet-600' },
-    { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-orange-100 text-orange-600' },
+    // { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-orange-100 text-orange-600' },
 ];
 
 export default async function Home() {

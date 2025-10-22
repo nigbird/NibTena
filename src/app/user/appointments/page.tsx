@@ -1,19 +1,18 @@
-
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useContext } from 'react';
 import Link from 'next/link';
-import type { Appointment, Doctor } from '@/lib/definitions';
+import type { Appointment, Doctor, Patient } from '@/lib/definitions';
 import { getMyAppointments } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileX, ShieldCheck } from 'lucide-react';
+import { Search, FileX } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { ToastAction } from '@/components/ui/toast';
 import PatientAuth from './PatientAuth';
+import { PatientContext } from '@/components/patient-portal/patient-context';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
@@ -28,7 +27,9 @@ function AppointmentsContent() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const patientId = searchParams.get('patientId');
+  const { patientId: superAppPatientId } = useContext(PatientContext);
+  const standalonePatientId = searchParams.get('patientId');
+  const patientId = superAppPatientId ?? standalonePatientId;
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
@@ -115,7 +116,6 @@ function AppointmentsContent() {
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
-              doctor={appointment.doctor}
               onActionSuccess={handleActionSuccess}
             />
           ))}

@@ -78,6 +78,7 @@ model Patient {
   appointments Appointment[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  superAppToken  String?  @unique
 }
 
 model Appointment {

@@ -1,6 +1,11 @@
 import { headers, cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+/**
+ * Super App entry endpoint.
+ * Receives the Authorization header, validates it using
+ * /api/mini-app/validate-token, sets session, and redirects user.
+ */
 export async function GET(request: Request) {
   try {
     const headerList = await headers();
@@ -20,46 +25,41 @@ export async function GET(request: Request) {
       );
     }
 
-    const token = authHeader.substring('Bearer '.length);
-    const validationUrl = process.env.VALIDATE_TOKEN_URL;
+    // 🔹 Forward validation to internal proxy route
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      `${new URL(request.url).protocol}//${new URL(request.url).host}`;
 
-    if (!validationUrl) {
-      console.error('VALIDATE_TOKEN_URL not set.');
-      return NextResponse.json(
-        { status: 'error', message: 'Server misconfiguration' },
-        { status: 500 }
-      );
-    }
+    const validateUrl = `${baseUrl}/api/mini-app/validate-token`;
 
-    // Validate token with NIB backend
-    const externalResponse = await fetch(validationUrl, {
+    const validationResponse = await fetch(validateUrl, {
       method: 'GET',
       headers: {
         Authorization: authHeader,
-        Accept: 'application/json',
       },
       cache: 'no-store',
     });
 
-    if (!externalResponse.ok) {
-      const errorText = await externalResponse.text();
+    const validationData = await validationResponse.json();
+
+    if (!validationResponse.ok || validationData.status !== 'success') {
+      console.error('❌ Token validation failed:', validationData);
       return NextResponse.json(
         {
           status: 'error',
-          message: `Token validation failed (${externalResponse.status})`,
-          details: errorText,
+          message:
+            validationData.message ||
+            'Token validation failed via /api/mini-app/validate-token',
         },
-        { status: externalResponse.status }
+        { status: validationResponse.status }
       );
     }
 
-    const validationResult = await externalResponse.json();
-    const phoneNumber = validationResult.phone || null;
-
-    // Create encoded session cookie
+    // ✅ Token is valid — create secure session
+    const token = authHeader.substring('Bearer '.length);
     const sessionData = {
       isAuthenticated: true,
-      phoneNumber,
+      phoneNumber: validationData.phone,
       authToken: token,
     };
 
@@ -73,13 +73,12 @@ export async function GET(request: Request) {
       sameSite: 'strict',
     });
 
-    // Redirect to home after session is ready
+    // 🔁 Redirect user to home page after successful validation
     const url = new URL(request.url);
     const redirectUrl = `${url.protocol}//${url.host}/`;
     return NextResponse.redirect(redirectUrl);
-
   } catch (error) {
-    console.error('Error in token validation route:', error);
+    console.error('💥 Error in /api/connect:', error);
     return NextResponse.json(
       { status: 'error', message: 'Internal server error' },
       { status: 500 }

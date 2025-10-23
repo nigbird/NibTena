@@ -1,87 +1,120 @@
 
-import { headers, cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+'use server';
 
-/**
- * Super App entry endpoint.
- * Receives the Authorization header, validates it using
- * /api/mini-app/validate-token, sets session, and redirects user.
- */
-export async function GET(request: Request) {
+import { headers } from 'next/headers';
+import { NextResponse, type NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
+import { encryptSessionPayload } from '@/lib/sessionCrypto';
+import { redirect } from 'next/navigation';
+
+export async function GET(request: NextRequest) {
   try {
     const headerList = await headers();
     const authHeader = headerList.get('Authorization');
 
     if (!authHeader) {
       return NextResponse.json(
-        { status: 'error', message: 'Authorization header missing' },
+        {
+          status: 'error',
+          message: 'Authorization header is missing from the request.',
+        },
         { status: 401 }
       );
     }
 
-    if (!authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { status: 'error', message: 'Invalid Authorization header format' },
-        { status: 401 }
-      );
-    }
-
-    // 🔹 Forward validation to internal proxy route
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      `${new URL(request.url).protocol}//${new URL(request.url).host}`;
-
-    const validateUrl = `${baseUrl}/api/mini-app/validate-token`;
-
-    const validationResponse = await fetch(validateUrl, {
-      method: 'GET',
-      headers: {
-        Authorization: authHeader,
-      },
-      cache: 'no-store',
-    });
-
-    const validationData = await validationResponse.json();
-
-    if (!validationResponse.ok || validationData.status !== 'success') {
-      console.error('❌ Token validation failed:', validationData);
+    const bearerPrefix = 'Bearer ';
+    if (!authHeader.startsWith(bearerPrefix)) {
       return NextResponse.json(
         {
           status: 'error',
           message:
-            validationData.message ||
-            'Token validation failed via /api/mini-app/validate-token',
+            'Authorization header is malformed. It must start with "Bearer ".',
         },
-        { status: validationResponse.status }
+        { status: 401 }
       );
     }
 
-    // ✅ Token is valid — create secure session
-    const token = authHeader.substring('Bearer '.length);
-    const sessionData = {
-      isAuthenticated: true,
-      phoneNumber: validationData.phone,
-      authToken: token,
-    };
+    const token = authHeader.substring(bearerPrefix.length);
 
-    const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
-
-    const cookieStore = cookies();
-    cookieStore.set('miniapp_session', encodedSession, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+    if (!token) {
+        return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Bearer token is missing.',
+        },
+        { status: 401 }
+      );
+    }
+    
+    const validationUrl = process.env.VALIDATE_TOKEN_URL;
+    if (!validationUrl) {
+      console.error('VALIDATE_TOKEN_URL environment variable is not set.');
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Server configuration error.',
+        },
+        { status: 500 }
+      );
+    }
+    
+    const externalResponse = await fetch(validationUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: authHeader,
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
     });
 
-    // 🔁 Redirect user to home page after successful validation
-    const url = new URL(request.url);
-    const redirectUrl = `${url.protocol}//${url.host}/`;
-    return NextResponse.redirect(redirectUrl);
+    if (!externalResponse.ok) {
+        const errorText = await externalResponse.text();
+        return NextResponse.json(
+            {
+                status: 'error',
+                message: `Token validation failed: ${externalResponse.statusText}`,
+                details: errorText,
+            },
+            { status: externalResponse.status }
+        );
+    }
+    
+    const validationResult = await externalResponse.json();
+    const phoneNumber = validationResult.phone;
+
+    if (!phoneNumber) {
+        return NextResponse.json({ status: 'error', message: 'Phone number not found in validation response.'}, { status: 400 });
+    }
+
+    // This is an end-user session, not tied to a registered user in our DB.
+    // The session payload contains the phone number and original token.
+    const sessionPayload = {
+      accessToken: token,
+      phoneNumber: phoneNumber,
+    };
+
+    const encrypted = await encryptSessionPayload(JSON.stringify(sessionPayload));
+
+    const cookieStore = cookies();
+    cookieStore.set('miniapp_session', encrypted, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    });
+
+    // Redirect to the homepage after setting the cookie
+    redirect('/user');
+
   } catch (error) {
-    console.error('💥 Error in /api/connect:', error);
+    console.error('Error processing connect request:', error);
+    // Return a generic error page or response
     return NextResponse.json(
-      { status: 'error', message: 'Internal server error' },
+      {
+        status: 'error',
+        message: 'An unexpected server error occurred during connection.',
+      },
       { status: 500 }
     );
   }

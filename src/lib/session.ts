@@ -1,6 +1,7 @@
 
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
+import { decryptSessionPayload } from './sessionCrypto';
 
 export interface MiniAppSession {
   isAuthenticated: boolean;
@@ -17,11 +18,19 @@ export async function getMiniAppSession(req?: NextRequest): Promise<MiniAppSessi
   }
 
   try {
-    const decodedSession = Buffer.from(sessionCookie.value, 'base64').toString('utf-8');
-    const sessionData: MiniAppSession = JSON.parse(decodedSession);
+    const decryptedPayload = await decryptSessionPayload(sessionCookie.value);
+    if (!decryptedPayload) {
+      return null;
+    }
+    
+    const sessionData = JSON.parse(decryptedPayload);
 
-    if (sessionData.isAuthenticated && sessionData.phoneNumber) {
-      return sessionData;
+    if (sessionData.phoneNumber && sessionData.accessToken) {
+      return {
+          isAuthenticated: true,
+          phoneNumber: sessionData.phoneNumber,
+          authToken: sessionData.accessToken,
+      };
     }
     return null;
   } catch (error) {

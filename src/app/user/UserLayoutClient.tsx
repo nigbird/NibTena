@@ -101,7 +101,7 @@ export default function UserLayoutClient({
           <div className="ml-auto flex items-center gap-2">
             {showLoginButton && (
               <Button asChild variant="outline" size="sm">
-                <Link href="/user/appointments">Login</Link>
+                Login
               </Button>
             )}
           </div>

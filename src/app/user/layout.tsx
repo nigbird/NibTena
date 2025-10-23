@@ -10,8 +10,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
 import { useSession } from 'next-auth/react';
+import type { MiniAppSession } from '@/lib/session';
+import { useEffect, useState } from 'react';
 
-// Remove hardcoded placeholder; we'll render dynamically from session
+// This is a client component, so we can't directly call the server-side getMiniAppSession
+// We would need an API route or pass it as a prop if this were a server component layout first.
+// For now, we simulate the check on the client. A better approach would be a server component parent.
 
 const pageTitles: { [key: string]: string } = {
     '/user': 'Home',
@@ -42,7 +46,20 @@ export default function UserLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session } = useSession(); // For standard web login
+  const [miniAppSession, setMiniAppSession] = useState<MiniAppSession | null>(null);
+
+  // Since this is a client component, we can check for the cookie's existence
+  // to infer if we are in a mini-app session.
+  useEffect(() => {
+    // A simple way to check if the cookie exists without parsing it on the client
+    if (document.cookie.includes('miniapp_session')) {
+        setMiniAppSession({ isAuthenticated: true, phoneNumber: 'from-cookie', authToken: 'from-cookie'});
+    }
+  }, []);
+
+  const isLoggedIn = !!session || !!miniAppSession;
+
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
@@ -61,7 +78,7 @@ export default function UserLayout({
                     <div>
                         <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
                         <p className="font-semibold text-foreground">
-                          {session?.user?.name || 'Guest'}
+                          {session?.user?.name || (miniAppSession ? `User ${miniAppSession.phoneNumber.slice(-4)}` : 'Guest')}
                         </p>
                     </div>
                 </div>
@@ -83,7 +100,7 @@ export default function UserLayout({
             )}
             
             <div className="ml-auto flex items-center gap-2">
-                {!session && (
+                {!isLoggedIn && (
                   <Button asChild variant="outline" size="sm">
                     <Link href="/user/appointments">
                       <LogIn className="mr-2 h-4 w-4" />

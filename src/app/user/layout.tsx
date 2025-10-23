@@ -6,8 +6,9 @@ import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { cookies } from 'next/headers';
 
 const pageTitles: { [key: string]: string } = {
   '/user': 'Home',
@@ -27,28 +28,21 @@ const getTitleForPath = (path: string) => {
   return 'NibTena';
 };
 
-export default function UserLayout({ children }: { children: React.ReactNode }) {
+export default function UserLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
-  // Client-side state for Mini App session
-  const [hasMiniAppSession, setHasMiniAppSession] = useState(false);
-
-  useEffect(() => {
-    // Read Mini App session from document.cookie
-    const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-      const [key, value] = cookie.split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    if (cookies['miniapp_session']) {
-      setHasMiniAppSession(true);
-    }
-  }, []);
+  // Read Mini App session cookie
+  const cookieStore = await cookies();
+  const miniappCookie = cookieStore.get('miniapp_session');
+  const hasMiniAppSession = !!miniappCookie;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -56,7 +50,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         <div className="container flex h-16 items-center">
           {isHomePage ? (
             hasMiniAppSession ? (
-              // Mini App session present
+              // ✅ Mini App session present
               <div className="flex items-center gap-3">
                 <p className="font-semibold text-foreground">Hi, Welcome!</p>
               </div>

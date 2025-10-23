@@ -1,3 +1,4 @@
+
 import { headers, cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
 
     const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
 
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     cookieStore.set('miniapp_session', encodedSession, {
       path: '/',
       httpOnly: true,

@@ -1,13 +1,8 @@
 
-'use server';
+import { headers, cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-import { headers } from 'next/headers';
-import { NextResponse, type NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
-import { encryptSessionPayload } from '@/lib/sessionCrypto';
-import { redirect } from 'next/navigation';
-
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
     const headerList = await headers();
     const authHeader = headerList.get('Authorization');
@@ -82,38 +77,32 @@ export async function GET(request: NextRequest) {
     const validationResult = await externalResponse.json();
     const phoneNumber = validationResult.phone;
 
-    if (!phoneNumber) {
-        return NextResponse.json({ status: 'error', message: 'Phone number not found in validation response.'}, { status: 400 });
-    }
-
-    // This is an end-user session, not tied to a registered user in our DB.
-    // The session payload contains the phone number and original token.
-    const sessionPayload = {
-      accessToken: token,
-      phoneNumber: phoneNumber,
+    // On successful validation, create an encoded session cookie and redirect.
+    const sessionData = {
+        isAuthenticated: true,
+        phoneNumber: phoneNumber,
+        authToken: token,
     };
-
-    const encrypted = await encryptSessionPayload(JSON.stringify(sessionPayload));
+    const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
 
     const cookieStore = await cookies();
-    cookieStore.set('auth', encrypted, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
+    cookieStore.set('miniapp_session', encodedSession, {
       path: '/',
-      maxAge: 60 * 60 * 24, // 1 day
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
     });
 
-    // Redirect to the homepage after setting the cookie
-    redirect('/');
+    const url = new URL(request.url);
+    const redirectUrl = `${url.protocol}//${url.host}/`;
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Error processing connect request:', error);
-    // Return a generic error page or response
     return NextResponse.json(
       {
         status: 'error',
-        message: 'An unexpected server error occurred during connection.',
+        message: 'An unexpected server error occurred.',
       },
       { status: 500 }
     );

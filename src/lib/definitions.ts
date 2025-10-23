@@ -54,7 +54,8 @@ export type Appointment = {
   hospitalId: number;
   appointmentSlot: string; // e.g., "09:00 AM - 09:30 AM"
   appointmentDate: Date;
-  status: 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
+  status: 'pending-payment' | 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
+  transactionId?: string | null;
   createdAt: string;
 };
 

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Loader2, User, Users } from 'lucide-react';
@@ -25,13 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { startBookingProcess, type State } from './actions';
+import { startBookingProcess, initiateBookingAndPayment, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { useSession } from 'next-auth/react';
+import { PatientContext } from '@/context/PatientContext';
 
-function SubmitButton() {
+
+function SubmitButton({ isMiniApp }: { isMiniApp: boolean }) {
   const { pending } = useFormStatus();
 
   return (
@@ -42,7 +43,7 @@ function SubmitButton() {
           Processing...
         </>
       ) : (
-        'Proceed to Verification'
+        isMiniApp ? 'Proceed to Payment' : 'Proceed to Verification'
       )}
     </Button>
   );
@@ -53,6 +54,10 @@ export default function BookingPage() {
   const doctorId = Number(params.doctorId);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { patient, superAppToken } = useContext(PatientContext);
+
+  const isMiniApp = !!superAppToken;
+
   const slot = searchParams.get('slot') || 'Not specified';
   const hospitalId = Number(searchParams.get('hospitalId'));
   const dateParam = searchParams.get('date');
@@ -67,39 +72,72 @@ export default function BookingPage() {
   const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
 
   const initialState: State = { message: null, errors: {} };
-  const startBookingWithParams = startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
-  const [state, dispatch] = useActionState<State, FormData>(startBookingWithParams, initialState);
+  
+  const actionToDispatch = isMiniApp 
+    ? initiateBookingAndPayment.bind(null, doctorId, hospitalId, slot, date, superAppToken)
+    : startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
+
+  const [state, dispatch] = useActionState<State, FormData>(actionToDispatch, initialState);
   const { toast } = useToast();
   
   useEffect(() => {
-    if (state?.success === true && state.data) {
-      if (state.otp) {
-        toast({
-          title: 'OTP For Testing',
-          description: `Your verification code is: ${state.otp}`,
-          duration: 10000,
-        });
+    // This effect handles the outcome of BOTH flows
+    if (state?.success) {
+      if (isMiniApp) {
+        // Step 4: Handle payment token for Mini App
+        if (state.paymentToken) {
+          if (typeof window !== 'undefined' && (window as any).myJsChannel?.postMessage) {
+            toast({
+              title: "Redirecting to Payment",
+              description: "Please complete your payment in the Super App.",
+            });
+            (window as any).myJsChannel.postMessage({ token: state.paymentToken });
+            // The super app will handle the rest. We might want to poll for status here.
+            // For now, we assume the callback will update the status.
+            // We can redirect the user to their appointments page after a delay.
+            setTimeout(() => {
+                if (patient?.id) {
+                    router.push(`/user/appointments?patientId=${patient.id}`);
+                } else {
+                    // Fallback if patient id isn't ready
+                    router.push(`/user/appointments`);
+                }
+            }, 3000);
+          } else {
+            console.error("NIB Super App channel (window.myJsChannel) not found.");
+            toast({
+              variant: "destructive",
+              title: "Integration Error",
+              description: "Could not communicate with the payment app.",
+            });
+          }
+        }
+      } else {
+        // Handle OTP for Standalone App
+        if (state.otp && state.data) {
+          toast({
+            title: 'OTP For Testing',
+            description: `Your verification code is: ${state.otp}`,
+            duration: 10000,
+          });
+
+          const bookingDetails = {
+            // ... (rest of the data as before)
+            phone: state.data.phone,
+            symptoms: state.data.symptoms,
+            doctorId,
+            hospitalId,
+            appointmentSlot: slot,
+            appointmentDate: date,
+          };
+          
+          const params = new URLSearchParams({
+            bookingData: JSON.stringify(bookingDetails),
+            phone: state.data.phone,
+          });
+          router.push(`/user/verify/otp?${params.toString()}`);
+        }
       }
-
-      const bookingDetails = {
-        patientName: state.data.fullName,
-        patientAge: state.data.age,
-        patientGender: state.data.gender,
-        phone: state.data.phone,
-        symptoms: state.data.symptoms,
-        bookingFor: state.data.bookingFor,
-        doctorId,
-        hospitalId,
-        appointmentSlot: slot,
-        appointmentDate: date,
-      };
-      
-      const params = new URLSearchParams({
-        bookingData: JSON.stringify(bookingDetails),
-        phone: state.data.phone,
-      });
-      router.push(`/user/verify/otp?${params.toString()}`);
-
     } else if (state?.success === false && state.message) {
       toast({
         variant: 'destructive',
@@ -107,7 +145,7 @@ export default function BookingPage() {
         description: state.message,
       });
     }
-  }, [state, toast, router, doctorId, hospitalId, slot, date]);
+  }, [state, toast, router, doctorId, hospitalId, slot, date, isMiniApp, patient]);
   
   const isBookingForSelf = bookingFor === 'myself';
 
@@ -147,7 +185,7 @@ export default function BookingPage() {
                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Full Name</Label>
-                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" required />
+                            <Input key={`name-${bookingFor}`} id="fullName" name="fullName" placeholder="John Doe" defaultValue={isBookingForSelf && patient ? patient.name : ''} required />
                             {state.errors?.fullName && <p className="text-sm font-medium text-destructive">{state.errors.fullName[0]}</p>}
                         </div>
                         <div className="space-y-2">
@@ -156,7 +194,7 @@ export default function BookingPage() {
                             <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
                               +251
                             </span>
-                            <Input id="phone" name="phone" placeholder="912345678" required className="rounded-l-none" />
+                            <Input id="phone" name="phone" placeholder="912345678" defaultValue={isBookingForSelf && patient ? patient.phone : ''} required className="rounded-l-none" />
                           </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
@@ -164,12 +202,12 @@ export default function BookingPage() {
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" required />
+                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf && patient ? patient.age?.toString() : ''} required />
                             {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="gender">Gender</Label>
-                            <Select key={`gender-${bookingFor}`} name="gender" required>
+                            <Select key={`gender-${bookingFor}`} name="gender" defaultValue={isBookingForSelf && patient ? patient.gender || undefined : undefined} required>
                                 <SelectTrigger id="gender">
                                     <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>
@@ -195,7 +233,7 @@ export default function BookingPage() {
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>
-            <SubmitButton />
+            <SubmitButton isMiniApp={isMiniApp} />
           </form>
         </CardContent>
       </Card>

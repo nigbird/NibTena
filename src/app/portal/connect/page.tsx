@@ -13,6 +13,10 @@ async function validateSuperAppToken(authHeader: string) {
     throw new Error('VALIDATE_TOKEN_URL is not configured in the environment.');
   }
 
+  console.log('🟡 [validateSuperAppToken] Starting validation...');
+  console.log('🔹 Validation URL:', VALIDATE_TOKEN_URL);
+  console.log('🔹 Authorization Header being sent:', authHeader);
+
   try {
     const externalResponse = await fetch(VALIDATE_TOKEN_URL, {
       method: 'GET',
@@ -23,24 +27,30 @@ async function validateSuperAppToken(authHeader: string) {
       cache: 'no-store',
     });
 
+    console.log('🟢 [validateSuperAppToken] Response status:', externalResponse.status);
+
+    const raw = await externalResponse.text();
+    console.log('🟢 [validateSuperAppToken] Raw response body:', raw);
+
     if (!externalResponse.ok) {
-      const raw = await externalResponse.text();
       throw new Error(
         `Token validation failed: ${externalResponse.status} - ${raw}`,
       );
     }
 
-    const raw = await externalResponse.text();
+    // Parse JSON safely
     const responseData = JSON.parse(raw);
-
     const phoneNumber = responseData.phone;
+
     if (!phoneNumber) {
       throw new Error('Phone number not found in validation response.');
     }
 
+    console.log('✅ [validateSuperAppToken] Validation successful for phone:', phoneNumber);
     return phoneNumber;
+
   } catch (error) {
-    console.error('Error validating Super App token:', error);
+    console.error('❌ [validateSuperAppToken] Error:', error);
     if (error instanceof Error) {
       throw new Error(`Could not connect to validation service: ${error.message}`);
     }
@@ -54,9 +64,17 @@ async function validateSuperAppToken(authHeader: string) {
  * user's phone number securely in a cookie.
  */
 export default async function ConnectPage() {
-  // ✅ FIX 1: Await headers()
-  const headerList = await headers();
-  const authHeader = headerList.get('Authorization');
+  console.log('🚀 [ConnectPage] Mini App initialization started...');
+
+  const headerList = headers();
+  // Try both uppercase and lowercase forms for robustness
+  const authHeader =
+    headerList.get('Authorization') || headerList.get('authorization');
+
+  console.log('🔍 [ConnectPage] Incoming request headers:');
+  for (const [key, value] of headerList.entries()) {
+    console.log(`   ${key}: ${value}`);
+  }
 
   let status: 'success' | 'error' = 'error';
   let message = '';
@@ -64,18 +82,20 @@ export default async function ConnectPage() {
 
   if (!authHeader) {
     message = 'Authorization header is missing from the request.';
+    console.error('❌ [ConnectPage] No Authorization header found!');
   } else if (!authHeader.startsWith('Bearer ')) {
     message = 'Authorization header is malformed. It must start with Bearer.';
+    console.error('❌ [ConnectPage] Malformed Authorization header:', authHeader);
   } else {
     const token = authHeader.substring(7);
     data.token = token;
+    console.log('🟡 [ConnectPage] Extracted Bearer token:', token);
 
     try {
       const phoneNumber = await validateSuperAppToken(authHeader);
       data.phoneNumber = phoneNumber;
 
-      // ✅ FIX 2: Await cookies() before setting
-      const cookieStore = await cookies();
+      const cookieStore = cookies();
       cookieStore.set('super-app-user-phone', phoneNumber, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -85,12 +105,20 @@ export default async function ConnectPage() {
 
       status = 'success';
       message = 'Successfully authenticated via Super App.';
-      redirect('/user'); // ✅ redirect is fine
+      console.log('✅ [ConnectPage] Cookie set successfully. Redirecting...');
+      redirect('/user');
     } catch (error) {
-      if (error instanceof Error) message = error.message;
-      else message = 'An unknown error occurred.';
+      if (error instanceof Error) {
+        message = error.message;
+        console.error('❌ [ConnectPage] Error:', error.message);
+      } else {
+        message = 'An unknown error occurred.';
+        console.error('❌ [ConnectPage] Unknown error:', error);
+      }
     }
   }
+
+  console.log('🧾 [ConnectPage] Final status:', status, '| message:', message);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">

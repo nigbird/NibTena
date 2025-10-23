@@ -1,10 +1,14 @@
-
-import { headers } from 'next/headers';
-import { cookies } from 'next/headers';
+// src/app/portal/connect/page.tsx
+import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+/**
+ * Calls the Super App’s validation endpoint to verify the token
+ * and return the user's phone number.
+ */
 async function validateSuperAppToken(authHeader: string) {
   const VALIDATE_TOKEN_URL = process.env.VALIDATE_TOKEN_URL;
+
   if (!VALIDATE_TOKEN_URL) {
     throw new Error('VALIDATE_TOKEN_URL is not configured in the environment.');
   }
@@ -20,12 +24,16 @@ async function validateSuperAppToken(authHeader: string) {
     });
 
     if (!externalResponse.ok) {
-      throw new Error(`Token validation failed with status: ${externalResponse.status}`);
+      const raw = await externalResponse.text();
+      throw new Error(
+        `Token validation failed: ${externalResponse.status} - ${raw}`,
+      );
     }
 
-    const responseData = await externalResponse.json();
-    const phoneNumber = responseData.phone;
+    const raw = await externalResponse.text();
+    const responseData = JSON.parse(raw);
 
+    const phoneNumber = responseData.phone;
     if (!phoneNumber) {
       throw new Error('Phone number not found in validation response.');
     }
@@ -34,17 +42,24 @@ async function validateSuperAppToken(authHeader: string) {
   } catch (error) {
     console.error('Error validating Super App token:', error);
     if (error instanceof Error) {
-        throw new Error(`Could not connect to validation service: ${error.message}`);
+      throw new Error(`Could not connect to validation service: ${error.message}`);
     }
     throw new Error('An unknown error occurred during token validation.');
   }
 }
 
+/**
+ * This page runs during the first initialization of the Mini App.
+ * It reads the Authorization header, validates it, and stores the
+ * user's phone number securely in a cookie.
+ */
 export default async function ConnectPage() {
-  const headerList = headers();
+  // ✅ FIX 1: Await headers()
+  const headerList = await headers();
   const authHeader = headerList.get('Authorization');
+
   let status: 'success' | 'error' = 'error';
-  let message: string = '';
+  let message = '';
   let data: { token?: string; phoneNumber?: string } = {};
 
   if (!authHeader) {
@@ -59,35 +74,28 @@ export default async function ConnectPage() {
       const phoneNumber = await validateSuperAppToken(authHeader);
       data.phoneNumber = phoneNumber;
 
-      // Set phone number in a secure, http-only cookie
-      cookies().set('super-app-user-phone', phoneNumber, {
+      // ✅ FIX 2: Await cookies() before setting
+      const cookieStore = await cookies();
+      cookieStore.set('super-app-user-phone', phoneNumber, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
       });
-      
-      status = 'success';
-      message = 'Successfully authenticated via Super App and session cookie has been set.';
-      
-      // Redirect to the main user page after successful connection
-      redirect('/user');
 
+      status = 'success';
+      message = 'Successfully authenticated via Super App.';
+      redirect('/user'); // ✅ redirect is fine
     } catch (error) {
-      if (error instanceof Error) {
-          message = error.message;
-      } else {
-          message = 'An unknown error occurred.';
-      }
+      if (error instanceof Error) message = error.message;
+      else message = 'An unknown error occurred.';
     }
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <div className="max-w-md rounded-lg bg-background p-8 shadow-lg">
-        <h1 className="mb-4 text-2xl font-bold">
-          Connecting to Super App...
-        </h1>
+        <h1 className="mb-4 text-2xl font-bold">Connecting to Super App...</h1>
         {status === 'success' ? (
           <div className="text-green-600">
             <p className="font-semibold">Connection Successful!</p>

@@ -6,7 +6,7 @@ export default async function UserLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const miniappCookie = cookieStore.get('miniapp_session');
   const hasMiniAppSession = !!miniappCookie;
 

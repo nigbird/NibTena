@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
     const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('miniapp_session', encodedSession, {
       path: '/',
       httpOnly: true,

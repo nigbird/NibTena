@@ -39,41 +39,42 @@ export default function UserLayoutClient({
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
-  const showUserProfile = !hasMiniAppSession;
-  const showLoginButton = !session?.user && !hasMiniAppSession;
+  // When in Mini App, we don't show the regular user profile/login.
+  const showUserProfile = !hasMiniAppSession && !session?.user;
+  const showLoginButton = !hasMiniAppSession && !session?.user;
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
         <div className="container flex h-16 items-center">
           {isHomePage ? (
-            showUserProfile ? (
-              // Default home page for unauthenticated standalone users
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border">
-                  {session?.user?.image ? (
-                    <AvatarImage
-                      src={session.user.image}
-                      alt={session.user.name || 'User'}
-                    />
-                  ) : null}
-                  <AvatarFallback>
-                    <User />
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
-                  <p className="font-semibold text-foreground">
-                    {session?.user?.name || 'Guest'}
-                  </p>
-                </div>
-              </div>
-            ) : (
               // Mini App session present
               <div className="flex items-center gap-3">
-                <p className="font-semibold text-foreground">Hi, Welcome!</p>
+                 {hasMiniAppSession ? (
+                    <p className="font-semibold text-foreground">Hi, Welcome!</p>
+                 ) : (
+                    <>
+                    <Avatar className="h-10 w-10 border">
+                        {session?.user?.image ? (
+                        <AvatarImage
+                            src={session.user.image}
+                            alt={session.user.name || 'User'}
+                        />
+                        ) : null}
+                        <AvatarFallback>
+                        <User />
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
+                        <p className="font-semibold text-foreground">
+                        {session?.user?.name || 'Guest'}
+                        </p>
+                    </div>
+                    </>
+                 )}
               </div>
-            )
           ) : (
             <div className="flex items-center gap-2">
               <Button

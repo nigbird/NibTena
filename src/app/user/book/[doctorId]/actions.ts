@@ -235,13 +235,14 @@ export async function initiateBookingAndPayment(
         transactionTime: transactionTime,
         signature: signature
     };
+    console.log("Payment Payload:", {payload});
     
     // Update appointment with transaction ID
     await prisma.appointment.update({
         where: { id: newAppointment.id },
         data: { transactionId: transactionId },
     });
-
+    console.log({superAppToken})
     const response = await fetch(NIB_PAYMENT_URL, {
         method: 'POST',
         headers: {
@@ -259,6 +260,7 @@ export async function initiateBookingAndPayment(
 
     const responseData = await response.json();
     const paymentToken = responseData.token;
+    console.log("Payment Token Received:", {paymentToken});
     
     if (!paymentToken) {
         throw new Error("Payment token not received from gateway.");

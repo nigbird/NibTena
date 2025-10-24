@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -7,7 +6,11 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { addMinutes, format } from 'date-fns';
 import crypto from 'crypto';
+import { cookies } from 'next/headers';
 
+// -----------------------------
+// ZOD VALIDATION SCHEMAS
+// -----------------------------
 const PatientInfoSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   phone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
@@ -20,8 +23,11 @@ const AppointmentFormSchema = PatientInfoSchema.extend({
   symptoms: z.string().min(10, { message: 'Please describe symptoms in at least 10 characters.' }),
 });
 
+// -----------------------------
+// TYPE DEFINITIONS
+// -----------------------------
 export type State = {
-  errors?: z.infer<z.ZodError<typeof AppointmentFormSchema>>['formErrors']['fieldErrors'];
+  errors?: z.inferFlattenedErrors<typeof AppointmentFormSchema>['fieldErrors'];
   message?: string | null;
   success?: boolean;
   data?: z.infer<typeof AppointmentFormSchema>;
@@ -29,28 +35,29 @@ export type State = {
   paymentToken?: string;
 };
 
-async function findOrCreatePatient(phone: string, defaults: { name: string, age: number, gender: 'male' | 'female' }) {
-    const patient = await prisma.patient.upsert({
-        where: { phone },
-        update: { name: defaults.name, age: defaults.age, gender: defaults.gender },
-        create: { phone, name: defaults.name, age: defaults.age, gender: defaults.gender },
-    });
-    return patient;
+// -----------------------------
+// HELPER FUNCTIONS
+// -----------------------------
+async function findOrCreatePatient(phone: string, defaults: { name: string; age: number; gender: 'male' | 'female' }) {
+  return prisma.patient.upsert({
+    where: { phone },
+    update: { name: defaults.name, age: defaults.age, gender: defaults.gender },
+    create: { phone, name: defaults.name, age: defaults.age, gender: defaults.gender },
+  });
 }
 
 export async function generateAndSaveOtp(phone: string): Promise<string> {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
-    await prisma.otp.create({
-        data: { phone, code, expiresAt },
-    });
-
-    console.log(`OTP for ${phone} is: ${code}`); // For testing purposes
-    return code;
+  await prisma.otp.create({ data: { phone, code, expiresAt } });
+  console.log(`OTP for ${phone} is: ${code}`); // Dev only
+  return code;
 }
 
-
+// -----------------------------
+// STAGE 1: BOOKING VALIDATION
+// -----------------------------
 export async function startBookingProcess(
   doctorId: number,
   hospitalId: number,
@@ -68,52 +75,45 @@ export async function startBookingProcess(
     symptoms: formData.get('symptoms'),
   };
 
-  const validatedFields = AppointmentFormSchema.safeParse(rawData);
-
-  if (!validatedFields.success) {
+  const validated = AppointmentFormSchema.safeParse(rawData);
+  if (!validated.success) {
     return {
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: validated.error.flatten().fieldErrors,
       message: 'Failed to book appointment. Please check the fields.',
       success: false,
     };
   }
 
-  let otpCode;
   try {
-     await findOrCreatePatient(validatedFields.data.phone, {
-         name: validatedFields.data.fullName,
-         age: validatedFields.data.age,
-         gender: validatedFields.data.gender
-     });
+    await findOrCreatePatient(validated.data.phone, {
+      name: validated.data.fullName,
+      age: validated.data.age,
+      gender: validated.data.gender,
+    });
 
-     otpCode = await generateAndSaveOtp(validatedFields.data.phone);
+    const otpCode = await generateAndSaveOtp(validated.data.phone);
 
-  } catch(error) {
-      console.error("Error during patient creation or OTP generation:", error);
-      return { success: false, message: "A server error occurred. Please try again."};
+    return {
+      success: true,
+      message: 'Booking validated successfully.',
+      data: validated.data,
+      otp: otpCode,
+    };
+  } catch (error) {
+    console.error('Error during patient creation or OTP generation:', error);
+    return { success: false, message: 'A server error occurred. Please try again.' };
   }
-  
-  return {
-    success: true,
-    message: 'Booking validated successfully.',
-    data: validatedFields.data,
-    otp: otpCode,
-  };
 }
 
+// -----------------------------
+// STAGE 2: FINALIZE BOOKING
+// -----------------------------
 export async function completeBooking(bookingData: any) {
-  let newAppointment;
-  let patient;
   try {
-    patient = await prisma.patient.findUnique({
-        where: { phone: bookingData.phone }
-    });
-    
-    if (!patient) {
-        return { success: false, message: 'Patient record not found.'};
-    }
+    const patient = await prisma.patient.findUnique({ where: { phone: bookingData.phone } });
+    if (!patient) return { success: false, message: 'Patient record not found.' };
 
-    newAppointment = await prisma.appointment.create({
+    const newAppointment = await prisma.appointment.create({
       data: {
         symptoms: bookingData.symptoms,
         patientId: patient.id,
@@ -124,28 +124,39 @@ export async function completeBooking(bookingData: any) {
         status: 'confirmed',
       },
     });
-  } catch (error) {
-    console.error('Data saving failed:', error);
-    return {
-      success: false,
-      message: 'An error occurred while processing your appointment.',
-    };
-  }
 
-  if (newAppointment && patient) {
     revalidatePath('/doctor-portal/appointments');
     revalidatePath('/hospital-admin/appointments');
     revalidatePath('/user/appointments');
-    // Redirect must be called outside of try/catch
+
     redirect(`/user/appointments?success=true&patientId=${patient.id}`);
-  } else {
-    return {
-        success: false,
-        message: 'Appointment creation failed.',
-    };
+  } catch (error) {
+    console.error('Data saving failed:', error);
+    return { success: false, message: 'An error occurred while processing your appointment.' };
   }
 }
 
+// -----------------------------
+// COOKIE AUTH TOKEN EXTRACTION
+// -----------------------------
+async function getAuthTokenFromCookie(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+  if (!sessionCookie) return null;
+
+  try {
+    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+    const session = JSON.parse(decoded);
+    return session.authToken || null;
+  } catch (err) {
+    console.error('Failed to parse miniapp_session cookie:', err);
+    return null;
+  }
+}
+
+// -----------------------------
+// STAGE 3: INITIATE PAYMENT
+// -----------------------------
 export async function initiateBookingAndPayment(
   doctorId: number,
   hospitalId: number,
@@ -164,25 +175,26 @@ export async function initiateBookingAndPayment(
     symptoms: formData.get('symptoms'),
   };
 
-  const validatedFields = AppointmentFormSchema.safeParse(rawData);
+  const validated = AppointmentFormSchema.safeParse(rawData);
+  const authToken = await getAuthTokenFromCookie();
+  console.log('Auth Token from Cookie:', authToken);
 
-  if (!validatedFields.success) {
+  if (!validated.success) {
     return {
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: validated.error.flatten().fieldErrors,
       message: 'Invalid appointment data.',
       success: false,
     };
   }
-  
-  const { fullName, phone, age, gender, symptoms } = validatedFields.data;
+
+  const { fullName, phone, age, gender, symptoms } = validated.data;
 
   try {
     const patient = await findOrCreatePatient(phone, { name: fullName, age, gender });
-    
-    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }});
-    if (!doctor) return { success: false, message: 'Doctor not found.'};
-    
-    // 1. Create the appointment first
+    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+    if (!doctor) return { success: false, message: 'Doctor not found.' };
+
+    // Create appointment in pending-payment state
     const newAppointment = await prisma.appointment.create({
       data: {
         symptoms,
@@ -191,94 +203,80 @@ export async function initiateBookingAndPayment(
         hospitalId,
         appointmentSlot,
         appointmentDate: new Date(appointmentDate),
-        status: 'pending-payment', // New status
+        status: 'pending-payment',
       },
     });
 
-    // 2. Prepare payment request (Step 3)
     const transactionId = crypto.randomUUID();
     const transactionTime = format(new Date(), 'yyyyMMddHHmmss');
     const amount = doctor.consultationFee;
 
-    const { 
-        ACCOUNT_NO, 
-        CALLBACK_URL, 
-        COMPANY_NAME, 
-        NIB_PAYMENT_KEY, 
-        NIB_PAYMENT_URL 
-    } = process.env;
+    const { ACCOUNT_NO, CALLBACK_URL, COMPANY_NAME, NIB_PAYMENT_KEY, NIB_PAYMENT_URL } = process.env;
 
     if (!ACCOUNT_NO || !CALLBACK_URL || !COMPANY_NAME || !NIB_PAYMENT_KEY || !NIB_PAYMENT_URL) {
-        throw new Error("Missing payment environment variables.");
+      throw new Error('Missing payment environment variables.');
     }
-    
+
     const signatureString = [
       `accountNo=${ACCOUNT_NO}`,
       `amount=${amount}`,
       `callBackURL=${CALLBACK_URL}`,
       `companyName=${COMPANY_NAME}`,
       `Key=${NIB_PAYMENT_KEY}`,
-      `token=${superAppToken}`,
+      `token=${authToken}`,
       `transactionId=${transactionId}`,
-      `transactionTime=${transactionTime}`
+      `transactionTime=${transactionTime}`,
     ].join('&');
 
     const signature = crypto.createHash('sha256').update(signatureString, 'utf8').digest('hex');
 
     const payload = {
-        accountNo: ACCOUNT_NO,
-        amount: String(amount),
-        callBackURL: CALLBACK_URL,
-        companyName: COMPANY_NAME,
-        token: superAppToken,
-        transactionId: transactionId,
-        transactionTime: transactionTime,
-        signature: signature
+      accountNo: ACCOUNT_NO,
+      amount: String(amount),
+      callBackURL: CALLBACK_URL,
+      companyName: COMPANY_NAME,
+      token: superAppToken,
+      transactionId,
+      transactionTime,
+      signature,
     };
-    console.log("Payment Payload:", {payload});
-    
-    // Update appointment with transaction ID
+
+    console.log('Payment Payload:', payload);
+
     await prisma.appointment.update({
-        where: { id: newAppointment.id },
-        data: { transactionId: transactionId },
+      where: { id: newAppointment.id },
+      data: { transactionId },
     });
-    console.log({superAppToken})
+
     const response = await fetch(NIB_PAYMENT_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${superAppToken}`
-        },
-        body: JSON.stringify(payload),
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Payment Gateway Error:", errorData);
-        throw new Error(`Payment gateway returned an error: ${response.statusText}`);
+      const errorData = await response.text();
+      console.error('Payment Gateway Error:', errorData);
+      throw new Error(`Payment gateway returned an error: ${response.statusText}`);
     }
 
     const responseData = await response.json();
     const paymentToken = responseData.token;
-    console.log("Payment Token Received:", {paymentToken});
-    
-    if (!paymentToken) {
-        throw new Error("Payment token not received from gateway.");
-    }
-    
-    // 3. Return paymentToken to the client
+    console.log('Payment Token Received:', paymentToken);
+
+    if (!paymentToken) throw new Error('Payment token not received from gateway.');
+
     return {
       success: true,
-      message: 'Payment initiated.',
-      data: validatedFields.data,
-      paymentToken: paymentToken,
+      message: 'Payment initiated successfully.',
+      data: validated.data,
+      paymentToken,
     };
-
   } catch (error) {
     console.error('Payment initiation failed:', error);
-    return {
-      success: false,
-      message: 'An error occurred while initiating the payment process.',
-    };
+    return { success: false, message: 'An error occurred while initiating the payment process.' };
   }
 }

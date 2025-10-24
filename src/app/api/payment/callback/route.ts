@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       token,
       Signature: receivedSignature,
     } = requestBody;
-
+    console.log("Callback received body:", {receivedSignature, ...requestBody});
     // ✅ Check required fields
     if (
       !paidAmount ||

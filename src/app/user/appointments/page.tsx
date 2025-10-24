@@ -13,7 +13,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import PatientAuth from './PatientAuth';
 import { useContext } from 'react';
 import { PatientContext } from '@/context/PatientContext';
-import { getMiniAppCookie } from './server-utils'; // 👈 new helper
+import { getMiniAppCookie } from './server-utils';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
@@ -27,15 +27,14 @@ function AppointmentsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { patient, superAppToken } = useContext(PatientContext);
+  const { patient } = useContext(PatientContext);
   const [isMiniApp, setIsMiniApp] = useState(false);
 
-  // ✅ Check server cookie (miniapp_session)
   useEffect(() => {
-    (async () => {
-      const insideMiniApp = await getMiniAppCookie();
-      if (insideMiniApp) setIsMiniApp(true);
-    })();
+    // Check for the mini-app cookie on the client side
+    getMiniAppCookie().then(hasCookie => {
+      setIsMiniApp(hasCookie);
+    });
   }, []);
 
   const urlPatientId = searchParams.get('patientId');
@@ -63,24 +62,40 @@ function AppointmentsContent() {
   };
 
   useEffect(() => {
-    if (patientId) fetchData();
-    else setIsLoading(false);
+    if (patientId) {
+      fetchData();
+    } else {
+      setIsLoading(false);
+    }
   }, [patientId]);
-
-  // ✅ Auto redirect Mini App user if no URL patientId
+  
+  // This effect ensures that if a mini-app user lands here without a patientId in the URL,
+  // we add it for them automatically, making the state consistent.
   useEffect(() => {
     if (isMiniApp && patient && !urlPatientId) {
       router.replace(`/user/appointments?patientId=${patient.id}`);
     }
   }, [isMiniApp, patient, urlPatientId, router]);
 
-  // ✅ Skip OTP completely for Mini App users
-  if (!patientId) {
-    if (isMiniApp && patient) {
-      router.replace(`/user/appointments?patientId=${patient.id}`);
-      return <div>Loading...</div>;
-    }
+
+  // If there's no patientId from either the URL or the context, it's a standalone user who needs to log in.
+  // The isMiniApp check provides an extra layer of safety to prevent the login form from flashing for a mini-app user.
+  if (!patientId && !isMiniApp) {
     return <PatientAuth />;
+  }
+  
+  // If we have a mini-app session but are still waiting for the patient object or redirect, show loading.
+  if (!patientId && isMiniApp) {
+    return (
+       <div className="p-4 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+       </div>
+    );
   }
 
   const filteredAppointments = useMemo(() => {
@@ -119,8 +134,10 @@ function AppointmentsContent() {
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
-              doctor={appointment.doctor}
-              onActionSuccess={fetchData}
+              onActionSuccess={() => {
+                toast({ title: 'Success', description: 'Your appointment has been updated.'});
+                fetchData();
+              }}
             />
           ))}
         </div>

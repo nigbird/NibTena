@@ -1,82 +1,102 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-'use server';
-
-import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
-
-/**
- * This endpoint handles the callback from the NIB payment gateway after a transaction.
- * It validates the request, updates the appointment status, and confirms the payment.
- */
+// Step 5: Callback endpoint for successful payments
 export async function POST(request: NextRequest) {
-  let requestBody;
   try {
-    requestBody = await request.json();
-    console.log("Callback received with body:", requestBody);
-  } catch (e) {
-    console.error("Callback Error: Invalid JSON in request body.", e);
-    return NextResponse.json({ message: "Invalid JSON body." }, { status: 400 });
-  }
+    // ✅ Read Authorization header
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("Missing Authorization header.");
+      return NextResponse.json({ message: "Missing Authorization header" }, { status: 400 });
+    }
 
-  const {
-    paidAmount,
-    paidByNumber,
-    txnRef,
-    transactionId,
-    transactionTime,
-    accountNo,
-    token,
-    Signature: receivedSignature, // Renaming to avoid conflict with local signature variable
-  } = requestBody;
+    const authToken = authHeader.replace("Bearer ", "").trim();
 
-  if (!transactionId) {
-      return NextResponse.json({ message: "Missing transactionId." }, { status: 400 });
-  }
+    // ✅ Step 01 Validation: validate token with the bank’s validation API
+    const validateResponse = await fetch(process.env.VALIDATE_TOKEN_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: authToken }),
+    });
 
-  // --- Security Validation (Placeholder) ---
-  // In a real application, you MUST validate the incoming request.
-  // 1. Validate the `Authorization` header token from the request.
-  // 2. Re-calculate the signature and compare it with `receivedSignature`.
-  // This ensures the request is genuinely from the NIB gateway.
-  // For now, we will proceed assuming the request is valid.
+    const validateData = await validateResponse.json();
+    if (!validateResponse.ok || !validateData.isValid) {
+      console.error("Invalid authorization token.");
+      return NextResponse.json({ message: "Invalid authorization token" }, { status: 400 });
+    }
 
-  try {
-    // Find the appointment using the transactionId from the payment gateway
-    const appointment = await prisma.appointment.findFirst({
-      where: {
-        transactionId: transactionId,
-        status: 'pending-payment',
-      },
+    // ✅ Parse the JSON body
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (e) {
+      console.error("Callback Error: Invalid JSON in request body.", e);
+      return NextResponse.json({ message: "Error Occurred." }, { status: 400 });
+    }
+
+    const {
+      paidAmount,
+      paidByNumber,
+      txnRef,
+      transactionId,
+      transactionTime,
+      accountNo,
+      token,
+      Signature: receivedSignature,
+    } = requestBody;
+
+    // ✅ Check required fields
+    if (
+      !paidAmount ||
+      !paidByNumber ||
+      !txnRef ||
+      !transactionId ||
+      !transactionTime ||
+      !accountNo ||
+      !token
+    ) {
+      console.error("Missing required fields in callback body.");
+      return NextResponse.json({ message: "Missing required fields." }, { status: 400 });
+    }
+
+    // ✅ Validate the `token` inside the payload (per Step 01 again)
+    const innerTokenValidation = await fetch(process.env.VALIDATE_TOKEN_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    const tokenData = await innerTokenValidation.json();
+    if (!innerTokenValidation.ok || !tokenData.isValid) {
+      console.error("Invalid inner token in callback body.");
+      return NextResponse.json({ message: "Invalid inner token" }, { status: 400 });
+    }
+
+    // ✅ Process: Find and update appointment
+    const appointment = await prisma.appointment.findUnique({
+      where: { transactionId },
     });
 
     if (!appointment) {
-      console.warn(`Callback Warning: Appointment with transactionId ${transactionId} not found or already processed.`);
-      // Return 200 to prevent the gateway from retrying, as we can't process this.
-      return NextResponse.json({ message: "Appointment not found or already processed." }, { status: 200 });
+      console.error("Appointment not found for transaction:", transactionId);
+      return NextResponse.json({ message: "Appointment not found" }, { status: 400 });
     }
 
-    // Update the appointment status to 'confirmed'
     await prisma.appointment.update({
-      where: {
-        id: appointment.id,
-      },
+      where: { id: appointment.id },
       data: {
-        status: 'confirmed',
-        // You can also store other payment details here if needed,
-        // e.g., paidAmount, txnRef, etc., by adding them to your Prisma schema.
+        status: "paid",
+        updatedAt: new Date(),
       },
     });
-    
-    console.log(`Successfully confirmed payment for appointment ${appointment.id}`);
 
-    // Acknowledge the successful processing to the payment gateway
-    return NextResponse.json({ message: "Payment confirmed and appointment updated." }, { status: 200 });
+    console.log("✅ Payment confirmed for transaction:", transactionId);
 
+    // ✅ Respond success per Step 5
+    return NextResponse.json({ message: "Payment confirmed and updated." }, { status: 200 });
   } catch (error) {
-    console.error(`Callback Error: Failed to update appointment for transactionId ${transactionId}.`, error);
-    // Return a 400 error to indicate a failure in processing on our end.
-    // The payment gateway might retry sending the callback.
-    return NextResponse.json({ message: "Failed to update appointment record." }, { status: 400 });
+    console.error("Callback server error:", error);
+    return NextResponse.json({ message: "Server error during callback." }, { status: 500 });
   }
 }

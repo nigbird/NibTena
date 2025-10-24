@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useContext } from 'react';
 import Link from 'next/link';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { getMyAppointments } from './actions';
@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ToastAction } from '@/components/ui/toast';
 import PatientAuth from './PatientAuth';
+import { PatientContext } from '@/context/PatientContext';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
@@ -27,8 +28,11 @@ function AppointmentsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { patient: patientFromContext } = useContext(PatientContext);
 
-  const patientId = searchParams.get('patientId');
+  const patientIdFromQuery = searchParams.get('patientId');
+  // Use patient from context if available (Super App user), otherwise use from query (standalone OTP user)
+  const patientId = patientFromContext?.id.toString() || patientIdFromQuery;
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';

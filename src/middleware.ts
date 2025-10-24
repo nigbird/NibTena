@@ -2,6 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '../auth';
 
 export default auth((req: NextRequest) => {
+  const { pathname } = req.nextUrl;
+  
+  // Skip auth middleware for API routes
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   const cspHeader = `

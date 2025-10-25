@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -109,7 +110,7 @@ export default function UserLayoutClient({
         </div>
       </header>
       <main className="flex-1 pb-24">{children}</main>
-      <BottomNavbar />
+      <BottomNavbar hasMiniAppSession={hasMiniAppSession} />
     </div>
   );
 }

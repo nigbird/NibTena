@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Home, Stethoscope, UserCircle, CalendarCheck, Hospital } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navLinks = [
+const allNavLinks = [
   { href: '/user', label: 'Home', icon: Home },
   { href: '/user/doctors', label: 'Doctors', icon: Stethoscope },
   { href: '/user/hospitals', label: 'Hospitals', icon: Hospital },
@@ -14,7 +14,7 @@ const navLinks = [
   { href: '/user/profile', label: 'Profile', icon: UserCircle },
 ];
 
-export default function BottomNavbar() {
+export default function BottomNavbar({ hasMiniAppSession }: { hasMiniAppSession: boolean }) {
   const pathname = usePathname();
 
   // Hide navbar on non-user routes
@@ -22,10 +22,13 @@ export default function BottomNavbar() {
     return null;
   }
 
+  const navLinks = hasMiniAppSession
+    ? allNavLinks.filter(link => link.label !== 'Profile')
+    : allNavLinks;
 
   return (
     <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t pb-[env(safe-area-inset-bottom)]">
-      <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
+      <div className={cn("grid h-full max-w-lg mx-auto font-medium", hasMiniAppSession ? "grid-cols-4" : "grid-cols-5")}>
         {navLinks.map(({ href, label, icon: Icon }) => {
           const isActive = (href === '/user' && pathname === '/user') || (href !== '/user' && pathname.startsWith(href));
           return (

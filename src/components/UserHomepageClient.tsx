@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useDebounce } from '@/hooks/use-debounce';
 import Autoplay from "embla-carousel-autoplay";
 import { type ImagePlaceholder } from '@/lib/placeholder-images';
+import { PatientContext } from '@/context/PatientContext';
 
 const actionIcons: { [key: string]: React.ElementType } = {
   Hospital: Hospital,
@@ -67,9 +68,10 @@ type UserHomepageClientProps = {
     topHospitals: HospitalType[];
     featuredDoctors: Doctor[];
     allData: { doctors: Doctor[]; hospitals: HospitalType[]; specialties: string[] };
+    hasMiniAppSession: boolean;
 }
 
-export default function UserHomepageClient({ heroImage, quickActions, topHospitals, featuredDoctors, allData }: UserHomepageClientProps) {
+export default function UserHomepageClient({ heroImage, quickActions, topHospitals, featuredDoctors, allData, hasMiniAppSession }: UserHomepageClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
@@ -82,6 +84,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
   const [currentDoctorSlide, setCurrentDoctorSlide] = useState(0);
 
   const router = useRouter();
+  const { patient } = useContext(PatientContext);
 
   useEffect(() => {
     if (!hospitalApi) return;
@@ -246,7 +249,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
       
        <div className="-mt-12 relative pb-4 z-20">
           <section className="container mx-auto max-w-md">
-              <div className="flex justify-around items-center">
+              <div className={cn("flex justify-around items-center", hasMiniAppSession ? "grid grid-cols-3" : "")}>
                   {quickActions.map(({ href, label, icon, color }) => {
                       const Icon = actionIcons[icon] || Stethoscope;
                       return (

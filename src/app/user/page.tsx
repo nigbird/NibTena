@@ -2,8 +2,9 @@
 import { placeholderImages } from '@/lib/placeholder-images';
 import { prisma } from '@/lib/prisma';
 import UserHomepageClient from '@/components/UserHomepageClient';
+import { cookies } from 'next/headers';
 
-const quickActions = [
+const allQuickActions = [
     { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-primary/20 text-primary-foreground' },
     { href: '/user/doctors', label: 'Doctors', icon: 'Stethoscope', color: 'bg-primary/20 text-primary-foreground' },
     { href: '/user/appointments', label: 'Bookings', icon: 'CalendarCheck', color: 'bg-primary/20 text-primary-foreground' },
@@ -11,6 +12,13 @@ const quickActions = [
 ];
 
 export default async function Home() {
+    const cookieStore = cookies();
+    const hasMiniAppSession = !!cookieStore.get('miniapp_session');
+
+    const quickActions = hasMiniAppSession
+        ? allQuickActions.filter(action => action.label !== 'Profile')
+        : allQuickActions;
+
     const [topHospitals, featuredDoctors, allDoctors, allHospitals, allSpecialties] = await Promise.all([
         prisma.hospital.findMany({
             take: 5,
@@ -39,6 +47,7 @@ export default async function Home() {
             topHospitals={topHospitals}
             featuredDoctors={featuredDoctors}
             allData={allData}
+            hasMiniAppSession={hasMiniAppSession}
         />
     );
 }

@@ -167,6 +167,26 @@ export async function completeBooking(bookingData: any) {
   }
 }
 
+async function getPhoneNumberFromCookie() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    // Decode base64 if it was encoded before storing
+    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+    const session = JSON.parse(decoded);
+
+    return session.phoneNumber || null;
+  } catch (err) {
+    console.error("Failed to parse miniapp_session cookie:", err);
+    return null;
+  }
+}
+
 export async function initiateBookingAndPayment(
   doctorId: number,
   hospitalId: number,
@@ -187,7 +207,9 @@ export async function initiateBookingAndPayment(
 
   const validatedFields = AppointmentFormSchema.safeParse(rawData);
   const authToken = await getAuthTokenFromCookie();
+  const phoneFromCookie = await getPhoneNumberFromCookie();
   console.log("Auth Token from Cookie:", {authToken});
+  console.log("Phone from Cookie:", {phoneFromCookie});
 
   if (!validatedFields.success) {
     return {
@@ -198,9 +220,12 @@ export async function initiateBookingAndPayment(
   }
   
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
+  
+  // Use phone number from cookie if available (for mini app sessions)
+  const finalPhone = phoneFromCookie || phone;
 
   try {
-    const patient = await findOrCreatePatient(phone, { name: fullName, age, gender });
+    const patient = await findOrCreatePatient(finalPhone, { name: fullName, age, gender });
     
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }});
     if (!doctor) return { success: false, message: 'Doctor not found.'};

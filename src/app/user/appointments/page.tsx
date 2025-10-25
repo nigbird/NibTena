@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { getMyAppointments } from './actions';
+import { getMyAppointments, getMyAppointmentsForMiniApp } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, FileX } from 'lucide-react';
@@ -56,8 +56,16 @@ function AppointmentsContent() {
   const fetchData = async () => {
     if (!patientId) return;
     setIsLoading(true);
-    const appointmentData = await getMyAppointments(Number(patientId));
-    setAppointments(appointmentData);
+    
+    // For mini app sessions, fetch appointments by phone number from cookie
+    if (isMiniApp) {
+      const appointmentData = await getMyAppointmentsForMiniApp();
+      setAppointments(appointmentData);
+    } else {
+      const appointmentData = await getMyAppointments(Number(patientId));
+      setAppointments(appointmentData);
+    }
+    
     setIsLoading(false);
   };
 
@@ -67,7 +75,7 @@ function AppointmentsContent() {
     } else {
       setIsLoading(false);
     }
-  }, [patientId]);
+  }, [patientId, isMiniApp]);
   
   // This effect ensures that if a mini-app user lands here without a patientId in the URL,
   // we add it for them automatically, making the state consistent.

@@ -3,6 +3,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { addMinutes } from 'date-fns';
+import { cookies } from 'next/headers';
 
 export async function getMyAppointments(patientId: number) {
   if (!patientId) return [];
@@ -25,6 +26,69 @@ export async function getMyAppointments(patientId: number) {
     console.error('Failed to fetch appointments:', error);
     return [];
   }
+}
+
+export async function getMyAppointmentsByPhone(phone: string) {
+  if (!phone) return [];
+
+  try {
+    // First find the patient by phone number
+    const patient = await prisma.patient.findUnique({
+      where: { phone }
+    });
+
+    if (!patient) {
+      return [];
+    }
+
+    // Then get appointments for that patient
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+      },
+      include: {
+        doctor: true,
+        hospital: true,
+      },
+      orderBy: {
+        appointmentDate: 'desc',
+      },
+    });
+    return appointments;
+  } catch (error) {
+    console.error('Failed to fetch appointments by phone:', error);
+    return [];
+  }
+}
+
+async function getPhoneNumberFromCookie() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    // Decode base64 if it was encoded before storing
+    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+    const session = JSON.parse(decoded);
+
+    return session.phoneNumber || null;
+  } catch (err) {
+    console.error("Failed to parse miniapp_session cookie:", err);
+    return null;
+  }
+}
+
+export async function getMyAppointmentsForMiniApp() {
+  const phoneFromCookie = await getPhoneNumberFromCookie();
+  
+  if (!phoneFromCookie) {
+    return [];
+  }
+
+  return await getMyAppointmentsByPhone(phoneFromCookie);
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {

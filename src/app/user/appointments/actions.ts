@@ -88,6 +88,7 @@ export async function getMyAppointmentsForMiniApp() {
     const sessionCookie = cookieStore.get('miniapp_session')?.value;
 
     if (!sessionCookie) {
+      console.log("No miniapp_session cookie found");
       return [];
     }
 
@@ -98,13 +99,46 @@ export async function getMyAppointmentsForMiniApp() {
       const phoneNumber = session.phoneNumber;
 
       if (!phoneNumber) {
+        console.log("No phone number found in miniapp_session");
         return [];
       }
 
-      // Use the existing function to get appointments by phone
-      return await getMyAppointmentsByPhone(phoneNumber);
+      console.log(`Fetching appointments for phone number: ${phoneNumber}`);
+      
+      // First find the patient by phone number
+      const patient = await prisma.patient.findUnique({
+        where: { phone: phoneNumber }
+      });
+
+      if (!patient) {
+        console.log(`No patient found with phone number: ${phoneNumber}`);
+        return [];
+      }
+
+      // Get all appointments for that patient with complete details
+      const appointments = await prisma.appointment.findMany({
+        where: {
+          patientId: patient.id,
+        },
+        include: {
+          doctor: {
+            include: {
+              hospitals: true,
+              specialtyDetails: true
+            }
+          },
+          hospital: true,
+          patient: true, // Include patient details
+        },
+        orderBy: {
+          appointmentDate: 'desc',
+        },
+      });
+      
+      console.log(`Found ${appointments.length} appointments for phone number: ${phoneNumber}`);
+      return appointments;
     } catch (err) {
-      console.error("Failed to parse miniapp_session cookie:", err);
+      console.error("Failed to parse miniapp_session cookie or fetch data:", err);
       return [];
     }
   } catch (error) {

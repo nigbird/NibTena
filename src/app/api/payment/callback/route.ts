@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     await prisma.appointment.update({
       where: { id: appointment.id },
       data: {
-        status: "paid",
+        status: "confirmed",
         updatedAt: new Date(),
       },
     });

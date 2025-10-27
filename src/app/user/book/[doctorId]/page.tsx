@@ -134,7 +134,7 @@ export default function BookingPage() {
                   const response = await fetch(`/api/appointments/status?transactionId=${transactionId}`);
                   const data = await response.json();
                   
-                  if (data.status === 'paid') {
+                  if (data.status === 'confirmed') {
                     clearInterval(pollInterval);
                     toast({
                       title: "Payment Successful",

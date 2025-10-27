@@ -82,69 +82,13 @@ async function getPhoneNumberFromCookie() {
 }
 
 export async function getMyAppointmentsForMiniApp() {
-  try {
-    // Get the phone number from the cookie
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('miniapp_session')?.value;
-
-    if (!sessionCookie) {
-      console.log("No miniapp_session cookie found");
-      return [];
-    }
-
-    try {
-      // Decode base64 if it was encoded before storing
-      const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-      const session = JSON.parse(decoded);
-      const phoneNumber = session.phoneNumber;
-
-      if (!phoneNumber) {
-        console.log("No phone number found in miniapp_session");
-        return [];
-      }
-
-      console.log(`Fetching appointments for phone number: ${phoneNumber}`);
-      
-      // First find the patient by phone number
-      const patient = await prisma.patient.findUnique({
-        where: { phone: phoneNumber }
-      });
-
-      if (!patient) {
-        console.log(`No patient found with phone number: ${phoneNumber}`);
-        return [];
-      }
-
-      // Get all appointments for that patient with complete details
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          patientId: patient.id,
-        },
-        include: {
-          doctor: {
-            include: {
-              hospitals: true,
-              specialtyDetails: true
-            }
-          },
-          hospital: true,
-          patient: true, // Include patient details
-        },
-        orderBy: {
-          appointmentDate: 'desc',
-        },
-      });
-      
-      console.log(`Found ${appointments.length} appointments for phone number: ${phoneNumber}`);
-      return appointments;
-    } catch (err) {
-      console.error("Failed to parse miniapp_session cookie or fetch data:", err);
-      return [];
-    }
-  } catch (error) {
-    console.error('Failed to fetch mini app appointments:', error);
+  const phoneFromCookie = await getPhoneNumberFromCookie();
+  
+  if (!phoneFromCookie) {
     return [];
   }
+
+  return await getMyAppointmentsByPhone(phoneFromCookie);
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {

@@ -60,10 +60,19 @@ export async function startBookingProcess(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Get phone number from cookie if booking for self
+  const bookingFor = formData.get('bookingFor') as string;
+  const isBookingForSelf = bookingFor === 'myself';
+  let phoneFromCookie = null;
+  
+  if (isBookingForSelf) {
+    phoneFromCookie = await getPhoneNumberFromCookie();
+  }
+  
   const rawData = {
     bookingFor: formData.get('bookingFor'),
     fullName: formData.get('fullName'),
-    phone: String(formData.get('phone') || ''),
+    phone: isBookingForSelf && phoneFromCookie ? phoneFromCookie : String(formData.get('phone') || ''),
     age: formData.get('age'),
     gender: formData.get('gender'),
     symptoms: formData.get('symptoms'),
@@ -89,18 +98,21 @@ export async function startBookingProcess(
 
      otpCode = await generateAndSaveOtp(validatedFields.data.phone);
 
-  } catch(error) {
-      console.error("Error during patient creation or OTP generation:", error);
-      return { success: false, message: "A server error occurred. Please try again."};
+     return {
+       data: validatedFields.data,
+       success: true,
+       otp: otpCode,
+     };
+  } catch (error) {
+    console.error('Error in booking process:', error);
+    return {
+      message: 'An error occurred during the booking process.',
+      success: false,
+    };
   }
-  
-  return {
-    success: true,
-    message: 'Booking validated successfully.',
-    data: validatedFields.data,
-    otp: otpCode,
-  };
 }
+
+// First implementation of initiateBookingAndPayment was removed to fix duplicate declaration
 
 export async function completeBooking(bookingData: any) {
   let newAppointment;
@@ -167,7 +179,7 @@ export async function completeBooking(bookingData: any) {
   }
 }
 
-async function getPhoneNumberFromCookie() {
+export async function getPhoneNumberFromCookie() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('miniapp_session')?.value;
 
@@ -196,20 +208,23 @@ export async function initiateBookingAndPayment(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Always get phone number from cookie for mini app sessions
+  const phoneFromCookie = await getPhoneNumberFromCookie();
+  const authToken = await getAuthTokenFromCookie();
+  
+  console.log("Auth Token from Cookie:", {authToken});
+  console.log("Phone from Cookie:", {phoneFromCookie});
+  
   const rawData = {
     bookingFor: formData.get('bookingFor'),
     fullName: formData.get('fullName'),
-    phone: String(formData.get('phone') || ''),
+    phone: phoneFromCookie || String(formData.get('phone') || ''),
     age: formData.get('age'),
     gender: formData.get('gender'),
     symptoms: formData.get('symptoms'),
   };
 
   const validatedFields = AppointmentFormSchema.safeParse(rawData);
-  const authToken = await getAuthTokenFromCookie();
-  const phoneFromCookie = await getPhoneNumberFromCookie();
-  console.log("Auth Token from Cookie:", {authToken});
-  console.log("Phone from Cookie:", {phoneFromCookie});
 
   if (!validatedFields.success) {
     return {

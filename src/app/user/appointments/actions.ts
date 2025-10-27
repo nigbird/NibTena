@@ -82,13 +82,35 @@ async function getPhoneNumberFromCookie() {
 }
 
 export async function getMyAppointmentsForMiniApp() {
-  const phoneFromCookie = await getPhoneNumberFromCookie();
-  
-  if (!phoneFromCookie) {
+  try {
+    // Get the phone number from the cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('miniapp_session')?.value;
+
+    if (!sessionCookie) {
+      return [];
+    }
+
+    try {
+      // Decode base64 if it was encoded before storing
+      const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+      const session = JSON.parse(decoded);
+      const phoneNumber = session.phoneNumber;
+
+      if (!phoneNumber) {
+        return [];
+      }
+
+      // Use the existing function to get appointments by phone
+      return await getMyAppointmentsByPhone(phoneNumber);
+    } catch (err) {
+      console.error("Failed to parse miniapp_session cookie:", err);
+      return [];
+    }
+  } catch (error) {
+    console.error('Failed to fetch mini app appointments:', error);
     return [];
   }
-
-  return await getMyAppointmentsByPhone(phoneFromCookie);
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {

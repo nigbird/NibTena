@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { startBookingProcess, initiateBookingAndPayment, type State } from './actions';
+import { startBookingProcess, initiateBookingAndPayment, type State, getPhoneNumberFromCookie } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -70,6 +70,7 @@ export default function BookingPage() {
     : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
 
   const initialState: State = { message: null, errors: {} };
   
@@ -79,6 +80,35 @@ export default function BookingPage() {
 
   const [state, dispatch] = useActionState<State, FormData>(actionToDispatch, initialState);
   const { toast } = useToast();
+  
+  // Fetch phone number from token when component mounts for mini app sessions
+  useEffect(() => {
+    if (isMiniApp) {
+      const fetchPhoneNumber = async () => {
+        try {
+          // Client-side approach to get phone from context
+          if (patient?.phone) {
+            setPhoneNumber(patient.phone);
+          } else if (superAppToken) {
+            // Try to extract from token if available
+            // This would typically be handled server-side
+            // For client-side, we're using the patient context
+            console.log('Using token to get phone number');
+            
+            // Use the getPhoneNumberFromCookie function if available
+            const phoneFromCookie = await getPhoneNumberFromCookie();
+            if (phoneFromCookie) {
+              setPhoneNumber(phoneFromCookie);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching phone number:', error);
+        }
+      };
+      
+      fetchPhoneNumber();
+    }
+  }, [isMiniApp, patient, superAppToken]);
   
   useEffect(() => {
     // This effect handles the outcome of BOTH flows
@@ -194,7 +224,15 @@ export default function BookingPage() {
                             <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
                               +251
                             </span>
-                            <Input id="phone" name="phone" placeholder="912345678" defaultValue={isBookingForSelf && patient ? patient.phone : ''} required className="rounded-l-none" readOnly={isMiniApp && isBookingForSelf} />
+                            <Input 
+                              id="phone" 
+                              name="phone" 
+                              placeholder="912345678" 
+                              defaultValue={isMiniApp ? phoneNumber : (isBookingForSelf ? (patient?.phone || '') : '')} 
+                              required 
+                              className="rounded-l-none" 
+                              readOnly={isMiniApp} 
+                            />
                           </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>

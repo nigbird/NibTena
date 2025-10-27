@@ -7,59 +7,84 @@ export async function POST(request: NextRequest) {
   console.log("📝 Request URL:", request.url);
   console.log("📝 Request method:", request.method);
   console.log("📝 Request headers:", Object.fromEntries(request.headers.entries()));
-  
+
   try {
     // ✅ Read Authorization header
     const authHeader = request.headers.get("Authorization");
     console.log("Auth header present:", !!authHeader);
-    
+
     if (!authHeader) {
       console.error("❌ Missing Authorization header.");
       return NextResponse.json({ message: "Missing Authorization header" }, { status: 400 });
     }
 
-    const authToken = authHeader.replace("Bearer ", "").trim();
-    console.log("Auth token extracted:", authToken ? "Present" : "Missing");
+    // Match: Bearer {token: <JWT>}
+    const match = authHeader.match(/Bearer\s*\{\s*token\s*:\s*([A-Za-z0-9\-_\.]+)\s*\}/);
+    const fixedAuthHeader = match ? match[1].trim() : null;
 
-    // ✅ Step 01 Validation: validate token with the bank's validation API
+    if (!fixedAuthHeader) {
+      console.error("❌ Could not extract token from Authorization header:", authHeader);
+      return NextResponse.json({ message: "Invalid Authorization header format" }, { status: 400 });
+    }
+
+    const fixedAuthHeader1 = `Bearer ${fixedAuthHeader}`;
+    console.log("✅ Extracted token:", fixedAuthHeader ? "Present" : "Missing");
+
+    // Continue with validation
     const VALIDATE_TOKEN_URL = process.env.VALIDATE_TOKEN_URL;
-    console.log("VALIDATE_TOKEN_URL:", VALIDATE_TOKEN_URL ? "Set" : "Missing");
-    
+    console.log("VALIDATE_TOKEN_URL:", VALIDATE_TOKEN_URL ? "Set" : "Not set");
+
     if (!VALIDATE_TOKEN_URL) {
       console.error("❌ VALIDATE_TOKEN_URL environment variable not set");
-      // Continue processing even if validation URL is missing in development
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         return NextResponse.json({ message: "Server configuration error" }, { status: 500 });
       }
       console.warn("⚠️ Skipping token validation in development mode");
     }
 
-    let validateData = { isValid: true };
-    
     if (VALIDATE_TOKEN_URL) {
       console.log("🔍 Validating token with bank API...");
+
       try {
-        const validateResponse = await fetch(VALIDATE_TOKEN_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: authToken }),
+        // Fix: Use the correct variable name (VALIDATE_TOKEN_URL)
+        let externalResponse = await fetch(VALIDATE_TOKEN_URL, {
+          method: "GET",
+          headers: {
+            Authorization: fixedAuthHeader1,
+            Accept: "application/json",
+          },
+          cache: "no-store",
         });
 
-        console.log("Validation response status:", validateResponse.status);
-        validateData = await validateResponse.json();
-        console.log("Validation response data:", validateData);
-        
-        if (!validateResponse.ok || !validateData.isValid) {
-          console.error("❌ Invalid authorization token:", validateData);
-          if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ message: "Invalid authorization token" }, { status: 400 });
-          }
-          console.warn("⚠️ Continuing with invalid token in development mode");
+        // Retry with POST if GET not allowed
+        if (externalResponse.status === 405) {
+          console.log("🔁 Retrying validation with POST method...");
+          externalResponse = await fetch(VALIDATE_TOKEN_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ token: fixedAuthHeader }),
+            cache: "no-store",
+          });
         }
+
+        console.log("Validation response status:", externalResponse.status);
+
+        const text = await externalResponse.text();
+        const validateData = text ? JSON.parse(text) : null;
+
+        if (!externalResponse.ok) {
+          console.error("❌ Token validation failed:", validateData || externalResponse.statusText);
+          return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+        }
+
+        console.log("✅ Token validated successfully:", validateData);
       } catch (error) {
-        console.error("❌ Error validating token:", error);
-        if (process.env.NODE_ENV === 'production') {
-          return NextResponse.json({ message: "Token validation failed" }, { status: 500 });
+        console.error("❌ Callback Error: Failed to call validation URL.", error);
+        if (process.env.NODE_ENV === "production") {
+          return NextResponse.json({ message: "Error validating token." }, { status: 500 });
         }
         console.warn("⚠️ Continuing after token validation error in development mode");
       }
@@ -72,7 +97,7 @@ export async function POST(request: NextRequest) {
       console.log("📦 Callback request body received:", requestBody);
     } catch (e) {
       console.error("❌ Callback Error: Invalid JSON in request body.", e);
-      return NextResponse.json({ message: "Error Occurred." }, { status: 400 });
+      return NextResponse.json({ message: "Invalid JSON in request body" }, { status: 400 });
     }
 
     const {
@@ -85,6 +110,7 @@ export async function POST(request: NextRequest) {
       token,
       Signature: receivedSignature,
     } = requestBody;
+
     console.log("📋 Extracted callback data:", {
       paidAmount,
       paidByNumber,
@@ -93,60 +119,31 @@ export async function POST(request: NextRequest) {
       transactionTime,
       accountNo,
       token: token ? "Present" : "Missing",
-      receivedSignature: receivedSignature ? "Present" : "Missing"
+      receivedSignature: receivedSignature ? "Present" : "Missing",
     });
+
     // ✅ Check required fields
     const missingFields = [];
-    if (!paidAmount) missingFields.push('paidAmount');
-    if (!paidByNumber) missingFields.push('paidByNumber');
-    if (!txnRef) missingFields.push('txnRef');
-    if (!transactionId) missingFields.push('transactionId');
-    if (!transactionTime) missingFields.push('transactionTime');
-    if (!accountNo) missingFields.push('accountNo');
-    if (!token) missingFields.push('token');
-    
+    if (!paidAmount) missingFields.push("paidAmount");
+    if (!paidByNumber) missingFields.push("paidByNumber");
+    if (!txnRef) missingFields.push("txnRef");
+    if (!transactionId) missingFields.push("transactionId");
+    if (!transactionTime) missingFields.push("transactionTime");
+    if (!accountNo) missingFields.push("accountNo");
+    if (!token) missingFields.push("token");
+
     if (missingFields.length > 0) {
       console.error("❌ Missing required fields in callback body:", missingFields);
-      return NextResponse.json({ message: `Missing required fields: ${missingFields.join(', ')}` }, { status: 400 });
+      return NextResponse.json(
+        { message: `Missing required fields: ${missingFields.join(", ")}` },
+        { status: 400 }
+      );
     }
 
-    // ✅ Validate the `token` inside the payload (per Step 01 again)
-    let tokenData = { isValid: true };
-    
-    if (VALIDATE_TOKEN_URL && token) {
-      console.log("🔍 Validating inner token from callback body...");
-      try {
-        const innerTokenValidation = await fetch(VALIDATE_TOKEN_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
 
-        console.log("Inner token validation status:", innerTokenValidation.status);
-        tokenData = await innerTokenValidation.json();
-        console.log("Inner token validation data:", tokenData);
-        
-        if (!innerTokenValidation.ok || !tokenData.isValid) {
-          console.error("❌ Invalid inner token in callback body:", tokenData);
-          if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ message: "Invalid inner token" }, { status: 400 });
-          }
-          console.warn("⚠️ Continuing with invalid inner token in development mode");
-        }
-      } catch (error) {
-        console.error("❌ Error validating inner token:", error);
-        if (process.env.NODE_ENV === 'production') {
-          return NextResponse.json({ message: "Inner token validation failed" }, { status: 500 });
-        }
-        console.warn("⚠️ Continuing after inner token validation error in development mode");
-      }
-    }
-
-    // ✅ Process: Find and update appointment
+    // ✅ Process appointment update
     console.log("🔍 Looking for appointment with transactionId:", transactionId);
-    const appointment = await prisma.appointment.findUnique({
-      where: { transactionId },
-    });
+    const appointment = await prisma.appointment.findUnique({ where: { transactionId:txnRef } });
 
     if (!appointment) {
       console.error("❌ Appointment not found for transaction:", transactionId);
@@ -157,7 +154,7 @@ export async function POST(request: NextRequest) {
       id: appointment.id,
       status: appointment.status,
       patientId: appointment.patientId,
-      doctorId: appointment.doctorId
+      doctorId: appointment.doctorId,
     });
 
     console.log("💾 Updating appointment status to 'paid'...");
@@ -171,10 +168,11 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Payment confirmed for transaction:", transactionId);
 
-    // ✅ Respond success per Step 5
+    // ✅ Respond success
     return NextResponse.json({ message: "Payment confirmed and updated." }, { status: 200 });
   } catch (error) {
     console.error("❌ Callback server error:", error);
     return NextResponse.json({ message: "Server error during callback." }, { status: 500 });
   }
 }
+

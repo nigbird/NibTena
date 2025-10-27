@@ -122,17 +122,57 @@ export default function BookingPage() {
               description: "Please complete your payment in the Super App.",
             });
             (window as any).myJsChannel.postMessage({ token: state.paymentToken });
-            // The super app will handle the rest. We might want to poll for status here.
-            // For now, we assume the callback will update the status.
-            // We can redirect the user to their appointments page after a delay.
-            setTimeout(() => {
-                if (patient?.id) {
-                    router.push(`/user/appointments?patientId=${patient.id}`);
-                } else {
-                    // Fallback if patient id isn't ready
-                    router.push(`/user/appointments`);
+            
+            // Start polling for appointment status
+            const transactionId = state.transactionId;
+            if (transactionId) {
+              let attempts = 0;
+              const maxAttempts = 10;
+              const pollInterval = setInterval(async () => {
+                try {
+                  attempts++;
+                  const response = await fetch(`/api/appointments/status?transactionId=${transactionId}`);
+                  const data = await response.json();
+                  
+                  if (data.status === 'paid') {
+                    clearInterval(pollInterval);
+                    toast({
+                      title: "Payment Successful",
+                      description: "Your appointment has been confirmed!",
+                    });
+                    
+                    // Redirect to appointments page
+                    if (patient?.id) {
+                      router.push(`/user/appointments?patientId=${patient.id}`);
+                    } else {
+                      router.push(`/user/appointments`);
+                    }
+                  } else if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    // Redirect anyway after max attempts
+                    if (patient?.id) {
+                      router.push(`/user/appointments?patientId=${patient.id}`);
+                    } else {
+                      router.push(`/user/appointments`);
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error polling appointment status:", error);
+                  if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                  }
                 }
-            }, 3000);
+              }, 2000);
+            } else {
+              // Fallback to simple timeout if no transactionId
+              setTimeout(() => {
+                if (patient?.id) {
+                  router.push(`/user/appointments?patientId=${patient.id}`);
+                } else {
+                  router.push(`/user/appointments`);
+                }
+              }, 5000);
+            }
           } else {
             console.error("NIB Super App channel (window.myJsChannel) not found.");
             toast({

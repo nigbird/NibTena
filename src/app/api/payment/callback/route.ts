@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 // Step 5: Callback endpoint for successful payments
 export async function POST(request: NextRequest) {
   console.log("🔔 Payment callback received");
+  console.log("📝 Request URL:", request.url);
+  console.log("📝 Request method:", request.method);
+  console.log("📝 Request headers:", Object.fromEntries(request.headers.entries()));
   
   try {
     // ✅ Read Authorization header
@@ -24,23 +27,42 @@ export async function POST(request: NextRequest) {
     
     if (!VALIDATE_TOKEN_URL) {
       console.error("❌ VALIDATE_TOKEN_URL environment variable not set");
-      return NextResponse.json({ message: "Server configuration error" }, { status: 500 });
+      // Continue processing even if validation URL is missing in development
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ message: "Server configuration error" }, { status: 500 });
+      }
+      console.warn("⚠️ Skipping token validation in development mode");
     }
 
-    console.log("🔍 Validating token with bank API...");
-    const validateResponse = await fetch(VALIDATE_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: authToken }),
-    });
-
-    console.log("Validation response status:", validateResponse.status);
-    const validateData = await validateResponse.json();
-    console.log("Validation response data:", validateData);
+    let validateData = { isValid: true };
     
-    if (!validateResponse.ok || !validateData.isValid) {
-      console.error("❌ Invalid authorization token:", validateData);
-      return NextResponse.json({ message: "Invalid authorization token" }, { status: 400 });
+    if (VALIDATE_TOKEN_URL) {
+      console.log("🔍 Validating token with bank API...");
+      try {
+        const validateResponse = await fetch(VALIDATE_TOKEN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: authToken }),
+        });
+
+        console.log("Validation response status:", validateResponse.status);
+        validateData = await validateResponse.json();
+        console.log("Validation response data:", validateData);
+        
+        if (!validateResponse.ok || !validateData.isValid) {
+          console.error("❌ Invalid authorization token:", validateData);
+          if (process.env.NODE_ENV === 'production') {
+            return NextResponse.json({ message: "Invalid authorization token" }, { status: 400 });
+          }
+          console.warn("⚠️ Continuing with invalid token in development mode");
+        }
+      } catch (error) {
+        console.error("❌ Error validating token:", error);
+        if (process.env.NODE_ENV === 'production') {
+          return NextResponse.json({ message: "Token validation failed" }, { status: 500 });
+        }
+        console.warn("⚠️ Continuing after token validation error in development mode");
+      }
     }
 
     // ✅ Parse the JSON body
@@ -89,20 +111,35 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ Validate the `token` inside the payload (per Step 01 again)
-    console.log("🔍 Validating inner token from callback body...");
-    const innerTokenValidation = await fetch(VALIDATE_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-
-    console.log("Inner token validation status:", innerTokenValidation.status);
-    const tokenData = await innerTokenValidation.json();
-    console.log("Inner token validation data:", tokenData);
+    let tokenData = { isValid: true };
     
-    if (!innerTokenValidation.ok || !tokenData.isValid) {
-      console.error("❌ Invalid inner token in callback body:", tokenData);
-      return NextResponse.json({ message: "Invalid inner token" }, { status: 400 });
+    if (VALIDATE_TOKEN_URL && token) {
+      console.log("🔍 Validating inner token from callback body...");
+      try {
+        const innerTokenValidation = await fetch(VALIDATE_TOKEN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+
+        console.log("Inner token validation status:", innerTokenValidation.status);
+        tokenData = await innerTokenValidation.json();
+        console.log("Inner token validation data:", tokenData);
+        
+        if (!innerTokenValidation.ok || !tokenData.isValid) {
+          console.error("❌ Invalid inner token in callback body:", tokenData);
+          if (process.env.NODE_ENV === 'production') {
+            return NextResponse.json({ message: "Invalid inner token" }, { status: 400 });
+          }
+          console.warn("⚠️ Continuing with invalid inner token in development mode");
+        }
+      } catch (error) {
+        console.error("❌ Error validating inner token:", error);
+        if (process.env.NODE_ENV === 'production') {
+          return NextResponse.json({ message: "Inner token validation failed" }, { status: 500 });
+        }
+        console.warn("⚠️ Continuing after inner token validation error in development mode");
+      }
     }
 
     // ✅ Process: Find and update appointment

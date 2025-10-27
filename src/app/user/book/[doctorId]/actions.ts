@@ -293,10 +293,11 @@ export async function initiateBookingAndPayment(
     });
     
     // Use superAppToken consistently for both signature and payload
+    const cleanCallbackURL = CALLBACK_URL?.trim();
     const signatureString = [
       `accountNo=${ACCOUNT_NO}`,
       `amount=${amount}`,
-      `callBackURL=${CALLBACK_URL}`,
+      `callBackURL=${cleanCallbackURL}`,
       `companyName=${COMPANY_NAME}`,
       `Key=${NIB_PAYMENT_KEY}`,
       `token=${authToken}`,
@@ -311,7 +312,7 @@ export async function initiateBookingAndPayment(
     const payload = {
         accountNo: ACCOUNT_NO,
         amount: String(amount),
-        callBackURL: CALLBACK_URL,
+        callBackURL: CALLBACK_URL?.trim(), // Trim any extra spaces
         companyName: COMPANY_NAME,
         token: authToken,
         transactionId: transactionId,

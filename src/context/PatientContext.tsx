@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -30,66 +29,82 @@ type PatientProviderProps = {
   initialSuperAppToken: string | undefined;
 };
 
-export const PatientProvider = ({ children, initialPatient, initialSuperAppToken }: PatientProviderProps) => {
+export const PatientProvider = ({
+  children,
+  initialPatient,
+  initialSuperAppToken,
+}: PatientProviderProps) => {
   const [patient, setPatientState] = useState<Patient | null>(initialPatient);
-  const [superAppToken] = useState<string | null>(initialSuperAppToken || null);
+  const [superAppToken, setSuperAppToken] = useState<string | null>(initialSuperAppToken || null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // This effect runs only once on the client to initialize the session.
     if (initialSuperAppToken) {
-      // Mini App session is prioritized and driven by the server-side cookie.
-      // The initialPatient prop will be set correctly.
+      /**
+       * MINI APP MODE:
+       * Token and patient are managed by the SuperApp and provided via cookies.
+       * No localStorage usage.
+       */
       setPatientState(initialPatient);
+      setSuperAppToken(initialSuperAppToken);
     } else {
-      // For standalone web, try to load from localStorage.
+      /**
+       * STANDALONE WEB MODE:
+       * Manage session using localStorage.
+       */
       try {
         const storedSessionJSON = localStorage.getItem(SESSION_KEY);
         if (storedSessionJSON) {
           const storedSession: StoredSession = JSON.parse(storedSessionJSON);
-          // Check if the session is expired
-          if (new Date().getTime() < storedSession.expiry) {
+          if (Date.now() < storedSession.expiry) {
             setPatientState(storedSession.patient);
           } else {
-            // Clear expired session
             localStorage.removeItem(SESSION_KEY);
           }
         }
-      } catch (error) {
-        console.error("Could not parse patient session from localStorage", error);
+      } catch (err) {
+        console.error('Failed to load patient session:', err);
         localStorage.removeItem(SESSION_KEY);
       }
     }
+
     setIsInitialized(true);
   }, [initialPatient, initialSuperAppToken]);
 
-  const handleSetPatient = useCallback((newPatient: Patient | null) => {
-    // This function is the single point of truth for setting the patient state.
-    setPatientState(newPatient);
+  const handleSetPatient = useCallback(
+    (newPatient: Patient | null) => {
+      setPatientState(newPatient);
 
-    // Don't use localStorage for mini-app sessions
-    if (initialSuperAppToken) return;
+      // MINI APP → cookies handle persistence, do nothing
+      if (superAppToken) return;
 
-    if (newPatient) {
-      // Set new session with expiry
-      const session: StoredSession = {
-        patient: newPatient,
-        expiry: new Date().getTime() + SESSION_DURATION_MS,
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } else {
-      // Clear session on logout
-      localStorage.removeItem(SESSION_KEY);
-    }
-  }, [initialSuperAppToken]);
-  
+      // STANDALONE WEB → persist to localStorage
+      if (newPatient) {
+        const session: StoredSession = {
+          patient: newPatient,
+          expiry: Date.now() + SESSION_DURATION_MS,
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      } else {
+        localStorage.removeItem(SESSION_KEY);
+      }
+    },
+    [superAppToken]
+  );
+
   if (!isInitialized) {
-      // Prevents a flash of incorrect UI while session is being determined.
-      return null;
+    // Avoids flicker before determining session source
+    return null;
   }
 
   return (
-    <PatientContext.Provider value={{ patient, setPatient: handleSetPatient, superAppToken }}>
+    <PatientContext.Provider
+      value={{
+        patient,
+        setPatient: handleSetPatient,
+        superAppToken,
+      }}
+    >
       {children}
     </PatientContext.Provider>
   );

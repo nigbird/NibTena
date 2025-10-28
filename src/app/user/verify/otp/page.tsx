@@ -25,7 +25,7 @@ function OtpForm() {
     const phone = searchParams.get('phone');
     const bookingDataString = searchParams.get('bookingData');
     const isBooking = !!bookingDataString;
-    // Capture the URL the user was on before being sent to the OTP page
+    // Capture the URL the user was on before being sent to the OTP page, default to appointments
     const redirectUrl = searchParams.get('redirectUrl') || '/user/appointments';
     
     const { setPatient } = useContext(PatientContext);
@@ -145,7 +145,7 @@ function OtpForm() {
                     </div>
                     <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
                     <CardDescription>
-                        We've sent a 6-digit code to +251{phone}. Please check the notification.
+                        We've sent a 6-digit code to +251{phone}. Please check your messages.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -174,7 +174,7 @@ function OtpForm() {
                             })}
                         </div>
                         </div>
-                        <Button type="submit" className="w-full" variant="accent" disabled={isVerifying}>
+                        <Button type="submit" className="w-full" variant="accent" disabled={isVerifying || otp.join('').length < 6}>
                             {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Continue'}
                         </Button>
                     </form>

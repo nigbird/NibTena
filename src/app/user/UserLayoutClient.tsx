@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useContext } from 'react';
 import { PatientContext } from '@/context/PatientContext';
+import Link from 'next/link';
 
 const pageTitles: { [key: string]: string } = {
   '/user': 'Home',
@@ -26,6 +27,8 @@ const getTitleForPath = (path: string) => {
   if (path.startsWith('/user/book/')) return 'Book Appointment';
   if (path.startsWith('/user/search')) return 'Search Results';
   if (path.startsWith('/user/confirmation')) return 'Confirmation';
+  if (path.startsWith('/user/verify/otp')) return 'Verify Account';
+  if (path.startsWith('/user/profile/setup')) return 'Edit Profile';
   return 'NibTena';
 };
 
@@ -43,10 +46,11 @@ export default function UserLayoutClient({
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
-  // When in Mini App, we don't show the regular user profile/login.
+  // Determine if the user is authenticated either via NextAuth or our patient context
   const isAuthenticated = !!session?.user || !!patient;
-  const showUserProfile = !hasMiniAppSession && !isAuthenticated;
-  const showLoginButton = !hasMiniAppSession && !isAuthenticated;
+  
+  // The login button should only show for standalone web users who are not logged in.
+  const showLoginButton = !hasMiniAppSession && !isAuthenticated && isHomePage;
 
 
   return (
@@ -59,9 +63,7 @@ export default function UserLayoutClient({
                  {hasMiniAppSession ? (
                     <>
                       <Avatar className="h-10 w-10 border">
-                        <AvatarFallback>
-                          <User />
-                        </AvatarFallback>
+                         {patient?.name && <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>}
                       </Avatar>
                       <div>
                         <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
@@ -78,7 +80,7 @@ export default function UserLayoutClient({
                         />
                         ) : null}
                         <AvatarFallback>
-                        <User />
+                          {patient?.name ? patient.name.charAt(0) : <User />}
                         </AvatarFallback>
                     </Avatar>
                     <div>
@@ -116,7 +118,7 @@ export default function UserLayoutClient({
             
             {showLoginButton && (
               <Button asChild variant="outline" size="sm">
-                Login
+                <Link href="/user/profile">Login</Link>
               </Button>
             )}
           </div>

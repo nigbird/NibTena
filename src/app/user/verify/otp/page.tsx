@@ -110,16 +110,21 @@ function OtpForm() {
                 return;
             }
             
+            // Set the patient in the global context, which also saves to localStorage
             setPatient(result.patient);
-            toast({
-                title: "✅ Phone Verified",
-                description: isBooking ? "Finalizing your booking..." : "You are now logged in.",
-            });
 
             if (isBooking && bookingDataString) {
-                const bookingData = JSON.parse(bookingDataString);
-                await completeBooking(bookingData);
+                 toast({
+                    title: "✅ Phone Verified",
+                    description: "Finalizing your booking...",
+                });
+                await completeBooking(JSON.parse(bookingDataString));
+                // completeBooking will handle the final redirect
             } else {
+                toast({
+                    title: "✅ Login Successful",
+                    description: "You are now logged in.",
+                });
                 // Not a booking flow, redirect to the original page or appointments as a fallback
                 router.push(redirectUrl);
             }

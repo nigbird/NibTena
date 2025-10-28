@@ -18,8 +18,6 @@ export default function ProfilePage() {
   const handleLogout = () => {
     // Clear the patient from context to log them out
     setPatient(null);
-    // In a real app with server-side sessions, you would also call a sign-out API endpoint.
-    // For this OTP-based flow, clearing client state is sufficient.
     router.push('/user');
   };
 

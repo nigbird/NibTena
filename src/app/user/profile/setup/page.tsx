@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useContext, useEffect } from 'react';
@@ -18,6 +19,7 @@ import { User, Loader2 } from 'lucide-react';
 import { PatientContext } from '@/context/PatientContext';
 import { updatePatientProfile, type ProfileSetupState } from './actions';
 import { useFormStatus } from 'react-dom';
+import type { Patient } from '@/lib/definitions';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -38,7 +40,7 @@ function SubmitButton() {
 export default function ProfileSetupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { patient } = useContext(PatientContext);
+  const { patient, setPatient } = useContext(PatientContext);
 
   const initialState: ProfileSetupState = {
     message: null,
@@ -46,11 +48,20 @@ export default function ProfileSetupPage() {
     success: false,
   };
 
-  // ✅ Correct useActionState signature (prevState, formData)
   const [state, dispatch] = useActionState(
     async (prevState: ProfileSetupState, formData: FormData) => {
       if (!patient) return prevState;
-      return await updatePatientProfile(patient.id, formData);
+      const result = await updatePatientProfile(patient.id, formData);
+      // After a successful DB update, update the client-side context
+      if (result.success) {
+        setPatient({
+          ...patient,
+          name: formData.get('name') as string,
+          age: Number(formData.get('age')),
+          gender: formData.get('gender') as 'male' | 'female',
+        });
+      }
+      return result;
     },
     initialState
   );

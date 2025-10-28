@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useState, useRef, useEffect, useTransition } from 'react';
+import { Suspense, useState, useRef, useEffect, useTransition, useContext } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { completeBooking } from '../../book/[doctorId]/actions';
 import { verifyOtpAndGetPatient, generateAndSendOtp } from '@/app/user/appointments/actions';
+import { PatientContext } from '@/context/PatientContext';
 
 function OtpForm() {
     const searchParams = useSearchParams();
@@ -24,6 +25,7 @@ function OtpForm() {
     const phone = searchParams.get('phone');
     const bookingDataString = searchParams.get('bookingData');
     const isBooking = !!bookingDataString;
+    const { setPatient } = useContext(PatientContext);
 
     const { toast } = useToast();
 
@@ -97,7 +99,7 @@ function OtpForm() {
        startVerification(async () => {
             const result = await verifyOtpAndGetPatient(phone, enteredOtp);
 
-            if (!result.success) {
+            if (!result.success || !result.patient) {
                 toast({
                     variant: "destructive",
                     title: "Invalid Code",
@@ -106,19 +108,21 @@ function OtpForm() {
                 return;
             }
             
+            setPatient(result.patient);
             toast({
                 title: "✅ Phone Verified",
-                description: isBooking ? "Finalizing your booking..." : "Accessing your appointments...",
+                description: isBooking ? "Finalizing your booking..." : "You are now logged in.",
             });
 
             if (isBooking && bookingDataString) {
                 const bookingData = JSON.parse(bookingDataString);
-                // The completeBooking action now handles the redirect, so we just await it.
-                // It will redirect to the appointments page with the patientId.
                 await completeBooking(bookingData);
+            } else if (result.patient.name.startsWith('Patient ')) {
+                // If it's a new user (default name), guide them to setup their profile.
+                router.push('/user/profile/setup');
             } else {
-                // If not booking, redirect to appointments page with patientId
-                router.push(`/user/appointments?patientId=${result.patient?.id}`);
+                // If existing user, take them to their appointments.
+                router.push(`/user/appointments`);
             }
        });
     }

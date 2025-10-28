@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PatientContext } from '@/context/PatientContext';
+import PatientAuth from '../appointments/PatientAuth';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -24,26 +25,8 @@ export default function ProfilePage() {
 
   if (!patient) {
     return (
-        <div className="flex min-h-[80vh] items-center justify-center p-4">
-            <Card className="w-full max-w-md shadow-lg text-center">
-                <CardHeader>
-                    <div className="inline-block mx-auto rounded-full bg-muted p-4">
-                        <User className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    <CardTitle className="font-headline text-2xl pt-4">My Profile</CardTitle>
-                    <CardDescription>
-                        Log in to view and manage your profile information.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        It looks like you're not logged in. Please verify your phone number to access your profile.
-                    </p>
-                    <Button asChild variant="accent">
-                        <Link href="/user/appointments">Log In / Sign Up</Link>
-                    </Button>
-                </CardContent>
-            </Card>
+        <div className="p-4">
+           <PatientAuth />
         </div>
     );
   }

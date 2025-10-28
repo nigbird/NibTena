@@ -22,8 +22,8 @@ export default function PatientAuth() {
     const formData = new FormData(event.currentTarget);
     const phoneInput = formData.get('phone') as string;
 
-    if (!phoneInput || phoneInput.length !== 9) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid 9-digit phone number.' });
+    if (!phoneInput || phoneInput.length < 9) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid phone number.' });
       return;
     }
 
@@ -39,6 +39,8 @@ export default function PatientAuth() {
         }
         const params = new URLSearchParams(searchParams);
         params.set('phone', phoneInput);
+        // We no longer need to pass bookingData, the OTP page will handle the redirect logic
+        params.delete('bookingData'); 
         router.push(`/user/verify/otp?${params.toString()}`);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
@@ -53,9 +55,9 @@ export default function PatientAuth() {
           <div className="inline-block mx-auto rounded-full bg-primary p-3 ring-4 ring-background">
             <Phone className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="font-headline text-2xl pt-2">Verify to See Bookings</CardTitle>
+          <CardTitle className="font-headline text-2xl pt-2">Verify Your Account</CardTitle>
           <CardDescription>
-            Enter your phone number to receive a one-time verification code.
+            Enter your phone number to sign in or create an account.
           </CardDescription>
         </CardHeader>
         <CardContent>

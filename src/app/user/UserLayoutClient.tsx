@@ -8,6 +8,8 @@ import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useContext } from 'react';
+import { PatientContext } from '@/context/PatientContext';
 
 const pageTitles: { [key: string]: string } = {
   '/user': 'Home',
@@ -37,12 +39,14 @@ export default function UserLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const { patient } = useContext(PatientContext);
   const isHomePage = pathname === '/user';
   const pageTitle = getTitleForPath(pathname);
 
   // When in Mini App, we don't show the regular user profile/login.
-  const showUserProfile = !hasMiniAppSession && !session?.user;
-  const showLoginButton = !hasMiniAppSession && !session?.user;
+  const isAuthenticated = !!session?.user || !!patient;
+  const showUserProfile = !hasMiniAppSession && !isAuthenticated;
+  const showLoginButton = !hasMiniAppSession && !isAuthenticated;
 
 
   return (
@@ -53,7 +57,17 @@ export default function UserLayoutClient({
               // Mini App session present
               <div className="flex items-center gap-3">
                  {hasMiniAppSession ? (
-                    <p className="font-semibold text-foreground">Hi, Welcome!</p>
+                    <>
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarFallback>
+                          <User />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
+                        <p className="font-semibold text-foreground">{patient?.name || ''}</p>
+                      </div>
+                    </>
                  ) : (
                     <>
                     <Avatar className="h-10 w-10 border">
@@ -69,9 +83,7 @@ export default function UserLayoutClient({
                     </Avatar>
                     <div>
                         <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
-                        <p className="font-semibold text-foreground">
-                        {session?.user?.name || 'Guest'}
-                        </p>
+                        <p className="font-semibold text-foreground">{patient?.name || session?.user?.name || 'Guest'}</p>
                     </div>
                     </>
                  )}
@@ -101,6 +113,7 @@ export default function UserLayoutClient({
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            
             {showLoginButton && (
               <Button asChild variant="outline" size="sm">
                 Login

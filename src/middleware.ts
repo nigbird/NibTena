@@ -16,7 +16,7 @@ export default auth((req: NextRequest) => {
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
     style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
     style-src-attr 'unsafe-inline';
-    img-src 'self' data: blob: /api/uploads/ https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
+    img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com;
     font-src 'self' https://fonts.gstatic.com;
     connect-src 'self';
     frame-ancestors 'none';

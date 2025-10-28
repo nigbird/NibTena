@@ -42,7 +42,7 @@ export default function ProfilePage() {
             </AvatarFallback>
           </Avatar>
           <CardTitle className="font-headline text-2xl">{patient.name}</CardTitle>
-          <CardDescription>+251 {patient.phone}</CardDescription>
+          <CardDescription>{patient.phone}</CardDescription>
         </CardHeader>
         <CardContent className="mt-4 flex flex-col gap-2">
           <Button variant="outline" asChild>

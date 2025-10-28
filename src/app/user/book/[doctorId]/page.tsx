@@ -81,24 +81,16 @@ export default function BookingPage() {
   const [state, dispatch] = useActionState<State, FormData>(actionToDispatch, initialState);
   const { toast } = useToast();
   
-  // Fetch phone number from token when component mounts for mini app sessions
   useEffect(() => {
     if (isMiniApp) {
       const fetchPhoneNumber = async () => {
         try {
-          // Client-side approach to get phone from context
           if (patient?.phone) {
-            setPhoneNumber(patient.phone);
+            setPhoneNumber(patient.phone.replace('+251', ''));
           } else if (superAppToken) {
-            // Try to extract from token if available
-            // This would typically be handled server-side
-            // For client-side, we're using the patient context
-            console.log('Using token to get phone number');
-            
-            // Use the getPhoneNumberFromCookie function if available
             const phoneFromCookie = await getPhoneNumberFromCookie();
             if (phoneFromCookie) {
-              setPhoneNumber(phoneFromCookie);
+              setPhoneNumber(phoneFromCookie.replace('+251', ''));
             }
           }
         } catch (error) {
@@ -111,23 +103,20 @@ export default function BookingPage() {
   }, [isMiniApp, patient, superAppToken]);
   
   useEffect(() => {
-    // This effect handles the outcome of BOTH flows
     if (state?.success) {
       if (isMiniApp) {
-        // Step 4: Handle payment token for Mini App
         if (state.paymentToken) {
           if (typeof window !== 'undefined' && (window as any).myJsChannel?.postMessage) {
             toast({
               title: "Redirecting to Payment",
               description: "Please complete your payment in the Super App.",
             });
-            (window as any).myJsChannel.postMessage({ token: state.paymentToken });
+            (window as any).myJsChannel.postMessage(JSON.stringify({ token: state.paymentToken }));
             
-            // Start polling for appointment status
             const transactionId = state.transactionId;
             if (transactionId) {
               let attempts = 0;
-              const maxAttempts = 10;
+              const maxAttempts = 15; // Poll for 30 seconds
               const pollInterval = setInterval(async () => {
                 try {
                   attempts++;
@@ -141,37 +130,27 @@ export default function BookingPage() {
                       description: "Your appointment has been confirmed!",
                     });
                     
-                    // Redirect to appointments page
-                    if (patient?.id) {
-                      router.push(`/user/appointments?patientId=${patient.id}`);
-                    } else {
-                      router.push(`/user/appointments`);
-                    }
+                    const redirectUrl = patient?.id ? `/user/appointments?patientId=${patient.id}&success=true` : '/user/appointments?success=true';
+                    router.push(redirectUrl);
+
                   } else if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
-                    // Redirect anyway after max attempts
-                    if (patient?.id) {
-                      router.push(`/user/appointments?patientId=${patient.id}`);
-                    } else {
-                      router.push(`/user/appointments`);
-                    }
+                    toast({
+                      variant: "destructive",
+                      title: "Payment Verification Timed Out",
+                      description: "Please check your appointments list later to see if your booking was confirmed.",
+                    });
+                     const redirectUrl = patient?.id ? `/user/appointments?patientId=${patient.id}` : '/user/appointments';
+                     router.push(redirectUrl);
                   }
                 } catch (error) {
                   console.error("Error polling appointment status:", error);
                   if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
+                    router.push('/user');
                   }
                 }
               }, 2000);
-            } else {
-              // Fallback to simple timeout if no transactionId
-              setTimeout(() => {
-                if (patient?.id) {
-                  router.push(`/user/appointments?patientId=${patient.id}`);
-                } else {
-                  router.push(`/user/appointments`);
-                }
-              }, 5000);
             }
           } else {
             console.error("NIB Super App channel (window.myJsChannel) not found.");
@@ -182,8 +161,7 @@ export default function BookingPage() {
             });
           }
         }
-      } else {
-        // Handle OTP for Standalone App
+      } else { // Standalone app flow
         if (state.otp && state.data) {
           toast({
             title: 'OTP For Testing',
@@ -192,7 +170,6 @@ export default function BookingPage() {
           });
 
           const bookingDetails = {
-            // ... (rest of the data as before)
             phone: state.data.phone,
             symptoms: state.data.symptoms,
             doctorId,
@@ -268,10 +245,10 @@ export default function BookingPage() {
                               id="phone" 
                               name="phone" 
                               placeholder="912345678" 
-                              defaultValue={isMiniApp ? phoneNumber : (isBookingForSelf ? (patient?.phone || '') : '')} 
+                              defaultValue={isBookingForSelf ? phoneNumber : ''}
                               required 
                               className="rounded-l-none" 
-                              readOnly={isMiniApp} 
+                              readOnly={isBookingForSelf && isMiniApp}
                             />
                           </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}

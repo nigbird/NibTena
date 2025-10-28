@@ -31,14 +31,15 @@ type PatientProviderProps = {
 };
 
 export const PatientProvider = ({ children, initialPatient, initialSuperAppToken }: PatientProviderProps) => {
-  const [patient, setPatientState] = useState<Patient | null>(null);
+  const [patient, setPatientState] = useState<Patient | null>(initialPatient);
   const [superAppToken] = useState<string | null>(initialSuperAppToken || null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // This effect runs only once on the client to initialize the session.
-    if (initialSuperAppToken && initialPatient) {
+    if (initialSuperAppToken) {
       // Mini App session is prioritized and driven by the server-side cookie.
+      // The initialPatient prop will be set correctly.
       setPatientState(initialPatient);
     } else {
       // For standalone web, try to load from localStorage.
@@ -83,6 +84,7 @@ export const PatientProvider = ({ children, initialPatient, initialSuperAppToken
   }, [initialSuperAppToken]);
   
   if (!isInitialized) {
+      // Prevents a flash of incorrect UI while session is being determined.
       return null;
   }
 

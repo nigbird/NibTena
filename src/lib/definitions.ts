@@ -43,7 +43,7 @@ export type Patient = {
   name: string;
   email?: string | null;
   age?: number | null;
-  gender?: string | null;
+  gender?: 'male' | 'female' | null;
 };
 
 export type Appointment = {

@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -10,8 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
     }
     
-    // Find appointment by transaction ID
-    const appointment = await prisma.appointment.findUnique({
+    const appointment = await prisma.appointment.findFirst({
       where: { transactionId },
       select: {
         id: true,
@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     });
     
     if (!appointment) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+      // It's not an error if not found yet, just means payment isn't confirmed.
+      // Return a specific status to indicate it's still pending.
+      return NextResponse.json({ status: 'pending-payment' }, { status: 200 });
     }
     
     return NextResponse.json({

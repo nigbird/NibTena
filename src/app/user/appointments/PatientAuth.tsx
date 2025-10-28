@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { generateAndSendOtp } from './actions';
 
 export default function PatientAuth() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -39,8 +40,8 @@ export default function PatientAuth() {
         }
         const params = new URLSearchParams(searchParams);
         params.set('phone', phoneInput);
-        // We no longer need to pass bookingData, the OTP page will handle the redirect logic
-        params.delete('bookingData'); 
+        // Pass the current path as the redirectUrl
+        params.set('redirectUrl', pathname); 
         router.push(`/user/verify/otp?${params.toString()}`);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });

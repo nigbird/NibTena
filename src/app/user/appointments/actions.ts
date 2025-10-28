@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/prisma';
 import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
+import type { Patient } from '@/lib/definitions';
 
 export async function getMyAppointments(patientId: number) {
   if (!patientId) return [];
@@ -92,18 +93,19 @@ export async function getMyAppointmentsForMiniApp() {
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {
-    if (!phone || phone.length !== 9) {
+    if (!phone || phone.length < 9) {
         return { success: false, message: 'Invalid 9-digit phone number.' };
     }
+    const fullPhone = `+251${phone}`;
     try {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
         await prisma.otp.create({
-            data: { phone, code, expiresAt },
+            data: { phone: fullPhone, code, expiresAt },
         });
 
-        console.log(`OTP for ${phone} is: ${code}`); // For testing purposes.
+        console.log(`OTP for ${fullPhone} is: ${code}`); // For testing purposes.
         return { success: true, message: `An OTP has been sent.`, otp: code };
     } catch (error) {
         console.error("OTP generation failed:", error);
@@ -111,14 +113,15 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
     }
 }
 
-export async function verifyOtpAndGetPatient(phone: string, code: string) {
-    if (!phone || phone.length !== 9) {
+export async function verifyOtpAndGetPatient(phone: string, code: string): Promise<{ success: boolean; message: string; patient?: Patient | null;}> {
+    if (!phone || phone.length < 9) {
         return { success: false, message: 'Invalid phone number format for verification.' };
     }
+    const fullPhone = `+251${phone}`;
     try {
         const otpRecord = await prisma.otp.findFirst({
             where: {
-                phone,
+                phone: fullPhone,
                 code,
                 expiresAt: {
                     gt: new Date(),
@@ -130,25 +133,22 @@ export async function verifyOtpAndGetPatient(phone: string, code: string) {
             return { success: false, message: 'Invalid or expired OTP.' };
         }
 
-        // OTP is valid, delete it so it can't be reused
         await prisma.otp.delete({ where: { id: otpRecord.id } });
         
-        const patient = await prisma.patient.findUnique({
-            where: { phone }
+        let patient = await prisma.patient.findUnique({
+            where: { phone: fullPhone }
         });
         
         if (!patient) {
-            // If patient doesn't exist, create one. This is for users who want to see appointments but haven't booked one yet.
-            const newPatient = await prisma.patient.create({
+            patient = await prisma.patient.create({
                 data: {
-                    phone,
-                    name: `Patient ${phone.substring(0,4)}`, // Default name
+                    phone: fullPhone,
+                    name: `Patient ${phone.substring(5)}`, // Default name using last 4 digits
                 }
             });
-             return { success: true, patient: newPatient };
         }
         
-        return { success: true, patient };
+        return { success: true, message: "Verification successful.", patient };
 
     } catch (error) {
         console.error("OTP verification failed:", error);

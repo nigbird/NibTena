@@ -25,6 +25,9 @@ function OtpForm() {
     const phone = searchParams.get('phone');
     const bookingDataString = searchParams.get('bookingData');
     const isBooking = !!bookingDataString;
+    // Capture the URL the user was on before being sent to the OTP page
+    const redirectUrl = searchParams.get('redirectUrl') || '/user/appointments';
+    
     const { setPatient } = useContext(PatientContext);
 
     const { toast } = useToast();
@@ -60,7 +63,6 @@ function OtpForm() {
             (element.nextSibling as HTMLInputElement).focus();
         }
         
-        // Auto-submit when all fields are filled
         if (newOtp.every(digit => digit !== "") && newOtp.length === 6) {
              handleSubmit(newOtp.join(""));
         }
@@ -117,12 +119,9 @@ function OtpForm() {
             if (isBooking && bookingDataString) {
                 const bookingData = JSON.parse(bookingDataString);
                 await completeBooking(bookingData);
-            } else if (result.patient.name.startsWith('Patient ')) {
-                // If it's a new user (default name), guide them to setup their profile.
-                router.push('/user/profile/setup');
             } else {
-                // If existing user, take them to their appointments.
-                router.push(`/user/appointments`);
+                // Not a booking flow, redirect to the original page or appointments as a fallback
+                router.push(redirectUrl);
             }
        });
     }

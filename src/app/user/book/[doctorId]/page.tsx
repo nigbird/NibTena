@@ -266,7 +266,7 @@ export default function BookingPage() {
                               onChange={(e) => setPhoneNumber(e.target.value)}
                               required
                               className="rounded-l-none"
-                              readOnly={isBookingForSelf && isMiniApp}
+                              readOnly={isMiniApp}
                             />
 
                           </div>

@@ -127,7 +127,8 @@ export async function POST(request: NextRequest) {
     if (!paidAmount) missingFields.push("paidAmount");
     if (!paidByNumber) missingFields.push("paidByNumber");
     if (!txnRef) missingFields.push("txnRef");
-    if (!transactionId) missingFields.push("transactionId");
+    // transactionId from gateway is not always present, txnRef is the important one.
+    // if (!transactionId) missingFields.push("transactionId"); 
     if (!transactionTime) missingFields.push("transactionTime");
     if (!accountNo) missingFields.push("accountNo");
     if (!token) missingFields.push("token");
@@ -142,11 +143,11 @@ export async function POST(request: NextRequest) {
 
 
     // ✅ Process appointment update
-    console.log("🔍 Looking for appointment with transactionId:", transactionId);
-    const appointment = await prisma.appointment.findUnique({ where: { transactionId:txnRef } });
+    console.log("🔍 Looking for appointment with transactionId (txnRef):", txnRef);
+    const appointment = await prisma.appointment.findUnique({ where: { transactionId: txnRef } });
 
     if (!appointment) {
-      console.error("❌ Appointment not found for transaction:", transactionId);
+      console.error("❌ Appointment not found for transaction (txnRef):", txnRef);
       return NextResponse.json({ message: "Appointment not found" }, { status: 400 });
     }
 
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       doctorId: appointment.doctorId,
     });
 
-    console.log("💾 Updating appointment status to 'paid'...");
+    console.log("💾 Updating appointment status to 'confirmed'...");
     await prisma.appointment.update({
       where: { id: appointment.id },
       data: {
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("✅ Payment confirmed for transaction:", transactionId);
+    console.log("✅ Payment confirmed for transaction:", txnRef);
 
     // ✅ Respond success
     return NextResponse.json({ message: "Payment confirmed and updated." }, { status: 200 });
@@ -175,4 +176,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Server error during callback." }, { status: 500 });
   }
 }
-

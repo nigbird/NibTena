@@ -75,7 +75,7 @@ export default function BookingPage() {
   const initialState: State = { message: null, errors: {} };
   
   const actionToDispatch = isMiniApp 
-    ? initiateBookingAndPayment.bind(null, doctorId, hospitalId, slot, date, superAppToken)
+    ? initiateBookingAndPayment.bind(null, doctorId, hospitalId, slot, date, superAppToken || '')
     : startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
 
   const [state, dispatch] = useActionState<State, FormData>(actionToDispatch, initialState);
@@ -248,7 +248,7 @@ export default function BookingPage() {
                               defaultValue={isBookingForSelf ? phoneNumber : ''}
                               required 
                               className="rounded-l-none" 
-                              readOnly={isBookingForSelf && isMiniApp}
+                              readOnly={isBookingForSelf}
                             />
                           </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
@@ -257,7 +257,7 @@ export default function BookingPage() {
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf && patient ? patient.age?.toString() : ''} required />
+                            <Input key={`age-${bookingFor}`} id="age" name="age" type="number" placeholder="30" defaultValue={isBookingForSelf && patient && patient.age ? patient.age.toString() : ''} required />
                             {state.errors?.age && <p className="text-sm font-medium text-destructive">{state.errors.age[0]}</p>}
                         </div>
                         <div className="space-y-2">

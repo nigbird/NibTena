@@ -111,7 +111,7 @@ export default function BookingPage() {
               title: "Redirecting to Payment",
               description: "Please complete your payment in the Super App.",
             });
-            (window as any).myJsChannel.postMessage(JSON.stringify({ token: state.paymentToken }));
+            (window as any).myJsChannel.postMessage({ token: state.paymentToken });
             
             const transactionId = state.transactionId;
             if (transactionId) {

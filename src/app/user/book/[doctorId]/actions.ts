@@ -28,7 +28,6 @@ export type State = {
   data?: z.infer<typeof AppointmentFormSchema>;
   otp?: string;
   paymentToken?: string;
-  transactionId?: string; // Added to track payment status
 };
 
 async function findOrCreatePatient(phone: string, defaults: { name: string, age: number, gender: 'male' | 'female' }) {
@@ -112,6 +111,8 @@ export async function startBookingProcess(
     };
   }
 }
+
+// First implementation of initiateBookingAndPayment was removed to fix duplicate declaration
 
 export async function completeBooking(bookingData: any) {
   let newAppointment;
@@ -203,16 +204,16 @@ export async function initiateBookingAndPayment(
   hospitalId: number,
   appointmentSlot: string,
   appointmentDate: string,
-  superAppToken: string, // This is the base64 encoded cookie value
+  superAppToken: string,
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Always get phone number from cookie for mini app sessions
   const phoneFromCookie = await getPhoneNumberFromCookie();
   const authToken = await getAuthTokenFromCookie();
-
-  if (!authToken) {
-    return { success: false, message: "Mini App session token not found. Please re-authenticate." };
-  }
+  
+  console.log("Auth Token from Cookie:", {authToken});
+  console.log("Phone from Cookie:", {phoneFromCookie});
   
   const rawData = {
     bookingFor: formData.get('bookingFor'),
@@ -235,6 +236,7 @@ export async function initiateBookingAndPayment(
   
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
   
+  // Use phone number from cookie if available (for mini app sessions)
   const finalPhone = phoneFromCookie || phone;
 
   try {
@@ -243,11 +245,7 @@ export async function initiateBookingAndPayment(
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }});
     if (!doctor) return { success: false, message: 'Doctor not found.'};
     
-    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId }});
-    if (!hospital) return { success: false, message: 'Hospital not found.' };
-
-    const transactionId = crypto.randomUUID();
-
+    // 1. Create the appointment first
     const newAppointment = await prisma.appointment.create({
       data: {
         symptoms,
@@ -256,34 +254,50 @@ export async function initiateBookingAndPayment(
         hospitalId,
         appointmentSlot,
         appointmentDate: new Date(appointmentDate),
-        status: 'pending-payment',
-        transactionId: transactionId,
+        status: 'pending-payment', // New status
       },
     });
 
+    // 2. Prepare payment request (Step 3)
+    const transactionId = crypto.randomUUID();
+    const transactionTime = format(new Date(), 'yyyyMMddHHmmss');
+    const amount = doctor.consultationFee;
+
     const { 
+        ACCOUNT_NO, 
         CALLBACK_URL, 
         COMPANY_NAME, 
         NIB_PAYMENT_KEY, 
         NIB_PAYMENT_URL 
     } = process.env;
 
-    const ACCOUNT_NO = hospital.accountNumber;
-    const amount = doctor.consultationFee;
-    const transactionTime = format(new Date(), 'yyyyMMddHHmmss');
+    // Enhanced environment variable validation
+    const missingVars = [];
+    if (!ACCOUNT_NO) missingVars.push('ACCOUNT_NO');
+    if (!CALLBACK_URL) missingVars.push('CALLBACK_URL');
+    if (!COMPANY_NAME) missingVars.push('COMPANY_NAME');
+    if (!NIB_PAYMENT_KEY) missingVars.push('NIB_PAYMENT_KEY');
+    if (!NIB_PAYMENT_URL) missingVars.push('NIB_PAYMENT_URL');
 
-    const requiredVars = { ACCOUNT_NO, CALLBACK_URL, COMPANY_NAME, NIB_PAYMENT_KEY, NIB_PAYMENT_URL };
-    for (const [key, value] of Object.entries(requiredVars)) {
-      if (!value) {
-        console.error(`Missing payment environment variable: ${key}`);
-        throw new Error(`Server configuration error: Missing payment variable ${key}.`);
-      }
+    if (missingVars.length > 0) {
+        console.error("Missing payment environment variables:", missingVars);
+        throw new Error(`Missing payment environment variables: ${missingVars.join(', ')}`);
     }
+
+    console.log("Payment Environment Variables:", {
+        ACCOUNT_NO: ACCOUNT_NO,
+        CALLBACK_URL: CALLBACK_URL,
+        COMPANY_NAME: COMPANY_NAME,
+        NIB_PAYMENT_URL: NIB_PAYMENT_URL,
+        NIB_PAYMENT_KEY: NIB_PAYMENT_KEY ? '[REDACTED]' : 'MISSING'
+    });
     
+    // Use superAppToken consistently for both signature and payload
+    const cleanCallbackURL = CALLBACK_URL?.trim();
     const signatureString = [
       `accountNo=${ACCOUNT_NO}`,
       `amount=${amount}`,
-      `callBackURL=${CALLBACK_URL!.trim()}`,
+      `callBackURL=${cleanCallbackURL}`,
       `companyName=${COMPANY_NAME}`,
       `Key=${NIB_PAYMENT_KEY}`,
       `token=${authToken}`,
@@ -291,20 +305,29 @@ export async function initiateBookingAndPayment(
       `transactionTime=${transactionTime}`
     ].join('&');
 
+    console.log("Signature String:", signatureString);
     const signature = crypto.createHash('sha256').update(signatureString, 'utf8').digest('hex');
+    console.log("Generated Signature:", signature);
 
     const payload = {
         accountNo: ACCOUNT_NO,
         amount: String(amount),
-        callBackURL: CALLBACK_URL!.trim(),
+        callBackURL: CALLBACK_URL?.trim(), // Trim any extra spaces
         companyName: COMPANY_NAME,
         token: authToken,
         transactionId: transactionId,
         transactionTime: transactionTime,
         signature: signature
     };
+    console.log("Payment Payload:", {payload});
     
-    const response = await fetch(NIB_PAYMENT_URL!, {
+    // Update appointment with transaction ID
+    await prisma.appointment.update({
+        where: { id: newAppointment.id },
+        data: { transactionId: transactionId },
+    });
+    console.log({authToken}, {NIB_PAYMENT_URL});
+    const response = await fetch(NIB_PAYMENT_URL ?? "", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -313,6 +336,7 @@ export async function initiateBookingAndPayment(
       body: JSON.stringify(payload),
     });
 
+    // Read body only once
     const responseText = await response.text();
     let responseData: any;
 
@@ -327,37 +351,33 @@ export async function initiateBookingAndPayment(
         status: response.status,
         statusText: response.statusText,
         errorData: responseData,
+        url: NIB_PAYMENT_URL,
+        payload,
       });
-      await prisma.appointment.update({
-        where: { id: newAppointment.id },
-        data: { status: 'cancelled' },
-      });
-      throw new Error(`Payment gateway returned ${response.status}: ${JSON.stringify(responseData)}`);
+      throw new Error(`Payment gateway returned ${response.status} ${response.statusText}: ${JSON.stringify(responseData)}`);
     }
 
     const paymentToken = responseData?.token;
+    console.log("Payment Token Received:", { paymentToken });
 
     if (!paymentToken) {
-      await prisma.appointment.update({
-        where: { id: newAppointment.id },
-        data: { status: 'cancelled' },
-      });
       throw new Error("Payment token not received from gateway.");
     }
+
     
+    // 3. Return paymentToken to the client
     return {
       success: true,
       message: 'Payment initiated.',
       data: validatedFields.data,
       paymentToken: paymentToken,
-      transactionId: transactionId,
     };
 
   } catch (error) {
     console.error('Payment initiation failed:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'An error occurred while initiating the payment process.',
+      message: 'An error occurred while initiating the payment process.',
     };
   }
 }

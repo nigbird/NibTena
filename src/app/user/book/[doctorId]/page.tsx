@@ -84,13 +84,30 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchPhoneNumber = async () => {
       try {
-        if (patient?.phone) {
-          // strip leading +251 or 251 if present
-          setPhoneNumber(String(patient.phone).replace(/^\+?251/, ''));
-        } else if (isMiniApp && superAppToken) {
-          const phoneFromCookie = await getPhoneNumberFromCookie();
-          if (phoneFromCookie) {
-            setPhoneNumber(String(phoneFromCookie).replace(/^\+?251/, ''));
+        // Booking for self: prefer patient.phone, otherwise (mini-app) try cookie/token
+        if (bookingFor === 'myself') {
+          if (patient?.phone) {
+            setPhoneNumber(String(patient.phone).replace(/^\+?251/, ''));
+          } else if (isMiniApp && superAppToken) {
+            const phoneFromCookie = await getPhoneNumberFromCookie();
+            if (phoneFromCookie) {
+              setPhoneNumber(String(phoneFromCookie).replace(/^\+?251/, ''));
+            }
+          }
+        }
+
+        // Booking for someone else:
+        // - In mini-app: fetch phone from super-app token/cookie and keep it (uneditable)
+        // - In standalone web: clear so the user can type a different phone
+        if (bookingFor === 'someoneElse') {
+          if (isMiniApp && superAppToken) {
+            const phoneFromCookie = await getPhoneNumberFromCookie();
+            if (phoneFromCookie) {
+              setPhoneNumber(String(phoneFromCookie).replace(/^\+?251/, ''));
+            }
+          } else {
+            // standalone: clear the phone so it's editable for someone else
+            setPhoneNumber('');
           }
         }
       } catch (error) {
@@ -99,7 +116,7 @@ export default function BookingPage() {
     };
 
     fetchPhoneNumber();
-  }, [patient, isMiniApp, superAppToken]);
+  }, [patient, isMiniApp, superAppToken, bookingFor]);
 
   
   useEffect(() => {
@@ -241,14 +258,14 @@ export default function BookingPage() {
                             <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
                               +251
                             </span>
-                            <Input 
-                              id="phone" 
-                              name="phone" 
-                              placeholder="912345678" 
-                              value={isBookingForSelf ? phoneNumber : ''} 
+                            <Input
+                              id="phone"
+                              name="phone"
+                              placeholder="912345678"
+                              value={phoneNumber}
                               onChange={(e) => setPhoneNumber(e.target.value)}
-                              required 
-                              className="rounded-l-none" 
+                              required
+                              className="rounded-l-none"
                               readOnly={isBookingForSelf && isMiniApp}
                             />
 

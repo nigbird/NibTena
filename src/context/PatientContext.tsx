@@ -46,8 +46,16 @@ export const PatientProvider = ({
   };
 
   const setCookie = (name: string, value: string, durationMs: number) => {
+    if (typeof document === 'undefined') return;
     const expires = new Date(Date.now() + durationMs).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}`;
+    // Use SameSite=None and Secure when appropriate so the cookie is available
+    // in embedded contexts (e.g., mobile webview / super app). Secure requires HTTPS.
+    const sameSite = 'Lax';
+    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    // Use SameSite=None in production only if you need cross-site cookies (super-app WebView).
+    // Default to Lax for regular standalone web usage.
+    const sameSiteAttr = process.env.NODE_ENV === 'production' ? '; SameSite=None' : `; SameSite=${sameSite}`;
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}${sameSiteAttr}${secure}`;
   };
 
   const removeCookie = (name: string) => {
@@ -87,10 +95,21 @@ export const PatientProvider = ({
       if (superAppToken) return; // MINI APP handled externally
 
       if (newPatient) {
+        // Normalize phone to include +251 prefix to keep stored data consistent
+        const normalizedPhone = (newPatient.phone || '').toString().replace(/^\+?251/, '');
+        const patientToStore = {
+          id: newPatient.id,
+          name: newPatient.name,
+          phone: `+251${normalizedPhone}`,
+          age: newPatient.age,
+          gender: newPatient.gender,
+        } as Patient;
+
         const session: StoredSession = {
-          patient: newPatient,
+          patient: patientToStore,
           expiry: Date.now() + SESSION_DURATION_MS,
         };
+
         setCookie(SESSION_KEY, JSON.stringify(session), SESSION_DURATION_MS);
       } else {
         removeCookie(SESSION_KEY);

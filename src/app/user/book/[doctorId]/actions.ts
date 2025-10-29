@@ -9,6 +9,19 @@ import { addMinutes, format } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 
+// Normalize phone numbers to canonical +251XXXXXXXXX format
+function normalizePhoneNumber(input?: string | null) {
+  if (!input) return '';
+  let s = String(input).trim();
+  // remove spaces and any leading +
+  s = s.replace(/\s+/g, '').replace(/^\+/, '');
+  // if already starts with 251, keep it; otherwise prepend
+  if (!s.startsWith('251')) {
+    s = '251' + s;
+  }
+  return `+${s}`;
+}
+
 const PatientInfoSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   phone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
@@ -28,27 +41,33 @@ export type State = {
   data?: z.infer<typeof AppointmentFormSchema>;
   otp?: string;
   paymentToken?: string;
+  transactionId?: string;
 };
 
 async function findOrCreatePatient(phone: string, defaults: { name: string, age: number, gender: 'male' | 'female' }) {
-    const patient = await prisma.patient.upsert({
-        where: { phone },
-        update: { name: defaults.name, age: defaults.age, gender: defaults.gender },
-        create: { phone, name: defaults.name, age: defaults.age, gender: defaults.gender },
-    });
+  const normalized = normalizePhoneNumber(phone);
+  const patient = await prisma.patient.upsert({
+    where: { phone: normalized },
+    update: { name: defaults.name, age: defaults.age, gender: defaults.gender, phone: normalized },
+    create: { phone: normalized, name: defaults.name, age: defaults.age, gender: defaults.gender },
+  });
     return patient;
 }
 
 export async function generateAndSaveOtp(phone: string): Promise<string> {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
+  const normalized = normalizePhoneNumber(phone);
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
-    await prisma.otp.create({
-        data: { phone, code, expiresAt },
-    });
+  // Use upsert so we don't violate unique constraint if an OTP already exists for this phone
+  await prisma.otp.upsert({
+    where: { phone: normalized },
+    update: { code, expiresAt },
+    create: { phone: normalized, code, expiresAt },
+  });
 
-    console.log(`OTP for ${phone} is: ${code}`); // For testing purposes
-    return code;
+  console.log(`OTP for ${normalized} is: ${code}`); // For testing purposes
+  return code;
 }
 
 
@@ -100,16 +119,22 @@ export async function startBookingProcess(
 
   let otpCode;
   try {
-     await findOrCreatePatient(validatedFields.data.phone, {
+     // Normalize phone and ensure patient record and OTP use canonical format
+     const normalizedPhone = normalizePhoneNumber(validatedFields.data.phone);
+
+     await findOrCreatePatient(normalizedPhone, {
          name: validatedFields.data.fullName,
          age: validatedFields.data.age,
          gender: validatedFields.data.gender
      });
 
-     otpCode = await generateAndSaveOtp(validatedFields.data.phone);
+     otpCode = await generateAndSaveOtp(normalizedPhone);
+
+     // return normalized phone in data so downstream uses the canonical value
+     const returnedData = { ...validatedFields.data, phone: normalizedPhone };
 
      return {
-       data: validatedFields.data,
+       data: returnedData,
        success: true,
        otp: otpCode,
      };
@@ -128,9 +153,10 @@ export async function completeBooking(bookingData: any) {
   let newAppointment;
   let patient;
   try {
-    patient = await prisma.patient.findUnique({
-        where: { phone: bookingData.phone }
-    });
+  const normalizedPhone = normalizePhoneNumber(bookingData.phone);
+  patient = await prisma.patient.findUnique({
+    where: { phone: normalizedPhone }
+  });
     
     if (!patient) {
         return { success: false, message: 'Patient record not found.'};
@@ -257,7 +283,7 @@ export async function initiateBookingAndPayment(
   const { fullName, phone, age, gender, symptoms } = validatedFields.data;
   
   // Use phone number from cookie if available (for mini app sessions)
-  const finalPhone = phoneFromCookie || phone;
+  const finalPhone = normalizePhoneNumber(phoneFromCookie || phone);
 
   try {
     const patient = await findOrCreatePatient(finalPhone, { name: fullName, age, gender });

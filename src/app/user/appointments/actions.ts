@@ -6,6 +6,15 @@ import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
 
+// Normalize incoming phone to +251XXXXXXXXX format
+function normalizePhoneNumber(input?: string | null) {
+  if (!input) return '';
+  let s = String(input).trim();
+  s = s.replace(/\s+/g, '').replace(/^\+/, '');
+  if (!s.startsWith('251')) s = '251' + s;
+  return `+${s}`;
+}
+
 export async function getMyAppointments(patientId: number) {
   if (!patientId) return [];
 
@@ -93,17 +102,20 @@ export async function getMyAppointmentsForMiniApp() {
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {
-    if (!phone || phone.length < 9) {
-        return { success: false, message: 'Invalid 9-digit phone number.' };
-    }
-    const fullPhone = `+251${phone}`;
+  if (!phone) {
+    return { success: false, message: 'Invalid phone number.' };
+  }
+  const fullPhone = normalizePhoneNumber(phone);
     try {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = addMinutes(new Date(), 2);
 
-        await prisma.otp.create({
-            data: { phone: fullPhone, code, expiresAt },
-        });
+    // Upsert OTP record so repeated sends update existing record
+    await prisma.otp.upsert({
+      where: { phone: fullPhone },
+      update: { code, expiresAt },
+      create: { phone: fullPhone, code, expiresAt },
+    });
 
         console.log(`OTP for ${fullPhone} is: ${code}`); // For testing purposes.
         return { success: true, message: `An OTP has been sent.`, otp: code };
@@ -114,10 +126,10 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
 }
 
 export async function verifyOtpAndGetPatient(phone: string, code: string): Promise<{ success: boolean; message: string; patient?: Patient | null;}> {
-    if (!phone || phone.length < 9) {
-        return { success: false, message: 'Invalid phone number format for verification.' };
-    }
-    const fullPhone = `+251${phone}`;
+  if (!phone) {
+    return { success: false, message: 'Invalid phone number format for verification.' };
+  }
+  const fullPhone = normalizePhoneNumber(phone);
     try {
         const otpRecord = await prisma.otp.findFirst({
             where: {
@@ -148,7 +160,15 @@ export async function verifyOtpAndGetPatient(phone: string, code: string): Promi
             });
         }
         
-        return { success: true, message: "Verification successful.", patient };
+        // Map patient to the expected Patient type (normalize gender to typed union)
+        const mappedPatient = patient
+            ? ({
+                ...patient,
+                gender: patient.gender === 'male' ? 'male' : patient.gender === 'female' ? 'female' : null,
+              } as Patient)
+            : null;
+
+        return { success: true, message: "Verification successful.", patient: mappedPatient };
 
     } catch (error) {
         console.error("OTP verification failed:", error);

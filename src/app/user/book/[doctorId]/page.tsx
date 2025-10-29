@@ -85,11 +85,12 @@ export default function BookingPage() {
     const fetchPhoneNumber = async () => {
       try {
         if (patient?.phone) {
-          setPhoneNumber(patient.phone.replace('+251', ''));
+          // strip leading +251 or 251 if present
+          setPhoneNumber(String(patient.phone).replace(/^\+?251/, ''));
         } else if (isMiniApp && superAppToken) {
           const phoneFromCookie = await getPhoneNumberFromCookie();
           if (phoneFromCookie) {
-            setPhoneNumber(phoneFromCookie.replace('+251', ''));
+            setPhoneNumber(String(phoneFromCookie).replace(/^\+?251/, ''));
           }
         }
       } catch (error) {

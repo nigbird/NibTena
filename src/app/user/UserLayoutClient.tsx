@@ -85,29 +85,34 @@ export default function UserLayoutClient({
                     </Avatar>
                     <div>
                         <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
-                        <p className="font-semibold text-foreground">{patient?.name || session?.user?.name || 'Guest'}</p>
+                        <p className="font-semibold text-foreground">{patient?.name || session?.user?.name || ''}</p>
                     </div>
                     </>
                  )}
               </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-2 group"
-                onClick={() => router.back()}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
-                  aria-hidden="true"
-                >
-                  <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
-                </svg>
-                <span className="sr-only">Back</span>
-              </Button>
+              {!hasMiniAppSession ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="-ml-2 group"
+                    onClick={() => router.back()}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
+                      aria-hidden="true"
+                    >
+                      <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
+                    </svg>
+                    <span className="sr-only">Back</span>
+                  </Button>
+                </>
+              ) : null}
+
               <h1 className="font-headline text-xl font-bold text-foreground">
                 {pageTitle}
               </h1>

@@ -144,7 +144,6 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
                                         <span>{getDoctorName(nowServingPatient.doctorId)}</span>
                                     </div>
                                     <span>&bull;</span>
-                                    <span>Consultation Room 3</span>
                                 </div>
                             </CardContent>
                         </Card>

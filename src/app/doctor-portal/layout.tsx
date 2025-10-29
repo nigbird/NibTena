@@ -8,6 +8,7 @@ import DoctorPortalHeader from '@/components/doctor-portal-header';
 import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-context';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function DoctorPortalLayout({
   children,
@@ -16,8 +17,23 @@ export default function DoctorPortalLayout({
 }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [doctorData, setDoctorData] = useState<{ doctor: Doctor | null; doctorHospitals: Hospital[] }>({ doctor: null, doctorHospitals: [] });
   const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Redirect to login if session is unauthenticated
+  useEffect(() => {
+    if (pathname !== '/doctor-portal/login' && status === 'unauthenticated') {
+      router.push('/doctor-portal/login');
+    }
+  }, [pathname, status, router]);
+
+  // Redirect if session exists but doctor data load finished with no doctor
+  useEffect(() => {
+    if (status === 'authenticated' && !isLoadingData && !doctorData.doctor && pathname !== '/doctor-portal/login') {
+      router.push('/doctor-portal/login');
+    }
+  }, [status, isLoadingData, doctorData, pathname, router]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -58,13 +74,14 @@ export default function DoctorPortalLayout({
   }
 
   if (!session || !doctorData.doctor) {
-    // This will protect routes if the session is gone or data fetching fails
-    // The middleware should handle the redirect, but this is a safeguard.
-    return (
-       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
-        {children}
-      </main>
-    );
+    // Client-side redirect to login when session ends or doctor data missing
+    useEffect(() => {
+      if (status !== 'loading' && pathname !== '/doctor-portal/login') {
+        router.push('/doctor-portal/login');
+      }
+    }, [status, pathname, router]);
+
+    return null;
   }
 
   return (

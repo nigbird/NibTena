@@ -5,6 +5,8 @@ import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function HospitalAdminLayout({
   children,
@@ -14,6 +16,12 @@ export default function HospitalAdminLayout({
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isLoginPage = pathname === '/hospital-admin/login';
+  const router = useRouter();
+  useEffect(() => {
+    if (!isLoginPage && status === 'unauthenticated') {
+      router.push('/hospital-admin/login');
+    }
+  }, [isLoginPage, status, router]);
 
   if (isLoginPage) {
     return <>{children}</>;
@@ -27,14 +35,8 @@ export default function HospitalAdminLayout({
       </div>
     );
   }
-
   if (status === 'unauthenticated') {
-    // The middleware should handle redirects, but this is a client-side safeguard.
-    return (
-       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
-        {children}
-      </main>
-    );
+    return null;
   }
 
   return (

@@ -5,17 +5,18 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: process.env.NEXTAUTH_TRUST_HOST === 'true',
   // Enforce finite session lifetime so authenticated users are logged out after inactivity/expiry
   session: {
     strategy: 'jwt',
     // absolute session lifetime (e.g., 30 minutes)
-    maxAge: 30 * 60,
+    maxAge: 10 * 60,
   },
   jwt: {
     // align JWT expiry with session lifetime
-    maxAge: 30 * 60,
+    maxAge: 10 * 60,
   },
   providers: [
     Credentials({

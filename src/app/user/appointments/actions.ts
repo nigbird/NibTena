@@ -99,7 +99,7 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
     const fullPhone = `+251${phone}`;
     try {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
+        const expiresAt = addMinutes(new Date(), 2);
 
         await prisma.otp.create({
             data: { phone: fullPhone, code, expiresAt },

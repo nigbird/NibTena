@@ -60,6 +60,16 @@ export async function startBookingProcess(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Debug: log incoming cookies to see if patient session is sent
+  try {
+    const cookieStore = await cookies();
+    console.log('server cookies (startBookingProcess):', {
+      patient_session: cookieStore.get('nib-tena-patient-session')?.value,
+      miniapp_session: cookieStore.get('miniapp_session')?.value,
+    });
+  } catch (err) {
+    console.error('Failed to read cookies in startBookingProcess:', err);
+  }
   // Get phone number from cookie if booking for self
   const bookingFor = formData.get('bookingFor') as string;
   const isBookingForSelf = bookingFor === 'myself';
@@ -208,6 +218,16 @@ export async function initiateBookingAndPayment(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Debug: log incoming cookies to see if patient session is sent
+  try {
+    const cookieStore = await cookies();
+    console.log('server cookies (initiateBookingAndPayment):', {
+      patient_session: cookieStore.get('nib-tena-patient-session')?.value,
+      miniapp_session: cookieStore.get('miniapp_session')?.value,
+    });
+  } catch (err) {
+    console.error('Failed to read cookies in initiateBookingAndPayment:', err);
+  }
   // Always get phone number from cookie for mini app sessions
   const phoneFromCookie = await getPhoneNumberFromCookie();
   const authToken = await getAuthTokenFromCookie();

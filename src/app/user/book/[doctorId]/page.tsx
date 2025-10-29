@@ -82,25 +82,24 @@ export default function BookingPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (isMiniApp) {
-      const fetchPhoneNumber = async () => {
-        try {
-          if (patient?.phone) {
-            setPhoneNumber(patient.phone.replace('+251', ''));
-          } else if (superAppToken) {
-            const phoneFromCookie = await getPhoneNumberFromCookie();
-            if (phoneFromCookie) {
-              setPhoneNumber(phoneFromCookie.replace('+251', ''));
-            }
+    const fetchPhoneNumber = async () => {
+      try {
+        if (patient?.phone) {
+          setPhoneNumber(patient.phone.replace('+251', ''));
+        } else if (isMiniApp && superAppToken) {
+          const phoneFromCookie = await getPhoneNumberFromCookie();
+          if (phoneFromCookie) {
+            setPhoneNumber(phoneFromCookie.replace('+251', ''));
           }
-        } catch (error) {
-          console.error('Error fetching phone number:', error);
         }
-      };
-      
-      fetchPhoneNumber();
-    }
-  }, [isMiniApp, patient, superAppToken]);
+      } catch (error) {
+        console.error('Error fetching phone number:', error);
+      }
+    };
+
+    fetchPhoneNumber();
+  }, [patient, isMiniApp, superAppToken]);
+
   
   useEffect(() => {
     if (state?.success) {
@@ -245,11 +244,13 @@ export default function BookingPage() {
                               id="phone" 
                               name="phone" 
                               placeholder="912345678" 
-                              defaultValue={isBookingForSelf ? phoneNumber : ''}
+                              value={isBookingForSelf ? phoneNumber : ''} 
+                              onChange={(e) => setPhoneNumber(e.target.value)}
                               required 
                               className="rounded-l-none" 
-                              readOnly={isBookingForSelf}
+                              readOnly={isBookingForSelf && isMiniApp}
                             />
+
                           </div>
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>

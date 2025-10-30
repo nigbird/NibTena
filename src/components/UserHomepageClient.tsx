@@ -352,7 +352,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                                       <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                                   </Avatar>
                                   <div className="p-3 pt-0 flex flex-col flex-grow justify-between">
-                                      <div>
+                                      <div className="flex-grow">
                                         <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
                                         <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
                                       </div>

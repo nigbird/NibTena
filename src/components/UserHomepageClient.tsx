@@ -267,7 +267,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
       <section className="py-8 space-y-4">
           <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
               <h2 className="font-headline text-2xl font-bold">Top Hospitals</h2>
-              <Link href="/user/hospitals" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+              <Link href="/user/hospitals" className="text-sm font-semibold text-secondary hover:underline flex items-center gap-1">
                   See all <ArrowRight className="h-4 w-4" />
               </Link>
           </div>
@@ -330,7 +330,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
       <section className="py-8 space-y-4 bg-muted/20">
             <div className="flex justify-between items-baseline px-6 mb-4 border-b pb-2">
               <h2 className="font-headline text-2xl font-bold">Featured Doctors</h2>
-              <Link href="/user/doctors" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+              <Link href="/user/doctors" className="text-sm font-semibold text-secondary hover:underline flex items-center gap-1">
                   See all <ArrowRight className="h-4 w-4" />
               </Link>
           </div>
@@ -351,14 +351,17 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                                       )}
                                       <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                                   </Avatar>
-                                  <div className="p-3 pt-0 flex flex-col flex-grow justify-between">
-                                      <div className="flex-grow">
-                                        <h3 className="font-bold text-sm truncate">{doctor.name}</h3>
-                                        <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
+                                  <div className="p-3 pt-0 flex flex-col flex-grow justify-between w-full">
+                                      {/* Text block: fixed min height to keep button aligned */}
+                                      <div className="flex-grow mb-3 w-full min-h-[3.25rem]">
+                                        <h3 title={doctor.name} className="font-bold text-sm text-foreground w-full overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{doctor.name}</h3>
+                                        <p className="text-xs text-muted-foreground w-full overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{doctor.specialty}</p>
                                       </div>
-                                      <Button asChild size="sm" className="mt-4 w-full transition-transform hover:scale-105" variant="accent">
-                                          <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
-                                      </Button>
+                                      <div className="w-full">
+                                        <Button asChild size="sm" className="mt-2 w-full h-10 flex items-center justify-center" variant="accent">
+                                          <Link href={`/user/doctors/${doctor.id}`} className="w-full text-center">Book Now</Link>
+                                        </Button>
+                                      </div>
                                   </div>
                               </Card>
                           </CarouselItem>

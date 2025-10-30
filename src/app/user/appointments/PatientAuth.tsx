@@ -38,11 +38,13 @@ export default function PatientAuth() {
               duration: 10000,
             });
         }
-        const params = new URLSearchParams(searchParams);
-        params.set('phone', phoneInput);
-        // Pass the current path as the redirectUrl
-        params.set('redirectUrl', pathname); 
-        router.push(`/user/verify/otp?${params.toString()}`);
+  const params = new URLSearchParams(searchParams);
+  params.set('phone', phoneInput);
+  // Determine redirectUrl: avoid sending users back to profile after login in standalone.
+  // If the current path is the profile page, redirect to the user home instead.
+  const safeRedirect = pathname && pathname.startsWith('/user/profile') ? '/user' : (pathname || '/user');
+  params.set('redirectUrl', safeRedirect);
+  router.push(`/user/verify/otp?${params.toString()}`);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
       }

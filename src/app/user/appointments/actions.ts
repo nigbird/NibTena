@@ -10,7 +10,7 @@ import type { Patient } from '@/lib/definitions';
 function normalizePhoneNumber(input?: string | null) {
   if (!input) return '';
   let s = String(input).trim();
-  s = s.replace(/\s+/g, '').replace(/^\+/, '');
+  s = s.replace(/\s+/g, '');
   if (!s.startsWith('251')) s = '251' + s;
   return `+${s}`;
 }

@@ -13,8 +13,8 @@ import { cookies } from 'next/headers';
 function normalizePhoneNumber(input?: string | null) {
   if (!input) return '';
   let s = String(input).trim();
-  // remove spaces and any leading +
-  s = s.replace(/\s+/g, '').replace(/^\+/, '');
+  // remove spaces
+  s = s.replace(/\s+/g, '');
   // if already starts with 251, keep it; otherwise prepend
   if (!s.startsWith('251')) {
     s = '251' + s;

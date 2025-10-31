@@ -411,12 +411,13 @@ export async function initiateBookingAndPayment(
     }
 
     
-    // 3. Return paymentToken to the client
+    // 3. Return paymentToken and transactionId to the client so it can poll status
     return {
       success: true,
       message: 'Payment initiated.',
       data: validatedFields.data,
       paymentToken: paymentToken,
+      transactionId,
     };
 
   } catch (error) {

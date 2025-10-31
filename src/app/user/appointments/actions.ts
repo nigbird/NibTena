@@ -41,30 +41,26 @@ export async function getMyAppointments(patientId: number) {
 export async function getMyAppointmentsByPhone(phone: string) {
   if (!phone) return [];
 
+  const normalized = normalizePhoneNumber(phone);
+
   try {
-    // First find the patient by phone number
-    const patient = await prisma.patient.findUnique({
-      where: { phone }
-    });
-
-    if (!patient) {
-      return [];
-    }
-
-    // Then get appointments for that patient
-    const appointments = await prisma.appointment.findMany({
+    // findFirst lets us check multiple possible formats
+    const patient = await prisma.patient.findFirst({
       where: {
-        patientId: patient.id,
-      },
-      include: {
-        doctor: true,
-        hospital: true,
-      },
-      orderBy: {
-        appointmentDate: 'desc',
+        OR: [
+          { phone: phone },        // e.g. "0912345678"
+          { phone: normalized },   // e.g. "+251912345678"
+        ],
       },
     });
-    return appointments;
+
+    if (!patient) return [];
+
+    return prisma.appointment.findMany({
+      where: { patientId: patient.id },
+      include: { doctor: true, hospital: true },
+      orderBy: { appointmentDate: 'desc' },
+    });
   } catch (error) {
     console.error('Failed to fetch appointments by phone:', error);
     return [];

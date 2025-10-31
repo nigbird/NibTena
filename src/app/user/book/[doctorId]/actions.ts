@@ -9,7 +9,7 @@ import { addMinutes, format } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 
-// Normalize phone numbers to canonical +251XXXXXXXXX format
+// Normalize phone numbers to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
   if (!input) return '';
   let s = String(input).trim();
@@ -19,7 +19,8 @@ function normalizePhoneNumber(input?: string | null) {
   if (!s.startsWith('251')) {
     s = '251' + s;
   }
-  return `+${s}`;
+  // Return canonical storage format without a leading '+' (e.g. 251908279572)
+  return s;
 }
 
 const PatientInfoSchema = z.object({

@@ -6,13 +6,14 @@ import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
 
-// Normalize incoming phone to +251XXXXXXXXX format
+// Normalize incoming phone to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
   if (!input) return '';
   let s = String(input).trim();
   s = s.replace(/\s+/g, '');
   if (!s.startsWith('251')) s = '251' + s;
-  return `+${s}`;
+  // Return canonical storage format without a leading '+' (e.g. 251908279572)
+  return s;
 }
 
 export async function getMyAppointments(patientId: number) {

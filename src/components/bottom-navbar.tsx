@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Home, Stethoscope, UserCircle, CalendarCheck, Hospital } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,64 @@ const allNavLinks = [
 
 export default function BottomNavbar({ hasMiniAppSession }: { hasMiniAppSession: boolean }) {
   const pathname = usePathname();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+  // Track whether we're on a mobile-sized viewport and only enable keyboard hiding there.
+  const checkIsMobile = () => setIsMobile(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  checkIsMobile();
+  window.addEventListener('resize', checkIsMobile);
+
+  // Use VisualViewport API when available to detect on-screen keyboard on mobile.
+    const vv = typeof window !== 'undefined' ? (window as any).visualViewport : null;
+
+    const threshold = 150; // px: if viewport shrinks more than this, treat as keyboard open
+
+    const update = () => {
+      try {
+        if (vv) {
+          const vh = vv.height;
+          const ih = window.innerHeight;
+          setKeyboardOpen(vh < ih - threshold);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    if (vv) {
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
+      // initial check
+      update();
+      return () => {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+        window.removeEventListener('resize', checkIsMobile);
+      };
+    }
+
+    // Fallback: listen to focusin/out events for inputs
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (target.getAttribute && target.getAttribute('contenteditable') === 'true')) {
+        setKeyboardOpen(true);
+      }
+    };
+    const onFocusOut = () => setKeyboardOpen(false);
+
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('resize', checkIsMobile);
+    };
+  }, []);
 
   // Hide navbar on non-user routes
   if (!pathname.startsWith('/user')) {
@@ -27,7 +86,13 @@ export default function BottomNavbar({ hasMiniAppSession }: { hasMiniAppSession:
     : allNavLinks;
 
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t pb-[env(safe-area-inset-bottom)]">
+    <nav
+      className={cn(
+        'fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t pb-[env(safe-area-inset-bottom)] transition-transform duration-200',
+        isMobile && keyboardOpen ? 'translate-y-full' : 'translate-y-0'
+      )}
+      aria-hidden={isMobile && keyboardOpen}
+    >
       <div className={cn("grid h-full max-w-lg mx-auto font-medium", hasMiniAppSession ? "grid-cols-4" : "grid-cols-5")}>
         {navLinks.map(({ href, label, icon: Icon }) => {
           const isActive = (href === '/user' && pathname === '/user') || (href !== '/user' && pathname.startsWith(href));

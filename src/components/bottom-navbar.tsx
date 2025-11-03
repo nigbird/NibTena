@@ -89,7 +89,7 @@ export default function BottomNavbar({ hasMiniAppSession }: { hasMiniAppSession:
     <nav
       className={cn(
         'fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t pb-[env(safe-area-inset-bottom)] transition-transform duration-200',
-        isMobile && keyboardOpen ? 'translate-y-full' : 'translate-y-0'
+        isMobile && keyboardOpen ? 'hidden' : 'translate-y-0'
       )}
       aria-hidden={isMobile && keyboardOpen}
     >

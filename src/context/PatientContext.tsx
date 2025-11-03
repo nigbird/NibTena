@@ -1,16 +1,16 @@
 'use client';
 
-import { createContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { createContext, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import type { Patient } from '@/lib/definitions';
 
 const SESSION_KEY = 'nib-tena-patient-session';
-const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const SESSION_DURATION_MS = 1 * 60 * 1000; // 30 minutes
 
 type StoredSession = {
   patient: Patient;
   expiry: number;
 };
-
+  
 type PatientContextType = {
   patient: Patient | null;
   superAppToken: string | null;
@@ -37,6 +37,34 @@ export const PatientProvider = ({
   const [patient, setPatientState] = useState<Patient | null>(initialPatient);
   const [superAppToken] = useState<string | null>(initialSuperAppToken || null);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Timer ref to auto-clear session when it expires (standalone sessions only)
+  const logoutTimerRef = useRef<number | null>(null);
+
+  const clearExistingTimer = () => {
+    if (typeof window === 'undefined') return;
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+  };
+
+  const scheduleExpiry = (expiry: number) => {
+    if (typeof window === 'undefined') return;
+    clearExistingTimer();
+    const ms = expiry - Date.now();
+    if (ms <= 0) {
+      // already expired
+      removeCookie(SESSION_KEY);
+      setPatientState(null);
+      return;
+    }
+    logoutTimerRef.current = window.setTimeout(() => {
+      removeCookie(SESSION_KEY);
+      setPatientState(null);
+      logoutTimerRef.current = null;
+    }, ms);
+  };
 
   // ✅ Helper for cookie handling
   const getCookie = (name: string) => {
@@ -75,6 +103,8 @@ export const PatientProvider = ({
           const session: StoredSession = JSON.parse(storedSession);
           if (Date.now() < session.expiry) {
             setPatientState(session.patient);
+            // schedule automatic logout when the expiry time is reached
+            scheduleExpiry(session.expiry);
           } else {
             removeCookie(SESSION_KEY);
           }
@@ -111,12 +141,23 @@ export const PatientProvider = ({
         };
 
         setCookie(SESSION_KEY, JSON.stringify(session), SESSION_DURATION_MS);
+        // schedule automatic logout for standalone sessions
+        scheduleExpiry(session.expiry);
       } else {
+        // clear any existing expiry timer and remove cookie
+        clearExistingTimer();
         removeCookie(SESSION_KEY);
       }
     },
     [superAppToken]
   );
+
+  // Clear the timer on unmount
+  useEffect(() => {
+    return () => {
+      clearExistingTimer();
+    };
+  }, []);
 
   if (!isInitialized) return null;
 

@@ -3,7 +3,19 @@
 
 import { prisma } from './prisma';
 
-export async function getSpecialties() {
+// Return specialties. If hospitalId provided, prefer Specialty model entries (active ones). Otherwise fallback
+// to distinct specialties derived from existing doctors (backwards compatibility).
+export async function getSpecialties(hospitalId?: number) {
+  if (typeof hospitalId === 'number') {
+    const specs = await prisma.specialty.findMany({
+      where: { hospitalId, active: true },
+      orderBy: { name: 'asc' },
+      select: { name: true },
+    });
+    return specs.map(s => s.name);
+  }
+
+  // Fallback: return distinct specialties from doctors
   const distinctSpecialties = await prisma.doctor.findMany({
     select: {
         specialty: true,

@@ -46,7 +46,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
 
 
   useEffect(() => {
-    getSpecialties().then(setSpecialties);
+    getSpecialties(hospitalId).then(setSpecialties);
   }, []);
   
   useEffect(() => {

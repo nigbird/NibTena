@@ -58,7 +58,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const [formKey, setFormKey] = useState(Date.now()); // Used to reset the form
 
   useEffect(() => {
-    getSpecialties().then(setSpecialties);
+    getSpecialties(hospitalId).then(setSpecialties);
   }, []);
   
   useEffect(() => {

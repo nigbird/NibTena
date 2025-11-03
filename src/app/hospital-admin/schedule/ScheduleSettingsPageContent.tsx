@@ -65,7 +65,6 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
   const handleHospitalSettingsSave = (e: React.FormEvent) => {
     e.preventDefault();
     // This should be a server action
-    console.log({ bookingWindow, startTime, endTime });
     toast({
       title: 'Settings Saved',
       description: 'Hospital-wide booking rules have been updated.',

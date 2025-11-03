@@ -3,15 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 // Step 5: Callback endpoint for successful payments
 export async function POST(request: NextRequest) {
-  console.log("🔔 Payment callback received");
-  console.log("📝 Request URL:", request.url);
-  console.log("📝 Request method:", request.method);
-  console.log("📝 Request headers:", Object.fromEntries(request.headers.entries()));
-
   try {
     // ✅ Read Authorization header
     const authHeader = request.headers.get("Authorization");
-    console.log("Auth header present:", !!authHeader);
 
     if (!authHeader) {
       console.error("❌ Missing Authorization header.");
@@ -28,11 +22,8 @@ export async function POST(request: NextRequest) {
     }
 
     const fixedAuthHeader1 = `Bearer ${fixedAuthHeader}`;
-    console.log("✅ Extracted token:", fixedAuthHeader ? "Present" : "Missing");
-
     // Continue with validation
     const VALIDATE_TOKEN_URL = process.env.VALIDATE_TOKEN_URL;
-    console.log("VALIDATE_TOKEN_URL:", VALIDATE_TOKEN_URL ? "Set" : "Not set");
 
     if (!VALIDATE_TOKEN_URL) {
       console.error("❌ VALIDATE_TOKEN_URL environment variable not set");
@@ -43,8 +34,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (VALIDATE_TOKEN_URL) {
-      console.log("🔍 Validating token with bank API...");
-
       try {
         // Fix: Use the correct variable name (VALIDATE_TOKEN_URL)
         let externalResponse = await fetch(VALIDATE_TOKEN_URL, {
@@ -58,7 +47,6 @@ export async function POST(request: NextRequest) {
 
         // Retry with POST if GET not allowed
         if (externalResponse.status === 405) {
-          console.log("🔁 Retrying validation with POST method...");
           externalResponse = await fetch(VALIDATE_TOKEN_URL, {
             method: "POST",
             headers: {
@@ -70,8 +58,6 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        console.log("Validation response status:", externalResponse.status);
-
         const text = await externalResponse.text();
         const validateData = text ? JSON.parse(text) : null;
 
@@ -80,7 +66,6 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ message: "Invalid token" }, { status: 401 });
         }
 
-        console.log("✅ Token validated successfully:", validateData);
       } catch (error) {
         console.error("❌ Callback Error: Failed to call validation URL.", error);
         if (process.env.NODE_ENV === "production") {
@@ -94,7 +79,6 @@ export async function POST(request: NextRequest) {
     let requestBody;
     try {
       requestBody = await request.json();
-      console.log("📦 Callback request body received:", requestBody);
     } catch (e) {
       console.error("❌ Callback Error: Invalid JSON in request body.", e);
       return NextResponse.json({ message: "Invalid JSON in request body" }, { status: 400 });
@@ -111,16 +95,6 @@ export async function POST(request: NextRequest) {
       Signature: receivedSignature,
     } = requestBody;
 
-    console.log("📋 Extracted callback data:", {
-      paidAmount,
-      paidByNumber,
-      txnRef,
-      transactionId,
-      transactionTime,
-      accountNo,
-      token: token ? "Present" : "Missing",
-      receivedSignature: receivedSignature ? "Present" : "Missing",
-    });
 
     // ✅ Check required fields
     const missingFields = [];
@@ -143,7 +117,6 @@ export async function POST(request: NextRequest) {
 
 
     // ✅ Process appointment update
-    console.log("🔍 Looking for appointment with transactionId (txnRef):", txnRef);
     const appointment = await prisma.appointment.findUnique({ where: { transactionId: txnRef } });
 
     if (!appointment) {
@@ -151,14 +124,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Appointment not found" }, { status: 400 });
     }
 
-    console.log("✅ Found appointment:", {
-      id: appointment.id,
-      status: appointment.status,
-      patientId: appointment.patientId,
-      doctorId: appointment.doctorId,
-    });
-
-    console.log("💾 Updating appointment status to 'confirmed'...");
     await prisma.appointment.update({
       where: { id: appointment.id },
       data: {
@@ -166,8 +131,6 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
     });
-
-    console.log("✅ Payment confirmed for transaction:", txnRef);
 
     // ✅ Respond success
     return NextResponse.json({ message: "Payment confirmed and updated." }, { status: 200 });

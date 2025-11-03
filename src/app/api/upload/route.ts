@@ -78,8 +78,6 @@ export async function POST(request: NextRequest) {
     // Public URL (make sure you have a route to serve these files)
     const publicUrl = `/api/uploads/${filename}`;
 
-    console.log(`File uploaded successfully: ${filename} (${file.size} bytes, ${detected.mime})`);
-
     return NextResponse.json({
       success: true,
       filename,

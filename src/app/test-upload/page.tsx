@@ -3,9 +3,6 @@ import { type UploadResponse } from '@/lib/image-utils';
 
 export default function TestUploadPage() {
   const handleUploadSuccess = (result: UploadResponse) => {
-    console.log('Upload successful:', result);
-    // Here you could update the database with the image URL
-    // For example, if updating a hospital or doctor profile
   };
 
   const handleUploadError = (error: string) => {
@@ -44,7 +41,6 @@ import { uploadImage } from '@/lib/image-utils';
 <ImageUpload 
   onUploadSuccess={(result) => {
     // Handle successful upload
-    console.log('Image URL:', result.url);
   }}
   onUploadError={(error) => {
     // Handle upload error

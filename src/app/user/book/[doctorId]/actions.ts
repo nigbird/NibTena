@@ -83,10 +83,6 @@ export async function startBookingProcess(
   // Debug: log incoming cookies to see if patient session is sent
   try {
     const cookieStore = await cookies();
-    console.log('server cookies (startBookingProcess):', {
-      patient_session: cookieStore.get('nib-tena-patient-session')?.value,
-      miniapp_session: cookieStore.get('miniapp_session')?.value,
-    });
   } catch (err) {
     console.error('Failed to read cookies in startBookingProcess:', err);
   }
@@ -248,20 +244,13 @@ export async function initiateBookingAndPayment(
   // Debug: log incoming cookies to see if patient session is sent
   try {
     const cookieStore = await cookies();
-    console.log('server cookies (initiateBookingAndPayment):', {
-      patient_session: cookieStore.get('nib-tena-patient-session')?.value,
-      miniapp_session: cookieStore.get('miniapp_session')?.value,
-    });
   } catch (err) {
     console.error('Failed to read cookies in initiateBookingAndPayment:', err);
   }
   // Always get phone number from cookie for mini app sessions
   const phoneFromCookie = await getPhoneNumberFromCookie();
   const authToken = await getAuthTokenFromCookie();
-  
-  console.log("Auth Token from Cookie:", {authToken});
-  console.log("Phone from Cookie:", {phoneFromCookie});
-  
+    
   const rawData = {
     bookingFor: formData.get('bookingFor'),
     fullName: formData.get('fullName'),
@@ -331,13 +320,6 @@ export async function initiateBookingAndPayment(
         throw new Error(`Missing payment environment variables: ${missingVars.join(', ')}`);
     }
 
-    console.log("Payment Environment Variables:", {
-        ACCOUNT_NO: ACCOUNT_NO,
-        CALLBACK_URL: CALLBACK_URL,
-        COMPANY_NAME: COMPANY_NAME,
-        NIB_PAYMENT_URL: NIB_PAYMENT_URL,
-        NIB_PAYMENT_KEY: NIB_PAYMENT_KEY ? '[REDACTED]' : 'MISSING'
-    });
     
     // Use superAppToken consistently for both signature and payload
     const cleanCallbackURL = CALLBACK_URL?.trim();
@@ -352,9 +334,7 @@ export async function initiateBookingAndPayment(
       `transactionTime=${transactionTime}`
     ].join('&');
 
-    console.log("Signature String:", signatureString);
     const signature = crypto.createHash('sha256').update(signatureString, 'utf8').digest('hex');
-    console.log("Generated Signature:", signature);
 
     const payload = {
         accountNo: ACCOUNT_NO,
@@ -365,15 +345,12 @@ export async function initiateBookingAndPayment(
         transactionId: transactionId,
         transactionTime: transactionTime,
         signature: signature
-    };
-    console.log("Payment Payload:", {payload});
-    
+    };    
     // Update appointment with transaction ID
     await prisma.appointment.update({
         where: { id: newAppointment.id },
         data: { transactionId: transactionId },
     });
-    console.log({authToken}, {NIB_PAYMENT_URL});
     const response = await fetch(NIB_PAYMENT_URL ?? "", {
       method: 'POST',
       headers: {
@@ -405,7 +382,6 @@ export async function initiateBookingAndPayment(
     }
 
     const paymentToken = responseData?.token;
-    console.log("Payment Token Received:", { paymentToken });
 
     if (!paymentToken) {
       throw new Error("Payment token not received from gateway.");

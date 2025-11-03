@@ -5,7 +5,6 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log(`🌱 Start seeding ...`);
   const saltRounds = 10;
 
   // --- Create Super Admin ---
@@ -188,10 +187,7 @@ async function main() {
       status: 'active',
     },
   });
-  // ... (rest of the doctors remain unchanged)
-  // You can keep all your doctor3–doctor8 and relations as they were.
-
-  console.log(`✅ Seeding finished.`);
+ 
 }
 
 main()

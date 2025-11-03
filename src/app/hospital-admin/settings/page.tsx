@@ -40,7 +40,6 @@ export default function HospitalAdminSettingsPage() {
     setIsLoading(true);
 
     // Mock API call to save settings
-    console.log('Saving data retention period:', retentionPeriod);
     setTimeout(() => {
       setIsLoading(false);
       toast({

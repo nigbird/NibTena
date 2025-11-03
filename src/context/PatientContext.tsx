@@ -4,13 +4,12 @@ import { createContext, ReactNode, useState, useEffect, useCallback, useRef } fr
 import type { Patient } from '@/lib/definitions';
 
 const SESSION_KEY = 'nib-tena-patient-session';
-const SESSION_DURATION_MS = 1 * 60 * 1000; // 30 minutes
-
+const SESSION_DURATION_MS = 5 * 60 * 1000; 
 type StoredSession = {
   patient: Patient;
   expiry: number;
 };
-  
+
 type PatientContextType = {
   patient: Patient | null;
   superAppToken: string | null;

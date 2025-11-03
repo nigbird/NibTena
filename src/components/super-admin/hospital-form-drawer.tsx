@@ -44,6 +44,7 @@ export default function HospitalFormDrawer({
   const [state, formAction] = useActionState(action, initialState);
 
   const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
+  const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
   
   useEffect(() => {
     if (state.success && !isPending) {
@@ -65,21 +66,65 @@ export default function HospitalFormDrawer({
     if (isOpen) {
       formRef.current?.reset();
       setImagePreview(hospitalToEdit?.imageUrl || null);
+      setImageValidationErrors([]);
     }
   }, [isOpen, hospitalToEdit]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // client-side validation: type and size
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const vErrors: string[] = [];
+
+      if (!allowedTypes.includes(file.type)) {
+        vErrors.push('Unsupported file type. Allowed: JPEG, PNG, GIF, WebP.');
+      }
+
+      if (file.size > maxSize) {
+        const mb = (file.size / (1024 * 1024)).toFixed(2);
+        vErrors.push(`File is too large (${mb} MB). Maximum allowed is 5 MB.`);
+      }
+
+      if (vErrors.length > 0) {
+        setImageValidationErrors(vErrors);
+        setImagePreview(null);
+        return;
+      }
+
+      setImageValidationErrors([]);
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Re-validate image before submitting to avoid sending large/invalid files to server
+    const fileInput = formRef.current?.querySelector<HTMLInputElement>('input[name="image"]');
+    const file = fileInput?.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const vErrors: string[] = [];
+      if (!allowedTypes.includes(file.type)) vErrors.push('Unsupported file type. Allowed: JPEG, PNG, GIF, WebP.');
+      if (file.size > maxSize) vErrors.push(`File is too large (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maximum allowed is 5 MB.`);
+      if (vErrors.length > 0) {
+        setImageValidationErrors(vErrors);
+        fileInput.focus();
+        return;
+      }
+    }
+
+    if (imageValidationErrors.length > 0) {
+      const fileInputEl = formRef.current?.querySelector<HTMLInputElement>('input[name="image"]');
+      fileInputEl?.focus();
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     startTransition(() => {
-        formAction(formData);
+      formAction(formData);
     });
   };
 
@@ -113,6 +158,13 @@ export default function HospitalFormDrawer({
             <div className="space-y-2">
               <Label htmlFor="image">Hospital Photo</Label>
               <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+              {imageValidationErrors.length > 0 && (
+                <div className="mt-2 space-y-1 text-sm">
+                  {imageValidationErrors.map((msg, i) => (
+                    <p key={i} className="text-destructive">{msg}</p>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -196,7 +248,7 @@ export default function HospitalFormDrawer({
           <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
-           <Button type="submit" form="hospital-form" variant="accent" disabled={isPending}>
+           <Button type="submit" form="hospital-form" variant="accent" disabled={isPending || imageValidationErrors.length > 0}>
               {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : isEditing ? 'Save Changes' : 'Add Hospital'}
             </Button>
         </div>

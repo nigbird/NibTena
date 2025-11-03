@@ -42,6 +42,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [imagePreview, setImagePreview] = useState<string | null>(doctorToEdit?.imageUrl || null);
+  const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
 
 
   useEffect(() => {
@@ -68,20 +69,66 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
     if (isOpen) {
       formRef.current?.reset();
       setImagePreview(doctorToEdit?.imageUrl || null);
+      setImageValidationErrors([]);
     }
   }, [isOpen, doctorToEdit]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Re-validate image before submitting to avoid sending large/invalid files to server
+    const fileInput = formRef.current?.querySelector<HTMLInputElement>('input[name="image"]');
+    const file = fileInput?.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const vErrors: string[] = [];
+      if (!allowedTypes.includes(file.type)) vErrors.push('Unsupported file type. Allowed: JPEG, PNG, GIF, WebP.');
+      if (file.size > maxSize) vErrors.push(`File is too large (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maximum allowed is 5 MB.`);
+      if (vErrors.length > 0) {
+        setImageValidationErrors(vErrors);
+        // focus the input to make it obvious to the user
+        fileInput.focus();
+        return;
+      }
+    }
+
+    if (imageValidationErrors.length > 0) {
+      // prevent submit if there are outstanding validation errors
+      const fileInputEl = formRef.current?.querySelector<HTMLInputElement>('input[name="image"]');
+      fileInputEl?.focus();
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     startTransition(() => {
-        formAction(formData);
+      formAction(formData);
     });
   }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // validate type and size (max 5MB)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const vErrors: string[] = [];
+
+      if (!allowedTypes.includes(file.type)) {
+        vErrors.push('Unsupported file type. Allowed: JPEG, PNG, GIF, WebP.');
+      }
+
+      if (file.size > maxSize) {
+        const mb = (file.size / (1024 * 1024)).toFixed(2);
+        vErrors.push(`File is too large (${mb} MB). Maximum allowed is 5 MB.`);
+      }
+
+      if (vErrors.length > 0) {
+        setImageValidationErrors(vErrors);
+        setImagePreview(null);
+        return;
+      }
+
+      setImageValidationErrors([]);
       setImagePreview(URL.createObjectURL(file));
     }
   };
@@ -111,6 +158,13 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                 </Label>
                 <div className="col-span-3">
                 <Input id="image" name="image" type="file" accept="image/*" className="w-full" onChange={handleImageChange}/>
+                {imageValidationErrors.length > 0 && (
+                  <div className="mt-2 space-y-1 text-sm">
+                    {imageValidationErrors.map((msg, i) => (
+                      <p key={i} className="text-destructive">{msg}</p>
+                    ))}
+                  </div>
+                )}
                 </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -187,7 +241,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         </ScrollArea>
         <div className="flex justify-end space-x-2 pt-4 border-t -mx-6 px-6">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit" form="doctor-form" disabled={isPending} variant="accent">
+            <Button type="submit" form="doctor-form" disabled={isPending || imageValidationErrors.length > 0} variant="accent">
                 {isPending ? (
                     <><Loader2 className="animate-spin mr-2" /> {isEditing ? 'Saving...' : 'Adding...'}</>
                 ) : (

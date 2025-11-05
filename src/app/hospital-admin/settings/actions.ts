@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
-import { auth } from '@/auth';
+import { auth } from '@/../../auth';
 
 const AddSpecialtySchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),

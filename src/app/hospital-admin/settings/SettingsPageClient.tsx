@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,7 +30,8 @@ type Specialty = { id: number; name: string; active: boolean };
 
 function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
   const { toast } = useToast();
-  const { update: updateSession } = useSession();
+  const { update: updateSession } = useSession() as any;
+  const router = useRouter();
   const initialState: GeneralSettingsState = { message: null, errors: {} };
   const updateSettingsWithId = updateHospitalGeneralSettings.bind(null, hospital.id);
   const [state, formAction] = useActionState(updateSettingsWithId, initialState);

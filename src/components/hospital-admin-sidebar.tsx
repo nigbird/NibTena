@@ -1,6 +1,7 @@
 
-'use client';
+ 'use client';
 
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -46,8 +47,10 @@ const bottomNavLinks = [
 export default function HospitalAdminSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  
-  const hospitalName = session?.user?.name || 'Hospital Admin';
+  const [localHospitalName, setLocalHospitalName] = useState<string | null>(null);
+  const [localImage, setLocalImage] = useState<string | null>(null);
+
+  const hospitalName = localHospitalName ?? session?.user?.name ?? 'Hospital Admin';
 
   if (!session) {
     return (
@@ -62,6 +65,55 @@ export default function HospitalAdminSidebar() {
       </aside>
     );
   }
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchHospital() {
+      try {
+        const hid = (session as any)?.user?.hospitalId;
+        if (!hid) return;
+        const res = await fetch(`/api/hospital/${hid}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        setLocalHospitalName(data?.name ?? null);
+        setLocalImage(data?.imageUrl ?? null);
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    fetchHospital();
+
+    const handler = (e: any) => {
+      try {
+        const detail = e?.detail;
+        const hid = (session as any)?.user?.hospitalId;
+        if (!hid) return;
+
+        // if caller provided updatedHospital data, update immediately without extra fetch
+        if (detail?.hospitalId === hid && detail.updatedHospital) {
+          setLocalHospitalName(detail.updatedHospital.name ?? null);
+          setLocalImage(detail.updatedHospital.imageUrl ?? null);
+          return;
+        }
+
+        if (!detail || detail.hospitalId === hid) {
+          fetchHospital();
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('hospital-updated', handler as EventListener);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('hospital-updated', handler as EventListener);
+    };
+  }, [session?.user?.hospitalId]);
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -105,13 +157,15 @@ export default function HospitalAdminSidebar() {
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {session.user.image && <AvatarImage src={session.user.image} alt={hospitalName} />}
+                        {(localImage ?? session.user.image) && (
+                          <AvatarImage src={(localImage ?? session.user.image) ?? undefined} alt={hospitalName} />
+                        )}
                         <AvatarFallback>{hospitalName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="text-left overflow-hidden">
-                        <p className="font-semibold text-sm leading-tight truncate">{hospitalName}</p>
-                        <p className="text-xs text-muted-foreground">Admin</p>
-                    </div>
+          <div className="text-left overflow-hidden">
+            <p className="font-semibold text-sm leading-tight truncate">{hospitalName}</p>
+            <p className="text-xs text-muted-foreground">Admin</p>
+          </div>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 mb-2">

@@ -50,7 +50,7 @@ export default function AddScheduleDrawer({ isOpen, setIsOpen, doctors, hospital
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
   const [schedules, setSchedules] = useState<DaySchedule[]>(
-     weekDays.map(day => ({ dayOfWeek: day, workingHours: [{startTime: '09:00', endTime: '17:00'}], breakHours: [{startTime: '12:30', endTime: '13:30'}], patientsPerHour: 2 }))
+     weekDays.map(day => ({ dayOfWeek: day, workingHours: [], breakHours: [], patientsPerHour: 2 }))
   );
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function AddScheduleDrawer({ isOpen, setIsOpen, doctors, hospital
     if (isOpen) {
         formRef.current?.reset();
         setSelectedDoctorId('');
-        setSchedules(weekDays.map(day => ({ dayOfWeek: day, workingHours: [{startTime: '09:00', endTime: '17:00'}], breakHours: [{startTime: '12:30', endTime: '13:30'}], patientsPerHour: 2 })));
+        setSchedules(weekDays.map(day => ({ dayOfWeek: day, workingHours: [], breakHours: [], patientsPerHour: 2 })));
     }
   }, [isOpen]);
 

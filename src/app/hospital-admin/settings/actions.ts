@@ -66,7 +66,7 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
   }
 }
 
-export async getHospitalById(hospitalId: number) {
+export async function getHospitalById(hospitalId: number) {
     return await prisma.hospital.findUnique({
         where: { id: hospitalId }
     });

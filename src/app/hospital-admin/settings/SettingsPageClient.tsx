@@ -305,15 +305,50 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
         
         <TabsContent value="data">
           <Card>
-              <CardHeader>
-                <CardTitle>Data Management</CardTitle>
-                <CardDescription>
-                  Configure how system data is managed and retained.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Data management settings will be available here in a future update.</p>
-              </CardContent>
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+              <CardDescription>
+                Set how long patient data is retained. This does not delete data automatically.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const value = Number(e.currentTarget.dataRetentionDays.value);
+                  if (!value || value < 1) {
+                    toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid number of days.' });
+                    return;
+                  }
+                  try {
+                    const res = await fetch(`/api/hospitals/${hospitalId}/data-management`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ dataRetentionDays: value }),
+                    });
+                    if (!res.ok) throw new Error('Failed to save');
+                    const data = await res.json();
+                    setHospital((h) => h ? { ...h, dataRetentionDays: data.dataRetentionDays } : h);
+                    toast({ title: 'Saved', description: 'Data retention period updated.' });
+                  } catch (err) {
+                    toast({ variant: 'destructive', title: 'Error', description: 'Failed to save.' });
+                  }
+                }}
+                className="space-y-6 max-w-md"
+              >
+                <Label htmlFor="dataRetentionDays">Data Retention Period (Days)</Label>
+                <Input
+                  id="dataRetentionDays"
+                  name="dataRetentionDays"
+                  type="number"
+                  min={1}
+                  defaultValue={hospital?.dataRetentionDays ?? 90}
+                  required
+                />
+                <Button type="submit" variant="accent">Save</Button>
+              </form>
+              <p className="text-xs text-muted-foreground mt-2">Current: <b>{hospital?.dataRetentionDays ?? 90}</b> days</p>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

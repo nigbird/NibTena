@@ -22,6 +22,7 @@ model Hospital {
   name           String             @unique
   description    String
   city           String
+  dataRetentionDays Int @default(90)
   imageUrl       String?
   contactEmail   String             @unique
   contactPhone   String

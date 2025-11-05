@@ -1,8 +1,11 @@
+
 "use server";
 
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { saveImage } from '@/lib/image-upload';
+import { auth } from '@/auth';
 
 const AddSpecialtySchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -60,6 +63,97 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
   } catch (error) {
     console.error('[updateSpecialty] error', error);
     return { message: 'Failed to update specialty.', success: false };
+  }
+}
+
+export async getHospitalById(hospitalId: number) {
+    return await prisma.hospital.findUnique({
+        where: { id: hospitalId }
+    });
+}
+
+const GeneralSettingsSchema = z.object({
+  name: z.string().min(2, "Hospital name must be at least 2 characters."),
+  description: z.string().min(10, "Description must be at least 10 characters."),
+  image: z.instanceof(File).optional(),
+});
+
+export type GeneralSettingsState = {
+  errors?: {
+    name?: string[];
+    description?: string[];
+    image?: string[];
+  };
+  message?: string | null;
+  success?: boolean;
+  updatedHospital?: {
+    name: string;
+    imageUrl?: string | null;
+  }
+};
+
+export async function updateHospitalGeneralSettings(
+  hospitalId: number,
+  prevState: GeneralSettingsState,
+  formData: FormData
+): Promise<GeneralSettingsState> {
+  const session = await auth();
+  if (session?.user?.role !== 'hospital' || session.user.hospitalId !== hospitalId) {
+    return { success: false, message: "Unauthorized." };
+  }
+
+  const rawData = {
+    name: formData.get('name'),
+    description: formData.get('description'),
+    image: formData.get('image'),
+  };
+
+  const imageFile = formData.get('image') as File | null;
+  if (!imageFile || imageFile.size === 0) {
+    delete rawData.image;
+  }
+
+  const validatedFields = GeneralSettingsSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to update settings. Please check the fields.',
+      success: false,
+    };
+  }
+
+  const { name, description, image } = validatedFields.data;
+
+  try {
+    const dataToUpdate: { name: string; description: string; imageUrl?: string } = {
+      name,
+      description,
+    };
+
+    if (image) {
+      dataToUpdate.imageUrl = await saveImage(image);
+    }
+    
+    const updatedHospital = await prisma.hospital.update({
+      where: { id: hospitalId },
+      data: dataToUpdate,
+    });
+    
+    revalidatePath('/hospital-admin/settings');
+    revalidatePath(`/user/hospitals/${hospitalId}`);
+
+    return {
+      success: true,
+      message: 'General settings updated successfully.',
+      updatedHospital: {
+        name: updatedHospital.name,
+        imageUrl: updatedHospital.imageUrl,
+      }
+    };
+  } catch (error) {
+    console.error("Failed to update hospital settings:", error);
+    return { success: false, message: 'A database error occurred.' };
   }
 }
 

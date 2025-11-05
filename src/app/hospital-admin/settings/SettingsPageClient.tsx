@@ -1,6 +1,8 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,14 +19,101 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty } from './actions';
+import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState } from './actions';
 import { useActionState } from 'react';
+import type { Hospital } from '@/lib/definitions';
+import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
 type Specialty = { id: number; name: string; active: boolean };
 
+function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
+  const { toast } = useToast();
+  const { update: updateSession } = useSession();
+  const initialState: GeneralSettingsState = { message: null, errors: {} };
+  const updateSettingsWithId = updateHospitalGeneralSettings.bind(null, hospital.id);
+  const [state, formAction] = useActionState(updateSettingsWithId, initialState);
+  const [isPending, setIsPending] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(hospital.imageUrl);
+  
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.success) {
+      toast({ title: 'Settings Saved', description: state.message });
+      if (state.updatedHospital) {
+        updateSession({
+          user: { 
+            name: state.updatedHospital.name,
+            image: state.updatedHospital.imageUrl 
+          }
+        });
+      }
+    } else if (state.message) {
+      toast({ variant: 'destructive', title: 'Error', description: state.message });
+    }
+     setIsPending(false);
+  }, [state, toast, updateSession]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+  
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsPending(true);
+    const formData = new FormData(event.currentTarget);
+    formAction(formData);
+  }
+
+  return (
+    <form ref={formRef} onSubmit={handleSubmit}>
+      <Card>
+        <CardHeader>
+          <CardTitle>General Settings</CardTitle>
+          <CardDescription>Update your hospital's public information and notification preferences.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+            <div className="flex items-start gap-6">
+              {imagePreview && (
+                 <div className="w-24 h-24 relative rounded-md overflow-hidden border-2 border-primary shrink-0">
+                    <Image src={imagePreview} alt="Hospital logo preview" fill style={{ objectFit: 'cover' }} />
+                </div>
+              )}
+               <div className="space-y-2 flex-grow">
+                  <Label htmlFor="image">Hospital Logo</Label>
+                  <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+                  <p className="text-xs text-muted-foreground">Recommended size: 400x400px. Max 5MB.</p>
+                  {state.errors?.image && <p className="text-destructive text-sm">{state.errors.image[0]}</p>}
+              </div>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="name">Hospital Name</Label>
+                <Input id="name" name="name" defaultValue={hospital.name} required />
+                 {state.errors?.name && <p className="text-destructive text-sm">{state.errors.name[0]}</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" name="description" placeholder="Enter hospital description" defaultValue={hospital.description} required />
+                {state.errors?.description && <p className="text-destructive text-sm">{state.errors.description[0]}</p>}
+            </div>
+        </CardContent>
+        <CardFooter>
+           <Button type="submit" variant="accent" disabled={isPending}>
+              {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save General Settings'}
+           </Button>
+        </CardFooter>
+      </Card>
+    </form>
+  )
+}
+
 export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospitalId: number }) {
-  const [retentionPeriod, setRetentionPeriod] = useState('180');
-  const [isLoading, setIsLoading] = useState(false);
+  const [hospital, setHospital] = useState<Hospital | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [newSpecialty, setNewSpecialty] = useState('');
   const { toast } = useToast();
@@ -33,8 +122,27 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const initialState = { message: null, errors: {}, success: false };
   const [addState, addAction] = useActionState(addSpecialty.bind(null, hospitalId), initialState as any);
 
+  const fetchInitialData = async () => {
+    setIsLoading(true);
+    try {
+      const [hospitalData, specialtiesData] = await Promise.all([
+        getHospitalById(hospitalId),
+        getHospitalSpecialties(hospitalId)
+      ]);
+      setHospital(hospitalData as Hospital);
+      setSpecialties(specialtiesData.map((s: any) => ({ id: s.id, name: s.name, active: s.active })));
+    } catch (e) {
+      console.error('Failed to load settings data', e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load hospital data.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchList();
+    if (hospitalId) {
+      fetchInitialData();
+    }
   }, [hospitalId]);
 
   useEffect(() => {
@@ -100,6 +208,19 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
       toast({ variant: 'destructive', title: 'Error', description: res?.message || 'Failed to update' });
     }
   };
+  
+  if (isLoading || !hospital) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-8 w-96" />
+        <Card>
+          <CardHeader><Skeleton className="h-8 w-64" /></CardHeader>
+          <CardContent><Skeleton className="h-48 w-full" /></CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -122,35 +243,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
         </TabsList>
 
         <TabsContent value="general">
-          <form>
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Update your hospital's public information and notification preferences.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="hospital-name">Hospital Name</Label>
-                        <Input id="hospital-name" defaultValue="" />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="hospital-logo">Hospital Logo</Label>
-                        <Input id="hospital-logo" type="file" />
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="hospital-address">Address</Label>
-                    <Textarea id="hospital-address" placeholder="Enter hospital address" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                 <Button type="button" variant="accent" disabled={isLoading} onClick={() => { setIsLoading(true); setTimeout(()=> setIsLoading(false), 800); }}>
-                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save General Settings'}
-                 </Button>
-              </CardFooter>
-            </Card>
-          </form>
+          <GeneralSettingsForm hospital={hospital} />
         </TabsContent>
 
         <TabsContent value="specialties">
@@ -205,15 +298,11 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
                 ))}
               </div>
             </CardContent>
-            <CardFooter>
-               <Button variant="accent" disabled>Save Specialty Changes</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
         
         <TabsContent value="data">
-          <form>
-            <Card>
+          <Card>
               <CardHeader>
                 <CardTitle>Data Management</CardTitle>
                 <CardDescription>
@@ -221,24 +310,9 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-w-md">
-                  <Label htmlFor="data-retention" className="font-semibold text-base">Data Retention</Label>
-                </div>
+                <p>Data management settings will be available here in a future update.</p>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" variant="accent" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Data Settings'
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          </form>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { EmailSettingsType } from '@/lib/email-actions';
 import { Mail, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { updateEmailSettings, testEmailConnection, setHospitalEmailPreference } from '@/lib/email-actions';
-import type { Hospital, EmailConfiguration as EmailConfigType } from '@/lib/definitions';
+import type { Hospital } from '@/lib/definitions';
+import type { EmailSettings as EmailConfigType } from '@prisma/client';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 const emptySettings: EmailSettingsType = {

@@ -22,6 +22,10 @@ model Hospital {
   name           String             @unique
   description    String
   city           String
+  useGlobalEmailId Int?
+  useGlobalEmail   EmailSettings?    @relation("HospitalUsesGlobalEmail", fields: [useGlobalEmailId], references: [id])
+  // If this hospital has its own custom email settings (one-to-one)
+  customEmail      EmailSettings?    @relation("HospitalCustomEmail")
   dataRetentionDays Int @default(90)
   imageUrl       String?
   contactEmail   String             @unique
@@ -38,6 +42,29 @@ model Hospital {
   doctorSchedules DoctorSchedule[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+}
+model EmailSettings {
+  id             Int      @id @default(autoincrement())
+  name           String?
+  smtpHost       String
+  smtpPort       Int
+  smtpUser       String
+  smtpPass       String
+  smtpEncryption String   @default("tls")
+  imapHost       String?
+  imapPort       Int?
+  imapUser       String?
+  imapPass       String?
+  imapEncryption String?
+  configured     Boolean  @default(false)
+  isGlobal       Boolean  @default(false)
+  // If this is a hospital-specific setting, link it here (one-to-one)
+  hospitalId     Int?     @unique
+  hospital       Hospital? @relation("HospitalCustomEmail", fields: [hospitalId], references: [id])
+  // Back-reference: which hospitals chose this global email (one-to-many)
+  hospitals      Hospital[] @relation("HospitalUsesGlobalEmail")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Doctor {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import {
   Hospital,
   Settings,
   Menu,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,6 +62,13 @@ export default function SuperAdminHeader() {
                         >
                         <Hospital className="h-5 w-5" />
                         Hospitals
+                    </Link>
+                    <Link
+                        href="/super-admin/email"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                        >
+                        <Mail className="h-5 w-5" />
+                        Email
                     </Link>
                     <Link
                         href="/super-admin/settings"

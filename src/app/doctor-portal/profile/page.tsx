@@ -165,7 +165,7 @@ export default function DoctorProfilePage() {
                     {state.errors?.experience && <p className="text-sm font-medium text-destructive">{state.errors.experience[0]}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="consultationFee">Consultation Fee ($)</Label>
+                    <Label htmlFor="consultationFee">Consultation Fee (ETB)</Label>
                     <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctor.consultationFee} required />
                     {state.errors?.consultationFee && <p className="text-sm font-medium text-destructive">{state.errors.consultationFee[0]}</p>}
                 </div>

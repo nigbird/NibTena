@@ -114,7 +114,7 @@ export default function DoctorList({ doctors, onEdit, onDelete, onStatusChange }
                 <TableCell className="hidden md:table-cell">
                   <Badge variant={doctor.status === 'active' ? 'accent' : 'outline'}>{doctor.status}</Badge>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">${doctor.consultationFee}</TableCell>
+                <TableCell className="hidden md:table-cell">${doctor.consultationFee}ETB</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

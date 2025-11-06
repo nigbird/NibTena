@@ -203,7 +203,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
               <DollarSign className="h-5 w-5 text-yellow-700 dark:text-yellow-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}ETB</div>
             </CardContent>
           </Card>
         </div>

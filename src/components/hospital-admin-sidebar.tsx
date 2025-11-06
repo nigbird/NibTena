@@ -172,8 +172,9 @@ export default function HospitalAdminSidebar() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
+                   <Link href="/hospital-admin/settings"></Link>
                     <CircleUser className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Profile </span>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>
                     <Link href="/hospital-admin/settings">

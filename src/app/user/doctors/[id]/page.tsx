@@ -88,7 +88,7 @@ export default async function DoctorProfilePage({
                     )}
                     <div className="flex items-center gap-3 text-muted-foreground">
                         <Wallet className="h-5 w-5 flex-shrink-0 text-accent" />
-                        <span className="font-bold text-base md:text-lg text-foreground">${doctor.consultationFee} Consultation Fee</span>
+                        <span className="font-bold text-base md:text-lg text-foreground">${doctor.consultationFee} ETB Consultation Fee</span>
                     </div>
                 </div>
             </Card>

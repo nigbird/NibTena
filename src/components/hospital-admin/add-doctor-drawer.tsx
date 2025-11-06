@@ -130,7 +130,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="consultationFee" className="text-right">
-              Fee ($)
+              Fee (ETB)
             </Label>
             <div className="col-span-3">
               <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctorToEdit?.consultationFee} placeholder="150" className="w-full" />

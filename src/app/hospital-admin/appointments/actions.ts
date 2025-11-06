@@ -60,7 +60,9 @@ export async function saveAppointment(
   
   const { appointmentDate, doctorId, appointmentSlot, patientName, patientPhone, patientAge, patientGender, ...rest } = validatedFields.data;
   
-  const appointmentDay = getDay(new Date(appointmentDate)); // Sunday - 0, Monday - 1, etc.
+  // Parse the date string as a local date to avoid timezone shifts caused by `new Date('YYYY-MM-DD')`
+  const appointmentDateObj = parseTime(appointmentDate, 'yyyy-MM-dd', new Date());
+  const appointmentDay = getDay(appointmentDateObj); // Sunday - 0, Monday - 1, etc.
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeek = weekDays[appointmentDay];
 
@@ -103,7 +105,8 @@ export async function saveAppointment(
       appointmentSlot,
       hospitalId,
       patientId: patient.id,
-      appointmentDate: new Date(appointmentDate),
+      // store appointmentDate as a parsed local date (start of day)
+      appointmentDate: appointmentDateObj,
       symptoms: validatedFields.data.symptoms || '',
     };
 
@@ -189,7 +192,9 @@ export async function getDoctorsByHospitalId(hospitalId: number) {
 
 export async function getDoctorScheduleForDate(doctorId: number, date: string, hospitalId: number) {
   if (!doctorId || !date) return null;
-  const dayIndex = getDay(new Date(date));
+  // Parse the date string as local date to avoid shifting to previous/next day due to UTC parsing
+  const parsedDate = parseTime(date, 'yyyy-MM-dd', new Date());
+  const dayIndex = getDay(parsedDate);
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeek = weekDays[dayIndex];
 

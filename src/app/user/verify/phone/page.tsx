@@ -27,7 +27,7 @@ function PhoneVerificationForm() {
         const formData = new FormData(event.currentTarget);
         const phone = formData.get('phone');
         
-        // In a real app, you would send an OTP here.
+        // In a real app, we would send an OTP here.
         // For this mock, we'll just redirect to the OTP page.
         const newParams = new URLSearchParams(searchParams);
         newParams.set('phone', phone as string);

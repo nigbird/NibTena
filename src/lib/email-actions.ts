@@ -3,7 +3,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import type { EmailConfiguration } from '@prisma/client';
+import type { EmailSettings } from '@prisma/client';
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import imaps from 'imap-simple';
@@ -33,10 +33,10 @@ export type EmailSettingsType = z.infer<typeof EmailSettingsSchema>;
 
 export async function getEmailSettings(hospitalId: number) {
   const [customSettings, globalSettings] = await Promise.all([
-    prisma.emailConfiguration.findFirst({
+    prisma.emailSettings.findFirst({
       where: { hospitalId },
     }),
-    prisma.emailConfiguration.findMany({
+    prisma.emailSettings.findMany({
       where: { isGlobal: true },
       orderBy: { name: 'asc' },
     }),
@@ -53,15 +53,15 @@ export async function updateEmailSettings(hospitalId: number, data: EmailSetting
     hospitalId,
   };
   
-  const existingSettings = await prisma.emailConfiguration.findFirst({ where: { hospitalId } });
+  const existingSettings = await prisma.emailSettings.findFirst({ where: { hospitalId } });
 
   if (existingSettings) {
-    return await prisma.emailConfiguration.update({
+    return await prisma.emailSettings.update({
       where: { id: existingSettings.id },
       data: settingsData,
     });
   } else {
-    return await prisma.emailConfiguration.create({
+    return await prisma.emailSettings.create({
       data: settingsData,
     });
   }
@@ -132,20 +132,20 @@ export async function testEmailConnection(settings: EmailSettingsType) {
 export async function getEmailTransporter(hospitalId: number) {
   const hospital = await prisma.hospital.findUnique({
     where: { id: hospitalId },
-    include: { emailConfiguration: true }
+    include: { customEmail: true }
   });
 
   if (!hospital) {
     throw new Error('Hospital not found');
   }
 
-  let configToUse: EmailConfiguration | null = null;
+  let configToUse: EmailSettings | null = null;
 
-  if (hospital.emailConfiguration) {
-    configToUse = hospital.emailConfiguration;
+  if (hospital.customEmail) {
+    configToUse = hospital.customEmail;
   } 
   else if (hospital.useGlobalEmailId) {
-    configToUse = await prisma.emailConfiguration.findUnique({
+    configToUse = await prisma.emailSettings.findUnique({
       where: { id: hospital.useGlobalEmailId }
     });
   }
@@ -177,9 +177,9 @@ export async function sendHospitalEmail(
 ) {
   try {
     const transporter = await getEmailTransporter(hospitalId);
-    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
-    const settings = await getEmailSettings(hospitalId);
-    const fromUser = settings.customSettings?.smtpUser || (await prisma.emailConfiguration.findFirst({ where: { id: hospital?.useGlobalEmailId ?? -1 }}))?.smtpUser;
+  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+  const settings = await getEmailSettings(hospitalId);
+  const fromUser = settings.customSettings?.smtpUser || (await prisma.emailSettings.findFirst({ where: { id: hospital?.useGlobalEmailId ?? -1 }}))?.smtpUser;
     
     if (!fromUser) {
         throw new Error("Could not determine sender email address.");
@@ -204,10 +204,10 @@ export async function sendHospitalEmail(
 // ---- Super Admin Actions ----
 
 export async function getGlobalEmailSettings() {
-    return await prisma.emailConfiguration.findMany({
-        where: { isGlobal: true },
-        orderBy: { name: 'asc' },
-    });
+  return await prisma.emailSettings.findMany({
+    where: { isGlobal: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
 export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hospitalId'>) {
@@ -220,29 +220,29 @@ export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hos
   };
   
   if(data.id) {
-     return await prisma.emailConfiguration.update({
-        where: { id: data.id },
-        data: settingsData,
-     });
+    return await prisma.emailSettings.update({
+      where: { id: data.id },
+      data: settingsData,
+    });
   } else {
     // Check for unique name on creation
-    const existing = await prisma.emailConfiguration.findFirst({ where: { name: data.name, isGlobal: true }});
+   const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
     if (existing) {
         throw new Error("A global email configuration with this name already exists.");
     }
-    return await prisma.emailConfiguration.create({ data: settingsData });
+   return await prisma.emailSettings.create({ data: settingsData });
   }
 }
 
 export async function deleteGlobalEmailSetting(id: number) {
-    return await prisma.emailConfiguration.delete({ where: { id }});
+   return await prisma.emailSettings.delete({ where: { id }});
 }
 
 export async function setHospitalEmailPreference(hospitalId: number, type: 'custom' | 'global', globalId: number | null) {
   if (type === 'global' && globalId) {
     return await prisma.hospital.update({
       where: { id: hospitalId },
-      data: { useGlobalEmailId: globalId, emailConfiguration: { disconnect: true } }
+      data: { useGlobalEmailId: globalId, customEmail: { disconnect: true } }
     });
   } else {
     return await prisma.hospital.update({

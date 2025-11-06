@@ -18,19 +18,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit } from 'lucide-react';
+import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState } from './actions';
+import { getEmailSettings } from '@/lib/email-actions';
 import { useActionState } from 'react';
-import type { Hospital } from '@/lib/definitions';
+import type { Hospital, EmailConfiguration as EmailConfigType } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import EmailSettingsTab from '@/components/hospital-admin/email-settings-tab';
 
 type Specialty = { id: number; name: string; active: boolean };
 
 function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
   const { toast } = useToast();
-  const { update: updateSession } = useSession() as any;
+  const { update: updateSession } = useSession();
   const router = useRouter();
   const initialState: GeneralSettingsState = { message: null, errors: {} };
   const updateSettingsWithId = updateHospitalGeneralSettings.bind(null, hospital.id);
@@ -47,15 +49,17 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
         updateSession({
           user: { 
             name: state.updatedHospital.name,
-            image: state.updatedHospital.imageUrl 
+            image: state.updatedHospital.imageUrl,
+            city: state.updatedHospital.city,
           }
         });
+         window.dispatchEvent(new CustomEvent('hospital-updated'));
       }
     } else if (state.message) {
       toast({ variant: 'destructive', title: 'Error', description: state.message });
     }
      setIsPending(false);
-  }, [state, toast, updateSession]);
+  }, [state, toast, updateSession, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -98,6 +102,11 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
                  {state.errors?.name && <p className="text-destructive text-sm">{state.errors.name[0]}</p>}
             </div>
             <div className="space-y-2">
+                <Label htmlFor="city">City / Address</Label>
+                <Input id="city" name="city" defaultValue={hospital.city} required />
+                 {state.errors?.city && <p className="text-destructive text-sm">{state.errors.city[0]}</p>}
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" name="description" placeholder="Enter hospital description" defaultValue={hospital.description} required />
                 {state.errors?.description && <p className="text-destructive text-sm">{state.errors.description[0]}</p>}
@@ -121,18 +130,22 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const [emailSettings, setEmailSettings] = useState<{ customSettings: EmailConfigType | null, globalSettings: EmailConfigType[] }>({ customSettings: null, globalSettings: [] });
+
   const initialState = { message: null, errors: {}, success: false };
   const [addState, addAction] = useActionState(addSpecialty.bind(null, hospitalId), initialState as any);
 
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const [hospitalData, specialtiesData] = await Promise.all([
+      const [hospitalData, specialtiesData, emailData] = await Promise.all([
         getHospitalById(hospitalId),
-        getHospitalSpecialties(hospitalId)
+        getHospitalSpecialties(hospitalId),
+        getEmailSettings(hospitalId)
       ]);
       setHospital(hospitalData as Hospital);
       setSpecialties(specialtiesData.map((s: any) => ({ id: s.id, name: s.name, active: s.active })));
+      setEmailSettings(emailData as any);
     } catch (e) {
       console.error('Failed to load settings data', e);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load hospital data.' });
@@ -232,12 +245,15 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general">
             <Building className="mr-2 h-4 w-4" /> General
           </TabsTrigger>
           <TabsTrigger value="specialties">
             <BriefcaseMedical className="mr-2 h-4 w-4" /> Specialties
+          </TabsTrigger>
+          <TabsTrigger value="email">
+            <Mail className="mr-2 h-4 w-4" /> Email
           </TabsTrigger>
           <TabsTrigger value="data">
             <DatabaseZap className="mr-2 h-4 w-4" /> Data Management
@@ -301,6 +317,15 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="email">
+            <EmailSettingsTab 
+                hospital={hospital}
+                initialCustomSettings={emailSettings.customSettings}
+                globalSettings={emailSettings.globalSettings}
+                onUpdate={fetchInitialData}
+            />
         </TabsContent>
         
         <TabsContent value="data">

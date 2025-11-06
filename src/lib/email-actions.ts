@@ -1,3 +1,4 @@
+
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -30,10 +31,6 @@ const EmailSettingsSchema = z.object({
 
 export type EmailSettingsType = z.infer<typeof EmailSettingsSchema>;
 
-/**
- * Fetches the email settings for a specific hospital.
- * Returns the hospital's custom configuration and a list of available global configurations.
- */
 export async function getEmailSettings(hospitalId: number) {
   const [customSettings, globalSettings] = await Promise.all([
     prisma.emailConfiguration.findFirst({
@@ -41,14 +38,12 @@ export async function getEmailSettings(hospitalId: number) {
     }),
     prisma.emailConfiguration.findMany({
       where: { isGlobal: true },
+      orderBy: { name: 'asc' },
     }),
   ]);
   return { customSettings, globalSettings };
 }
 
-/**
- * Updates or creates email settings for a hospital.
- */
 export async function updateEmailSettings(hospitalId: number, data: EmailSettingsType) {
   const validatedData = EmailSettingsSchema.parse(data);
   const settingsData = {
@@ -72,16 +67,12 @@ export async function updateEmailSettings(hospitalId: number, data: EmailSetting
   }
 }
 
-/**
- * Tests SMTP and IMAP connection for a given configuration.
- */
 export async function testEmailConnection(settings: EmailSettingsType) {
   const results = {
     smtp: { success: false, error: 'Unknown error' },
     imap: { success: false, error: 'Unknown error' },
   };
 
-  // Test SMTP
   if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPass) {
     results.smtp.error = 'SMTP settings are incomplete.';
   } else {
@@ -105,7 +96,6 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     }
   }
 
-  // Test IMAP
   if (!settings.imapHost || !settings.imapPort || !settings.imapUser || !settings.imapPass) {
     results.imap.error = 'IMAP settings are incomplete.';
   } else {
@@ -139,10 +129,6 @@ export async function testEmailConnection(settings: EmailSettingsType) {
   return results;
 }
 
-/**
- * Gets a configured nodemailer transporter for a hospital.
- * It intelligently selects the correct configuration (custom or global).
- */
 export async function getEmailTransporter(hospitalId: number) {
   const hospital = await prisma.hospital.findUnique({
     where: { id: hospitalId },
@@ -155,11 +141,9 @@ export async function getEmailTransporter(hospitalId: number) {
 
   let configToUse: EmailConfiguration | null = null;
 
-  // 1. Check for a custom configuration
   if (hospital.emailConfiguration) {
     configToUse = hospital.emailConfiguration;
   } 
-  // 2. If no custom config, check if a global one is selected
   else if (hospital.useGlobalEmailId) {
     configToUse = await prisma.emailConfiguration.findUnique({
       where: { id: hospital.useGlobalEmailId }
@@ -184,9 +168,6 @@ export async function getEmailTransporter(hospitalId: number) {
   });
 }
 
-/**
- * Sends an email using the correct transporter for the hospital.
- */
 export async function sendHospitalEmail(
     hospitalId: number, 
     to: string, 
@@ -196,8 +177,16 @@ export async function sendHospitalEmail(
 ) {
   try {
     const transporter = await getEmailTransporter(hospitalId);
+    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+    const settings = await getEmailSettings(hospitalId);
+    const fromUser = settings.customSettings?.smtpUser || (await prisma.emailConfiguration.findFirst({ where: { id: hospital?.useGlobalEmailId ?? -1 }}))?.smtpUser;
+    
+    if (!fromUser) {
+        throw new Error("Could not determine sender email address.");
+    }
+    
     const info = await transporter.sendMail({
-      from: `"${(await prisma.hospital.findUnique({where: {id: hospitalId}}))?.name}" <${(await getEmailSettings(hospitalId)).customSettings?.smtpUser}>`, // sender address
+      from: `"${hospital?.name}" <${fromUser}>`,
       to,
       subject,
       text,
@@ -209,5 +198,56 @@ export async function sendHospitalEmail(
   } catch (error: any) {
     console.error("Failed to send email:", error);
     return { success: false, error: error.message };
+  }
+}
+
+// ---- Super Admin Actions ----
+
+export async function getGlobalEmailSettings() {
+    return await prisma.emailConfiguration.findMany({
+        where: { isGlobal: true },
+        orderBy: { name: 'asc' },
+    });
+}
+
+export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hospitalId'>) {
+  const validatedData = EmailSettingsSchema.parse(data);
+  const settingsData = {
+    ...validatedData,
+    configured: true,
+    isGlobal: true,
+    hospitalId: null,
+  };
+  
+  if(data.id) {
+     return await prisma.emailConfiguration.update({
+        where: { id: data.id },
+        data: settingsData,
+     });
+  } else {
+    // Check for unique name on creation
+    const existing = await prisma.emailConfiguration.findFirst({ where: { name: data.name, isGlobal: true }});
+    if (existing) {
+        throw new Error("A global email configuration with this name already exists.");
+    }
+    return await prisma.emailConfiguration.create({ data: settingsData });
+  }
+}
+
+export async function deleteGlobalEmailSetting(id: number) {
+    return await prisma.emailConfiguration.delete({ where: { id }});
+}
+
+export async function setHospitalEmailPreference(hospitalId: number, type: 'custom' | 'global', globalId: number | null) {
+  if (type === 'global' && globalId) {
+    return await prisma.hospital.update({
+      where: { id: hospitalId },
+      data: { useGlobalEmailId: globalId, emailConfiguration: { disconnect: true } }
+    });
+  } else {
+    return await prisma.hospital.update({
+      where: { id: hospitalId },
+      data: { useGlobalEmailId: null }
+    });
   }
 }

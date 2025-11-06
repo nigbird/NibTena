@@ -55,9 +55,9 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
       getDoctorSchedules(doctor.id, hospitalId).then(data => {
         const newSchedules = weekDays.map(day => {
           const existing = data.find(d => d.dayOfWeek === day);
-          return existing 
-            ? { dayOfWeek: day, workingHours: existing.workingHours as TimeSlot[], breakHours: existing.breakHours as TimeSlot[], patientsPerHour: (existing as any).patientsPerHour || 2 } 
-            : { dayOfWeek: day, workingHours: [{startTime: '09:00', endTime: '17:00'}], breakHours: [{startTime: '12:30', endTime: '13:30'}], patientsPerHour: 2 };
+          return existing
+            ? { dayOfWeek: day, workingHours: existing.workingHours as TimeSlot[], breakHours: existing.breakHours as TimeSlot[], patientsPerHour: (existing as any).patientsPerHour || 2 }
+            : { dayOfWeek: day, workingHours: [], breakHours: [], patientsPerHour: 2 };
         });
         setSchedules(newSchedules);
         setIsLoading(false);

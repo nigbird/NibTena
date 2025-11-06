@@ -94,7 +94,11 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   useEffect(() => {
     if (isOpen) {
       setFormKey(Date.now());
-      setDate(appointmentToEdit ? parseISO(appointmentToEdit.appointmentDate as unknown as string) : new Date());
+          setDate(
+            appointmentToEdit
+              ? new Date(appointmentToEdit.appointmentDate + 'T00:00:00') // force local midnight
+              : new Date()
+          );
       setSelectedDoctorId(appointmentToEdit?.doctorId.toString());
     }
   }, [isOpen, appointmentToEdit]);

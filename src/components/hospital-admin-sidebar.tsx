@@ -1,4 +1,3 @@
-
  'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -15,6 +14,7 @@ import {
   Users,
   Settings,
   CircleUser,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ const navLinks = [
   { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered },
   { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart },
+  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield },
 ];
 
 const bottomNavLinks = [

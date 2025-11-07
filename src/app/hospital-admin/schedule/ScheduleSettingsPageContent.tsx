@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,10 +11,11 @@ import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId, getHospitalSettings } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// removed placeholder images; use uploaded imageUrl with fallback
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import DoctorScheduleDisplay from '@/components/hospital-admin/DoctorScheduleDisplay';
 
 
 export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId: number }) {
@@ -50,7 +52,8 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
     fetchDoctorsAndSettings();
   }, [fetchDoctorsAndSettings]);
 
-  const handleEditScheduleClick = (doctor: Doctor) => {
+  const handleEditScheduleClick = (e: React.MouseEvent, doctor: Doctor) => {
+    e.stopPropagation(); // prevent accordion from toggling
     setSelectedDoctor(doctor);
     setIsEditDrawerOpen(true);
   };
@@ -107,32 +110,43 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
             <CalendarDays className="h-5 w-5" />
             Doctor Schedules
           </CardTitle>
-          <CardDescription>Manage the weekly availability for each doctor.</CardDescription>
+          <CardDescription>Manage the weekly availability for each doctor. Click a doctor to view their schedule.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
            {isLoading ? (
             <div className="space-y-4">
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
             </div>
            ) : doctors.length > 0 ? (
-                doctors.map(doctor => {
-                    return (
-                    <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
-                            {doctor.imageUrl ? <AvatarImage src={doctor.imageUrl} alt={doctor.name} /> : null}
-                            <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-semibold">{doctor.name}</p>
-                            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
-                        </div>
-                        </div>
-                        <Button variant="outline" onClick={() => handleEditScheduleClick(doctor)}>Edit Schedule</Button>
-                    </div>
-                    )
-                })
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                  {doctors.map(doctor => (
+                    <AccordionItem value={`doctor-${doctor.id}`} key={doctor.id} className="border-b-0">
+                      <Card className="p-0">
+                        <AccordionTrigger className="w-full p-3 hover:no-underline rounded-lg hover:bg-muted/50">
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-4">
+                                <Avatar className="h-12 w-12">
+                                    {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
+                                    <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{doctor.name}</p>
+                                    <p className="text-sm text-muted-foreground text-left">{doctor.specialty}</p>
+                                </div>
+                                </div>
+                                <Button variant="outline" onClick={(e) => handleEditScheduleClick(e, doctor)}>Edit Schedule</Button>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="p-4 border-t">
+                            <DoctorScheduleDisplay hospitalId={hospitalId} doctorId={doctor.id} />
+                          </div>
+                        </AccordionContent>
+                      </Card>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
            ) : (
             <p className="text-muted-foreground text-sm text-center py-8">No doctors found for this hospital.</p>
            )}

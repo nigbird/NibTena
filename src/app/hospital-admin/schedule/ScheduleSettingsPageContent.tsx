@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,6 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import DoctorScheduleDisplay from '@/components/hospital-admin/doctor-schedule-display';
 
 
 export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId: number }) {
@@ -107,32 +110,39 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
             <CalendarDays className="h-5 w-5" />
             Doctor Schedules
           </CardTitle>
-          <CardDescription>Manage the weekly availability for each doctor.</CardDescription>
+          <CardDescription>Manage the weekly availability for each doctor. Click on a doctor to view their schedule.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
            {isLoading ? (
             <div className="space-y-4">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
             </div>
            ) : doctors.length > 0 ? (
-                doctors.map(doctor => {
-                    return (
-                    <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
-                            {doctor.imageUrl ? <AvatarImage src={doctor.imageUrl} alt={doctor.name} /> : null}
-                            <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-semibold">{doctor.name}</p>
-                            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
-                        </div>
-                        </div>
-                        <Button variant="outline" onClick={() => handleEditScheduleClick(doctor)}>Edit Schedule</Button>
-                    </div>
-                    )
-                })
+                <Accordion type="single" collapsible className="w-full">
+                    {doctors.map(doctor => (
+                        <AccordionItem value={`doctor-${doctor.id}`} key={doctor.id}>
+                            <div className="flex items-center pr-4 hover:bg-muted/50 transition-colors rounded-t-lg">
+                                <AccordionTrigger className="flex-1 p-4 text-left hover:no-underline">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-12 w-12">
+                                            {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
+                                            <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-semibold">{doctor.name}</p>
+                                            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditScheduleClick(doctor); }}>Edit Schedule</Button>
+                            </div>
+                            <AccordionContent className="bg-muted/30">
+                                <DoctorScheduleDisplay doctorId={doctor.id} hospitalId={hospitalId} />
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
            ) : (
             <p className="text-muted-foreground text-sm text-center py-8">No doctors found for this hospital.</p>
            )}

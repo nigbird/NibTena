@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import {
   createRole,
   updateRole,
@@ -59,6 +59,8 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 type Permission = { id: number; name: string; description: string; category: string };
@@ -197,6 +199,7 @@ export default function RolesPageClient({ hospitalId }: { hospitalId: number }) 
           role={editingRole}
           permissions={permissions}
           onSuccess={fetchData}
+          hospitalId={hospitalId}
         />
       )}
 
@@ -207,6 +210,7 @@ export default function RolesPageClient({ hospitalId }: { hospitalId: number }) 
             user={editingUser}
             roles={roles}
             onSuccess={fetchData}
+            hospitalId={hospitalId}
            />
       )}
 
@@ -375,7 +379,7 @@ function UserManagementTab({ users, roles, onCreateUser, onEditUser, onDeleteUse
 // #endregion
 
 // #region Role Form Sheet
-function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess }: any) {
+function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospitalId }: any) {
   const isEditing = !!role;
   const [name, setName] = useState(role?.name || '');
   const [selectedPerms, setSelectedPerms] = useState<number[]>(role?.permissions.map((p: any) => p.permissionId) || []);
@@ -404,9 +408,9 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess }: any
         formData.append('id', role.id);
     }
     
-    startTransition(async () => {
-        const action = isEditing ? updateRole : createRole.bind(null, 1); // hospitalId placeholder
-        const result: any = await action(formData);
+  startTransition(async () => {
+    const action = isEditing ? updateRole : createRole.bind(null, hospitalId);
+    const result: any = await action(formData);
          if (result.success) {
             toast({ title: 'Success', description: `Role ${isEditing ? 'updated' : 'created'}.` });
             onSuccess();
@@ -476,7 +480,7 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess }: any
 // #endregion
 
 // #region User Form Sheet
-function UserFormSheet({ open, onOpenChange, user, roles, onSuccess }: any) {
+function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId }: any) {
   const isEditing = !!user;
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -490,7 +494,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess }: any) {
       if (isEditing) {
         result = await updateUserRole(user.id, Number(formData.get('roleId')));
       } else {
-        result = await createUser(1, formData); // hospitalId placeholder
+        result = await createUser(hospitalId, formData);
       }
 
       if (result.success) {

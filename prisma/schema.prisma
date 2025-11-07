@@ -169,6 +169,7 @@ model Permission {
   id          Int              @id @default(autoincrement())
   key         String           @unique // machine-friendly key e.g. DOCTOR_MANAGE
   name        String // human friendly
+  category    String?
   description String?
   roles       RolePermission[]
   createdAt   DateTime         @default(now())

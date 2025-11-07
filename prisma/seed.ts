@@ -187,6 +187,65 @@ async function main() {
       status: 'active',
     },
   });
+  // --- Seed Permissions ---
+  const corePermissions = [
+    {
+      key: 'DOCTOR_MANAGE',
+      name: 'Doctor Management',
+      category: 'Doctors',
+      description: 'Create, update, delete, and view doctors',
+    },
+    {
+      key: 'APPOINTMENT_MANAGE',
+      name: 'Appointment Management',
+      category: 'Appointments',
+      description: 'Create, update and view appointments',
+    },
+    {
+      key: 'QUEUE_MANAGE',
+      name: 'Queue Management',
+      category: 'Queue',
+      description: 'Manage patient flow and queue',
+    },
+    {
+      key: 'SCHEDULE_MANAGE',
+      name: 'Schedule Management',
+      category: 'Schedules',
+      description: 'Manage doctors schedules',
+    },
+    {
+      key: 'REPORTS_VIEW',
+      name: 'Reports & Dashboard',
+      category: 'Reports',
+      description: 'View and generate analytics and reports',
+    },
+    {
+      key: 'USER_MANAGE',
+      name: 'User Management',
+      category: 'Users',
+      description: 'Create and manage staff users and roles',
+    },
+  ];
+
+  for (const p of corePermissions) {
+    // upsert so seed is idempotent
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // @ts-ignore
+    await prisma.permission.upsert({
+      where: { key: p.key },
+      update: {
+        name: p.name,
+        category: p.category,
+        description: p.description,
+      },
+      create: {
+        key: p.key,
+        name: p.name,
+        category: p.category,
+        description: p.description,
+      },
+    });
+  }
  
 }
 

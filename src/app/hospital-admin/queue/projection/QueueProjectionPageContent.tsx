@@ -138,7 +138,7 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
                         <Card className="w-full bg-primary/10 border-2 border-primary/30 shadow-2xl animate-pulse-slow">
                             <CardHeader>
                                 <CardTitle className="text-4xl lg:text-5xl font-bold text-primary-foreground font-headline tracking-wide">
-                                    Now Serving
+                                    Patient to Enter
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="py-8 lg:py-12">

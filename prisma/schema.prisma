@@ -1,4 +1,3 @@
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -18,45 +17,47 @@ model SuperAdmin {
 }
 
 model Hospital {
-  id             Int                @id @default(autoincrement())
-  name           String             @unique
-  description    String
-  city           String
-  dataRetentionDays Int @default(90)
-  imageUrl       String?
-  contactEmail   String             @unique
-  contactPhone   String
-  password       String
-  status         String             @default("active") // active, inactive
-  startTime      String             @default("08:00")
-  endTime        String             @default("19:00")
-  bookingWindow  Int                @default(30)
-  accountNumber  String             @unique
-  doctors        DoctorsOnHospitals[]
-  specialties    Specialty[]
-  appointments   Appointment[]
-  doctorSchedules DoctorSchedule[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id                Int                  @id @default(autoincrement())
+  name              String               @unique
+  description       String
+  city              String
+  dataRetentionDays Int                  @default(90)
+  imageUrl          String?
+  contactEmail      String               @unique
+  contactPhone      String
+  password          String
+  status            String               @default("active") // active, inactive
+  startTime         String               @default("08:00")
+  endTime           String               @default("19:00")
+  bookingWindow     Int                  @default(30)
+  accountNumber     String               @unique
+  doctors           DoctorsOnHospitals[]
+  specialties       Specialty[]
+  appointments      Appointment[]
+  doctorSchedules   DoctorSchedule[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  User              User[]
+  Role              Role[]
 }
 
 model Doctor {
-  id             Int                @id @default(autoincrement())
-  name           String
-  contact        String             @unique
-  password       String
-  specialty      String
-  imageUrl       String?
-  bio            String
+  id              Int                  @id @default(autoincrement())
+  name            String
+  contact         String               @unique
+  password        String
+  specialty       String
+  imageUrl        String?
+  bio             String
   consultationFee Float
-  rating         Float
-  experience     Int?
-  status         String             @default("active") // active, inactive
-  hospitals      DoctorsOnHospitals[]
-  appointments   Appointment[]
-  schedules      DoctorSchedule[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  rating          Float
+  experience      Int?
+  status          String               @default("active") // active, inactive
+  hospitals       DoctorsOnHospitals[]
+  appointments    Appointment[]
+  schedules       DoctorSchedule[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 model Specialty {
@@ -83,32 +84,32 @@ model DoctorsOnHospitals {
 }
 
 model Patient {
-  id           Int      @id @default(autoincrement())
-  phone        String   @unique
+  id           Int           @id @default(autoincrement())
+  phone        String        @unique
   name         String
   email        String?
   age          Int?
   gender       String?
   appointments Appointment[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Appointment {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   symptoms        String
-  patient         Patient   @relation(fields: [patientId], references: [id])
+  patient         Patient  @relation(fields: [patientId], references: [id])
   patientId       Int
-  doctor          Doctor    @relation(fields: [doctorId], references: [id])
+  doctor          Doctor   @relation(fields: [doctorId], references: [id])
   doctorId        Int
-  hospital        Hospital  @relation(fields: [hospitalId], references: [id])
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
   hospitalId      Int
   appointmentSlot String
   appointmentDate DateTime
-  status          String    @default("confirmed") // confirmed, cancelled, completed, rescheduled, pending-payment, paid
-  transactionId   String?   @unique                // ✅ Added: links to payment gateway transaction
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  status          String   @default("confirmed") // confirmed, cancelled, completed, rescheduled, pending-payment, paid
+  transactionId   String?  @unique // ✅ Added: links to payment gateway transaction
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Otp {
@@ -120,17 +121,67 @@ model Otp {
 }
 
 model DoctorSchedule {
-  id           Int      @id @default(autoincrement())
-  doctor       Doctor   @relation(fields: [doctorId], references: [id])
-  doctorId     Int
-  hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  hospitalId   Int
-  dayOfWeek    String
-  workingHours Json
-  breakHours   Json
-  patientsPerHour Int   @default(2) // Number of patients doctor can see per hour
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  doctor          Doctor   @relation(fields: [doctorId], references: [id])
+  doctorId        Int
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  hospitalId      Int
+  dayOfWeek       String
+  workingHours    Json
+  breakHours      Json
+  patientsPerHour Int      @default(2) // Number of patients doctor can see per hour
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([doctorId, hospitalId, dayOfWeek])
+}
+
+// Role & Permission models for dynamic role management
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  name       String
+  phone      String?
+  password   String
+  // Optional relation to a role; staff users belong to a hospital
+  role       Role?     @relation(fields: [roleId], references: [id])
+  roleId     Int?
+  hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  hospitalId Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String
+  hospital    Hospital         @relation(fields: [hospitalId], references: [id])
+  hospitalId  Int
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([hospitalId, name])
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  key         String           @unique // machine-friendly key e.g. DOCTOR_MANAGE
+  name        String // human friendly
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model RolePermission {
+  role         Role       @relation(fields: [roleId], references: [id])
+  roleId       Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  permissionId Int
+  // whether this role has this permission enabled
+  allowed      Boolean    @default(true)
+
+  @@id([roleId, permissionId])
 }

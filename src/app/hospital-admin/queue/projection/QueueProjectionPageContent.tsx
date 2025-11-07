@@ -6,13 +6,14 @@ import type { Appointment, Doctor } from '@/lib/definitions';
 import { format } from 'date-fns';
 import { Stethoscope, User, Users } from 'lucide-react';
 import type { QueueItem } from '../QueueManagementPageContent';
+type ExtendedQueueItem = QueueItem & { patientName?: string; doctorName?: string; patient?: any; doctor?: any };
 import { Logo } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function QueueProjectionPageContent({ hospitalId }: { hospitalId: number }) {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [queue, setQueue] = useState<ExtendedQueueItem[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -29,9 +30,14 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
         .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && (app.status === 'confirmed' || app.status === 'rescheduled'))
         .map(app => {
           const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueItem['queueStatus'] | null;
+          // normalize patient and doctor names onto the appointment object so the UI can read them consistently
+          const patientName = (app as any).patient?.name ?? (app as any).patientName ?? 'Unknown Patient';
+          const doctorName = (app as any).doctor?.name ?? (doctorsData.find((d: any) => d.id === app.doctorId)?.name) ?? 'Unknown Doctor';
           return {
             ...app,
             queueStatus: storedStatus || 'Waiting',
+            patientName,
+            doctorName,
           };
         })
         .sort((a, b) => {
@@ -40,7 +46,8 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
 
-      setQueue(todaysAppointments);
+  // todaysAppointments includes patientName and doctorName fields added above
+  setQueue(todaysAppointments as unknown as ExtendedQueueItem[]);
       setDoctors(doctorsData as Doctor[]);
     } catch (error) {
       console.error("Failed to fetch queue data:", error);
@@ -135,16 +142,19 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="py-8 lg:py-12">
-                                <h1 className="text-6xl lg:text-8xl font-extrabold text-foreground tracking-tighter">
-                                    {nowServingPatient.patientName}
-                                </h1>
-                                <div className="mt-6 flex items-center justify-center gap-4 text-xl lg:text-2xl text-muted-foreground">
-                                    <div className="flex items-center gap-2">
-                                        <Stethoscope />
-                                        <span>{getDoctorName(nowServingPatient.doctorId)}</span>
-                                    </div>
-                                    <span>&bull;</span>
-                                </div>
+                <h1 className="text-6xl lg:text-8xl font-extrabold text-foreground tracking-tighter">
+                  {nowServingPatient.patientName}
+                </h1>
+                <div className="mt-6 flex items-center justify-center gap-6 text-lg lg:text-xl text-muted-foreground">
+                  <div className="text-left">
+                    <div className="text-sm text-muted-foreground">Patient</div>
+                    <div className="font-semibold">{nowServingPatient.patientName}</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm text-muted-foreground">Doctor</div>
+                    <div className="font-semibold flex items-center gap-2"><Stethoscope className="h-4 w-4" />{nowServingPatient.doctorName ?? getDoctorName(nowServingPatient.doctorId)}</div>
+                  </div>
+                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -173,7 +183,7 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
                         </div>
                     ) : upNextPatients.length > 0 ? (
                         <ul className="space-y-3">
-                            {upNextPatients.map((patient, index) => (
+                      {upNextPatients.map((patient, index) => (
                                 <motion.li 
                                     key={patient.id}
                                     initial={{ opacity: 0, x: 20 }}
@@ -183,8 +193,10 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
                                     <div className="bg-background/50 p-4 rounded-lg border flex items-center gap-4">
                                         <div className="flex-shrink-0 h-10 w-10 bg-primary/20 text-primary-foreground font-bold rounded-full flex items-center justify-center text-lg">{index + 1}</div>
                                         <div>
-                                            <p className="font-semibold text-lg">{patient.patientName}</p>
-                                            <p className="text-sm text-muted-foreground">{getDoctorName(patient.doctorId)}</p>
+                      <p className="text-sm text-muted-foreground">Patient</p>
+                      <p className="font-semibold text-lg">{patient.patientName}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Doctor</p>
+                      <p className="text-sm">{patient.doctorName ?? getDoctorName(patient.doctorId)}</p>
                                         </div>
                                     </div>
                                 </motion.li>

@@ -60,7 +60,7 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
 
-      setQueue(todaysAppointments);
+  setQueue(todaysAppointments as unknown as QueueItem[]);
       setDoctors(doctorsData as Doctor[]);
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -174,8 +174,10 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
                                 </div>
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                                     <div>
-                                      <p className="font-semibold">{item.patientName}</p>
-                                      <p className="text-sm text-muted-foreground">{getDoctorName(item.doctorId)}</p>
+                                      <p className="text-sm text-muted-foreground">Patient</p>
+                                      <p className="font-semibold">{(item as any).patient?.name ?? (item as any).patientName ?? 'Unknown Patient'}</p>
+                                      <p className="text-sm text-muted-foreground mt-1">Doctor</p>
+                                      <p className="text-sm">{getDoctorName(item.doctorId)}</p>
                                     </div>
                                     <div className="text-sm">
                                       <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay, Users } from "lucide-react";
+import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay, Users, Stethoscope } from "lucide-react";
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
@@ -173,28 +174,37 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
                                     <Icon className="h-6 w-6" />
                                 </div>
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">Patient</p>
-                                      <p className="font-semibold">{(item as any).patient?.name ?? (item as any).patientName ?? 'Unknown Patient'}</p>
-                                      <p className="text-sm text-muted-foreground mt-1">Doctor</p>
-                                      <p className="text-sm">{getDoctorName(item.doctorId)}</p>
+                                    <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div className="bg-green-100/50 dark:bg-green-900/20 p-2 rounded-lg flex items-center gap-2 border border-green-500/20">
+                                            <User className="h-5 w-5 text-green-700 dark:text-green-500 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Patient</p>
+                                                <p className="font-semibold text-sm truncate">{(item as any).patient?.name ?? (item as any).patientName ?? 'Unknown Patient'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-blue-100/50 dark:bg-blue-900/20 p-2 rounded-lg flex items-center gap-2 border border-blue-500/20">
+                                            <Stethoscope className="h-5 w-5 text-blue-700 dark:text-blue-500 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Doctor</p>
+                                                <p className="font-semibold text-sm truncate">{getDoctorName(item.doctorId)}</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm">
-                                      <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
-                                    </div>
-                                    <div className="flex justify-end">
-                                      {config.nextAction ? (
-                                          <Button
-                                              variant="accent"
-                                              size="sm"
-                                              onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
-                                          >
-                                              <config.nextAction.icon className="mr-2 h-4 w-4" />
-                                              {config.nextAction.label}
-                                          </Button>
-                                      ) : (
-                                          <Button variant="outline" size="sm" disabled>Completed</Button>
-                                      )}
+                                    
+                                    <div className="flex items-center justify-between md:justify-end gap-4">
+                                        <Badge variant={item.queueStatus === 'Waiting' ? 'default' : 'secondary'} className="capitalize">{item.queueStatus}</Badge>
+                                        {config.nextAction ? (
+                                            <Button
+                                                variant="accent"
+                                                size="sm"
+                                                onClick={() => handleStatusUpdate(item.id, config.nextAction!.status)}
+                                            >
+                                                <config.nextAction.icon className="mr-2 h-4 w-4" />
+                                                {config.nextAction.label}
+                                            </Button>
+                                        ) : (
+                                            <Button variant="outline" size="sm" disabled>Completed</Button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -31,18 +31,18 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { Skeleton } from './ui/skeleton';
 
-const navLinks = [
+const navLinks: { href: string; label: string; icon: any; permissionKey?: string }[] = [
   { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
-  { href: '/hospital-admin/doctors', label: 'Doctors', icon: Users },
-  { href: '/hospital-admin/appointments', label: 'Appointments', icon: ClipboardPlus },
-  { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays },
-  { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered },
-  { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart },
-  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield },
+  { href: '/hospital-admin/doctors', label: 'Doctors', icon: Users, permissionKey: 'DOCTOR_MANAGE' },
+  { href: '/hospital-admin/appointments', label: 'Appointments', icon: ClipboardPlus, permissionKey: 'APPOINTMENT_MANAGE' },
+  { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays, permissionKey: 'SCHEDULE_MANAGE' },
+  { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered, permissionKey: 'QUEUE_MANAGE' },
+  { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart, permissionKey: 'REPORTS_VIEW' },
+  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield, permissionKey: 'USER_MANAGE' },
 ];
 
-const bottomNavLinks = [
-    { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
+const bottomNavLinks: { href: string; label: string; icon: any; permissionKey?: string }[] = [
+  { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function HospitalAdminSidebar() {
@@ -116,6 +116,28 @@ export default function HospitalAdminSidebar() {
     };
   }, [session?.user?.hospitalId]);
 
+  // decide which links to show based on session permissions
+  const permissionKeys: string[] = (session as any)?.user?.permissionKeys || [];
+  const role = (session as any)?.user?.role;
+
+  const visibleNavLinks = navLinks.filter(link => {
+    // superadmins see everything
+    if (role === 'superadmin') return true;
+    // if link has no permissionKey, show it (e.g., Dashboard)
+    if (!link.permissionKey) return true;
+    // hospital staff need the specific permission
+    if (role === 'hospital') return permissionKeys.includes(link.permissionKey);
+    // other roles default to hide
+    return false;
+  });
+
+  const visibleBottomNavLinks = bottomNavLinks.filter(link => {
+    if (role === 'superadmin') return true;
+    if (!link.permissionKey) return true;
+    if (role === 'hospital') return permissionKeys.includes(link.permissionKey);
+    return false;
+  });
+
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -124,7 +146,7 @@ export default function HospitalAdminSidebar() {
         </Link>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 lg:p-4">
-        {navLinks.map(({ href, label, icon: Icon }) => (
+        {visibleNavLinks.map(({ href, label, icon: Icon }) => (
           <Link
             key={label}
             href={href}
@@ -140,7 +162,7 @@ export default function HospitalAdminSidebar() {
       </nav>
       <div className="mt-auto p-4 space-y-2 border-t">
         <nav className="space-y-1">
-            {bottomNavLinks.map(({ href, label, icon: Icon }) => (
+            {visibleBottomNavLinks.map(({ href, label, icon: Icon }) => (
               <Link
                 key={label}
                 href={href}

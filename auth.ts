@@ -43,7 +43,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (role === 'superadmin') {
             user = await prisma.superAdmin.findUnique({ where: { email } });
           } else if (role === 'hospital') {
+            // hospital role can be either the Hospital account (contactEmail) or a staff User
             user = await prisma.hospital.findUnique({ where: { contactEmail: email } });
+            // If not a Hospital record, try staff User (created by hospital-admin UI)
+            if (!user) {
+              user = await prisma.user.findUnique({ where: { email } });
+              // mark that this is a staff user so we can set hospitalId from user.hospitalId below
+              if (user) (user as any).__isStaff = true;
+            }
           } else if (role === 'doctor') {
             user = await prisma.doctor.findUnique({ where: { contact: email } });
           }
@@ -55,22 +62,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
           if (passwordsMatch) {
-            const userEmail = role === 'hospital' ? user.contactEmail : (role === 'doctor' ? user.contact : user.email);
-            const userName = role === 'hospital' ? user.name : user.name;
-            const userImage = role === 'hospital' ? user.imageUrl : (role === 'doctor' ? user.imageUrl : null);
-            const doctorHospitalIds = role === 'doctor' 
-                ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
-                : null;
-            
-            return {
-              id: user.id.toString(),
-              name: userName,
-              email: userEmail,
-              role: role,
-              hospitalId: role === 'hospital' ? user.id : null,
-              doctorHospitalIds,
-              imageUrl: userImage,
-            };
+              const isStaff = (user as any).__isStaff === true;
+              const userEmail = role === 'hospital' ? (isStaff ? user.email : (user as any).contactEmail) : (role === 'doctor' ? (user as any).contact : user.email);
+              const userName = user.name;
+              const userImage = role === 'hospital' ? (user as any).imageUrl ?? null : (role === 'doctor' ? (user as any).imageUrl : null);
+              const doctorHospitalIds = role === 'doctor'
+                  ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
+                  : null;
+
+              // If a staff user, attempt to load their Role and permission keys
+              let roleName: string | null = null;
+              let permissionKeys: string[] = [];
+              if (isStaff && (user as any).roleId) {
+                const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
+                if (staffRole) {
+                  roleName = staffRole.name;
+                  permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
+                }
+              }
+
+              return {
+                id: user.id.toString(),
+                name: userName,
+                email: userEmail,
+                role: role,
+                // if this is a staff user keep their hospitalId, otherwise if it's a Hospital account use hospital.id
+                hospitalId: role === 'hospital' ? (isStaff ? (user as any).hospitalId : user.id) : null,
+                doctorHospitalIds,
+                imageUrl: userImage,
+                staffRoleName: roleName,
+                staffPermissionKeys: permissionKeys,
+              };
           }
         }
         
@@ -86,6 +108,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.hospitalId = (user as any).hospitalId;
         token.doctorHospitalIds = (user as any).doctorHospitalIds;
         token.picture = (user as any).imageUrl;
+        // attach staff role name and permission keys when present
+        if ((user as any).staffRoleName) {
+          token.staffRoleName = (user as any).staffRoleName;
+        }
+        if ((user as any).staffPermissionKeys) {
+          token.staffPermissionKeys = (user as any).staffPermissionKeys;
+        }
       }
       return token;
     },
@@ -96,6 +125,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.hospitalId = token.hospitalId as number | null;
         session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
         session.user.image = token.picture as string | null;
+  // surface staff role and permissions in the session (use any to avoid TS model mismatch)
+  (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
+  (session.user as any).permissionKeys = (token as any).staffPermissionKeys as string[] | undefined;
       }
       return session;
     },
@@ -137,8 +169,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // If logged in, trying to access a login page
       if (isAnyLogin) {
         if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
-        if (role === 'hospital') return Response.redirect(new URL('/hospital-admin', nextUrl));
         if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
+
+        // For hospital staff we want to redirect to a role-specific landing page based on their permissions
+        if (role === 'hospital') {
+          const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
+          // map permission keys to preferred landing paths
+          const PERM_PATH_MAP: Record<string, string> = {
+            'QUEUE_MANAGE': '/hospital-admin/queue',
+            'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
+            'DOCTOR_MANAGE': '/hospital-admin/doctors',
+            'SCHEDULE_MANAGE': '/hospital-admin/schedule',
+            'USER_MANAGE': '/hospital-admin/roles',
+            'REPORTS_VIEW': '/hospital-admin/reports',
+          };
+          const allowedPaths = permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[];
+          const landing = allowedPaths[0] || '/hospital-admin';
+          return Response.redirect(new URL(landing, nextUrl));
+        }
+
         // Fallback if role is somehow mismatched, just allow to prevent loops
         return true;
       }
@@ -149,6 +198,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       if (isHospitalAdminRoute && role !== 'hospital') {
         return Response.redirect(new URL('/hospital-admin/login', nextUrl));
+      }
+
+      // --- additional enforcement for hospital staff: restrict access to pages according to permission keys ---
+      if (isHospitalAdminRoute && role === 'hospital') {
+        const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
+        const PERM_PATH_MAP: Record<string, string> = {
+          'QUEUE_MANAGE': '/hospital-admin/queue',
+          'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
+          'DOCTOR_MANAGE': '/hospital-admin/doctors',
+          'SCHEDULE_MANAGE': '/hospital-admin/schedule',
+          'USER_MANAGE': '/hospital-admin/roles',
+          'REPORTS_VIEW': '/hospital-admin/reports',
+        };
+
+        // allow access to general hospital-admin index
+        if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') return true;
+
+        // Build a set of allowed prefixes from permissions
+        const allowedPrefixes = new Set<string>(permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[]);
+
+        // If user has no permissions, deny access to subpages and redirect to index
+        if (allowedPrefixes.size === 0) {
+          return Response.redirect(new URL('/hospital-admin', nextUrl));
+        }
+
+        // If the requested path starts with any allowed prefix, allow; otherwise redirect to first allowed prefix
+        const allowed = Array.from(allowedPrefixes).some(p => pathname.startsWith(p));
+        if (!allowed) {
+          const first = Array.from(allowedPrefixes)[0];
+          return Response.redirect(new URL(first, nextUrl));
+        }
       }
       if (isDoctorPortalRoute && role !== 'doctor') {
         return Response.redirect(new URL('/doctor-portal/login', nextUrl));

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -8,6 +9,7 @@ import {
   LayoutGrid,
   Settings,
   CircleUser,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,6 +28,7 @@ import { signOut, useSession } from 'next-auth/react';
 const navLinks = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/super-admin/hospitals', label: 'Hospitals', icon: Hospital },
+  { href: '/super-admin/email', label: 'Email', icon: Mail },
   { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];
 

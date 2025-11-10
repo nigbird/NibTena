@@ -129,44 +129,107 @@ export async function testEmailConnection(settings: EmailSettingsType) {
   return results;
 }
 
-export async function getEmailTransporter(hospitalId: number) {
-  const hospital = await prisma.hospital.findUnique({
-    where: { id: hospitalId },
-    include: { customEmail: true }
-  });
+export async function getEmailTransporter(hospitalId?: number) {
+    let configToUse: EmailSettings | null = null;
+    
+    // If hospitalId is provided, try to find its specific configuration
+    if (hospitalId) {
+        const hospital = await prisma.hospital.findUnique({
+            where: { id: hospitalId },
+            include: { customEmail: true }
+        });
 
-  if (!hospital) {
-    throw new Error('Hospital not found');
-  }
-
-  let configToUse: EmailSettings | null = null;
-
-  if (hospital.customEmail) {
-    configToUse = hospital.customEmail;
-  } 
-  else if (hospital.useGlobalEmailId) {
-    configToUse = await prisma.emailSettings.findUnique({
-      where: { id: hospital.useGlobalEmailId }
-    });
-  }
-
-  if (!configToUse || !configToUse.configured) {
-    throw new Error(`Email is not configured for this hospital.`);
-  }
-
-  return nodemailer.createTransport({
-    host: configToUse.smtpHost,
-    port: configToUse.smtpPort,
-    secure: configToUse.smtpPort === 465 || configToUse.smtpEncryption === 'ssl',
-    auth: {
-      user: configToUse.smtpUser,
-      pass: configToUse.smtpPass,
-    },
-    tls: {
-      rejectUnauthorized: false
+        if (hospital) {
+            if (hospital.useGlobalEmailId) {
+                configToUse = await prisma.emailSettings.findUnique({
+                    where: { id: hospital.useGlobalEmailId }
+                });
+            } else if (hospital.customEmail) {
+                configToUse = hospital.customEmail;
+            }
+        }
     }
-  });
+
+    // If no hospital-specific config is found (or no hospitalId was given),
+    // fall back to the first available global setting.
+    if (!configToUse) {
+        configToUse = await prisma.emailSettings.findFirst({
+            where: { isGlobal: true }
+        });
+    }
+
+    if (!configToUse || !configToUse.configured) {
+        const context = hospitalId ? `for hospital ID ${hospitalId}` : 'globally';
+        throw new Error(`Email is not configured ${context}.`);
+    }
+
+    return {
+        transporter: nodemailer.createTransport({
+            host: configToUse.smtpHost,
+            port: configToUse.smtpPort,
+            secure: configToUse.smtpPort === 465 || configToUse.smtpEncryption === 'ssl',
+            auth: {
+                user: configToUse.smtpUser,
+                pass: configToUse.smtpPass,
+            },
+            tls: {
+                rejectUnauthorized: false
+            }
+        }),
+        fromUser: configToUse.smtpUser,
+        fromName: configToUse.name,
+    };
 }
+
+
+export async function sendWelcomeEmail(
+    entityType: 'hospital' | 'doctor' | 'staff',
+    details: { name: string; email: string; rawPassword?: string; role?: string },
+    hospitalId?: number
+) {
+    if (!details.rawPassword) {
+        console.warn(`Attempted to send welcome email to ${details.email} without a password.`);
+        return { success: false, error: "Password was not provided for the welcome email." };
+    }
+
+    const subject = `Welcome to NibTena - Your Account is Ready`;
+    const loginUrl = entityType === 'doctor'
+        ? `${process.env.NEXT_PUBLIC_BASE_URL}/doctor-portal/login`
+        : `${process.env.NEXT_PUBLIC_BASE_URL}/hospital-admin/login`;
+
+    const html = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Welcome to NibTena, ${details.name}!</h2>
+            <p>Your ${entityType === 'hospital' ? '' : `${details.role} `}account has been successfully created.</p>
+            <p>You can now log in to the portal using the following credentials:</p>
+            <div style="background-color: #f2f2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+                <p><strong>Email:</strong> ${details.email}</p>
+                <p><strong>Password:</strong> <code style="background: #e1e1e1; padding: 3px 6px; border-radius: 4px;">${details.rawPassword}</code></p>
+            </div>
+            <p>We recommend changing your password after your first login.</p>
+            <p>Thank you!</p>
+        </div>
+    `;
+
+    try {
+        const { transporter, fromUser, fromName } = await getEmailTransporter(hospitalId);
+
+        const info = await transporter.sendMail({
+            from: `"${fromName}" <${fromUser}>`,
+            to: details.email,
+            subject: subject,
+            html: html,
+        });
+
+        console.log("Welcome email sent to %s: %s", details.email, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+        console.error(`Failed to send welcome email to ${details.email}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
 
 export async function sendHospitalEmail(
     hospitalId: number, 
@@ -176,17 +239,11 @@ export async function sendHospitalEmail(
     html?: string
 ) {
   try {
-    const transporter = await getEmailTransporter(hospitalId);
-  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
-  const settings = await getEmailSettings(hospitalId);
-  const fromUser = settings.customSettings?.smtpUser || (await prisma.emailSettings.findFirst({ where: { id: hospital?.useGlobalEmailId ?? -1 }}))?.smtpUser;
-    
-    if (!fromUser) {
-        throw new Error("Could not determine sender email address.");
-    }
+    const { transporter, fromUser } = await getEmailTransporter(hospitalId);
+    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
     
     const info = await transporter.sendMail({
-      from: `"${hospital?.name}" <${fromUser}>`,
+      from: `"${hospital?.name || 'NibTena System'}" <${fromUser}>`,
       to,
       subject,
       text,
@@ -240,14 +297,20 @@ export async function deleteGlobalEmailSetting(id: number) {
 
 export async function setHospitalEmailPreference(hospitalId: number, type: 'custom' | 'global', globalId: number | null) {
   if (type === 'global' && globalId) {
-    return await prisma.hospital.update({
+    await prisma.hospital.update({
       where: { id: hospitalId },
-      data: { useGlobalEmailId: globalId, customEmail: { disconnect: true } }
+      data: { useGlobalEmailId: globalId }
     });
+    // Disconnect any custom email setting if they are choosing a global one.
+    const customEmail = await prisma.emailSettings.findFirst({ where: { hospitalId } });
+    if (customEmail) {
+      await prisma.hospital.update({ where: { id: hospitalId }, data: { customEmail: { disconnect: true } } });
+    }
   } else {
-    return await prisma.hospital.update({
+    await prisma.hospital.update({
       where: { id: hospitalId },
       data: { useGlobalEmailId: null }
     });
   }
+  revalidatePath('/hospital-admin/settings');
 }

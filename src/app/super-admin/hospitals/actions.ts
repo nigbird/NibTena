@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
+import crypto from 'crypto';
+import { sendWelcomeEmail } from '@/lib/email-actions';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -13,7 +15,7 @@ const HospitalFormSchema = z.object({
   city: z.string().min(2, 'City is required.'),
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }).or(z.literal('')),
+  password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
   accountNumber: z.string().min(1, 'Account number is required.'),
   image: z.instanceof(File).optional(),
 });
@@ -38,13 +40,11 @@ export async function saveHospital(
   prevState: HospitalFormState,
   formData: FormData
 ): Promise<HospitalFormState> {
-
   const rawData = Object.fromEntries(formData.entries());
 
   if (hospitalId && !rawData.password) {
-      delete rawData.password;
+    delete rawData.password;
   }
-   // Handle file upload
   const imageFile = formData.get('image') as File | null;
   if (!imageFile || imageFile.size === 0) {
     delete rawData.image;
@@ -59,56 +59,54 @@ export async function saveHospital(
       success: false,
     };
   }
-  
+
   const { password, image, ...hospitalData } = validatedFields.data;
+  let rawPassword = password;
 
   const dataToSave: any = {
     ...hospitalData,
     status: formData.get('status') === 'on' ? 'active' : 'inactive',
   };
-  
-  if (password) {
-      dataToSave.password = await bcrypt.hash(password, 10);
-  }
 
   try {
-     if (image) {
+    if (image) {
       dataToSave.imageUrl = await saveImage(image);
     }
-    
+
     if (hospitalId) {
+      if (password) {
+        dataToSave.password = await bcrypt.hash(password, 10);
+      }
       await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
     } else {
       if (!password) {
-          return { success: false, message: 'Password is required for new hospitals.' };
+        // Generate a random password for new hospitals
+        rawPassword = crypto.randomBytes(8).toString('hex');
       }
-      // create hospital and then create default Owner role with full permissions
+      dataToSave.password = await bcrypt.hash(rawPassword!, 10);
+
       const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+      
+      // Send welcome email
+      await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail, rawPassword });
 
       try {
-        // create Owner role
         const ownerRole = await prisma.role.create({ data: { name: 'Owner', hospitalId: created.id, isAdmin: true } });
-
-        // attach all existing permissions to Owner (auditability)
         const allPerms = await prisma.permission.findMany({ select: { id: true } });
         if (allPerms.length > 0) {
           const rp = allPerms.map((p) => ({ roleId: ownerRole.id, permissionId: p.id, allowed: true }));
           await prisma.rolePermission.createMany({ data: rp });
         }
-
-        // if there is an existing User with the same contactEmail, assign ownerRole to that user
         const existingUser = await prisma.user.findUnique({ where: { email: created.contactEmail } });
         if (existingUser) {
           await prisma.user.update({ where: { id: existingUser.id }, data: { roleId: ownerRole.id } });
         }
       } catch (err) {
-        // non-fatal: log and continue (hospital was created)
         console.error('[create hospital owner role] error', err);
       }
     }
 
     revalidatePath('/super-admin/hospitals');
-
     return {
       success: true,
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,
@@ -140,7 +138,6 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
   try {
-    // This will cascade delete related DoctorsOnHospitals, Appointments, and DoctorSchedules due to schema relations
     await prisma.hospital.delete({ where: { id: hospitalId } });
     revalidatePath('/super-admin/hospitals');
     return { success: true, message: 'Hospital deleted successfully.' };
@@ -148,7 +145,6 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
     return { success: false, message: 'Database Error: Failed to delete hospital.' };
   }
 }
-
 
 export async function getHospitals(page: number, limit: number, query: string) {
   const where = query
@@ -159,7 +155,6 @@ export async function getHospitals(page: number, limit: number, query: string) {
         ],
       }
     : {};
-
   const results = await prisma.hospital.findMany({
     where,
     orderBy: { name: 'asc' },

@@ -24,7 +24,8 @@ model Hospital {
   useGlobalEmailId Int?
   useGlobalEmail   EmailSettings?    @relation("HospitalUsesGlobalEmail", fields: [useGlobalEmailId], references: [id])
   // If this hospital has its own custom email settings (one-to-one)
-  customEmail      EmailSettings? 
+  // one-to-one relation to EmailSettings where EmailSettings.hospitalId holds the FK
+  customEmail      EmailSettings?  @relation("HospitalCustomEmail")
   dataRetentionDays Int                  @default(90)
   imageUrl          String?
   contactEmail      String               @unique

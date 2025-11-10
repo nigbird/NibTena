@@ -138,10 +138,43 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
   try {
-    await prisma.hospital.delete({ where: { id: hospitalId } });
+    // Transaction to ensure all or nothing is deleted
+    await prisma.$transaction(async (tx) => {
+      // Find all doctors associated ONLY with this hospital
+      const doctorsInHospital = await tx.doctor.findMany({
+        where: { hospitals: { some: { hospitalId } } },
+        include: { hospitals: true },
+      });
+
+      const doctorsToDelete = doctorsInHospital
+        .filter(d => d.hospitals.length === 1 && d.hospitals[0].hospitalId === hospitalId)
+        .map(d => d.id);
+
+      // Delete records that have a direct relation to the hospital
+      await tx.appointment.deleteMany({ where: { hospitalId } });
+      await tx.doctorSchedule.deleteMany({ where: { hospitalId } });
+      await tx.rolePermission.deleteMany({ where: { role: { hospitalId } } });
+      await tx.role.deleteMany({ where: { hospitalId } });
+      await tx.user.deleteMany({ where: { hospitalId } });
+      await tx.specialty.deleteMany({ where: { hospitalId } });
+      await tx.emailSettings.deleteMany({ where: { hospitalId } });
+      
+      // Delete join table records
+      await tx.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
+
+      // Delete doctors that are only in this hospital
+      if (doctorsToDelete.length > 0) {
+        await tx.doctor.deleteMany({ where: { id: { in: doctorsToDelete } } });
+      }
+
+      // Finally, delete the hospital itself
+      await tx.hospital.delete({ where: { id: hospitalId } });
+    });
+
     revalidatePath('/super-admin/hospitals');
-    return { success: true, message: 'Hospital deleted successfully.' };
+    return { success: true, message: 'Hospital and all associated data deleted successfully.' };
   } catch (error) {
+    console.error("Failed to delete hospital:", error);
     return { success: false, message: 'Database Error: Failed to delete hospital.' };
   }
 }

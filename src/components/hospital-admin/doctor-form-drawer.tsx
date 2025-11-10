@@ -47,7 +47,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
 
   useEffect(() => {
     getSpecialties(hospitalId).then(setSpecialties);
-  }, []);
+  }, [hospitalId]);
   
   useEffect(() => {
     if (state.success) {
@@ -139,7 +139,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Doctor' : 'Add a New Doctor'}</SheetTitle>
           <SheetDescription>
-            {isEditing ? "Update the doctor's details below." : "Enter the details for the new doctor to add them to your hospital."}
+            {isEditing ? "Update the doctor's details below." : "Enter the details for the new doctor. A password will be auto-generated and sent to their email."}
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
@@ -185,15 +185,17 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                   {state.errors?.contact && <p className="text-sm font-medium text-destructive">{state.errors.contact[0]}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="password" className="text-right">
-                  Password
-                </Label>
-                <div className="col-span-3">
-                  <Input id="password" name="password" type="password" placeholder={isEditing ? "Leave blank to keep unchanged" : "Set initial password"} required={!isEditing} />
-                   {state.errors?.password && <p className="text-sm font-medium text-destructive">{state.errors.password[0]}</p>}
+              {isEditing && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="password" className="text-right">
+                    Password
+                    </Label>
+                    <div className="col-span-3">
+                    <Input id="password" name="password" type="password" placeholder="Leave blank to keep unchanged" />
+                    {state.errors?.password && <p className="text-sm font-medium text-destructive">{state.errors.password[0]}</p>}
+                    </div>
                 </div>
-              </div>
+              )}
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="specialty" className="text-right">
                 Specialty

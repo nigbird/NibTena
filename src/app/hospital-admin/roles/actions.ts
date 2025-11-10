@@ -1,3 +1,4 @@
+
 "use server";
 
 import { z } from 'zod';
@@ -5,6 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { requirePermission, isHospitalOwnerFor } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sendWelcomeEmail } from '@/lib/email-actions';
 
 const CreateRoleSchema = z.object({
   name: z.string().min(2, 'Role name must be at least 2 characters'),
@@ -22,9 +25,9 @@ const UpdateRoleSchema = z.object({
 const CreateUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).optional().or(z.literal('')),
   phone: z.string().optional(),
-  roleId: z.number().optional(),
+  roleId: z.coerce.number().optional(),
 });
 
 export async function getAllPermissions() {
@@ -198,24 +201,31 @@ export async function createUser(hospitalId: number, formData: FormData) {
     }
   }
   if (!allowed) return { success: false, message: 'Unauthorized' };
+  
   const raw = Object.fromEntries(formData.entries());
-  const parsed = CreateUserSchema.safeParse({
-    name: String(raw.name || ''),
-    email: String(raw.email || ''),
-    password: String(raw.password || ''),
-    phone: raw.phone ? String(raw.phone) : undefined,
-    roleId: raw.roleId ? Number(raw.roleId) : undefined,
-  });
+  // Password is not required in the form anymore, it will be generated
+  if (raw.password === '') {
+    delete raw.password;
+  }
+  const parsed = CreateUserSchema.safeParse(raw);
 
   if (!parsed.success) {
-    return { success: false, errors: parsed.error.flatten().fieldErrors };
+    return { success: false, message: parsed.error.flatten().fieldErrors.toString() };
   }
 
-  const { name, email, password, phone, roleId } = parsed.data;
+  const { name, email, phone, roleId } = parsed.data;
 
   try {
-    const hashed = await bcrypt.hash(password, 10);
+    const rawPassword = crypto.randomBytes(8).toString('hex');
+    const hashed = await bcrypt.hash(rawPassword, 10);
+    
     const user = await prisma.user.create({ data: { name, email, password: hashed, phone, roleId, hospitalId } });
+    
+    const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
+
+    // Send welcome email
+    await sendWelcomeEmail('staff', { name, email, rawPassword, role: role?.name }, hospitalId);
+    
     revalidatePath('/hospital-admin/roles');
     return { success: true, user };
   } catch (error) {

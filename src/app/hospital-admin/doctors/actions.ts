@@ -6,11 +6,13 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
+import crypto from 'crypto';
+import { sendWelcomeEmail } from '@/lib/email-actions';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   contact: z.string().email({ message: 'A valid email is required for login.'}),
-  password: z.string().min(8, 'Password must be at least 8 characters.').or(z.literal('')),
+  password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
   specialty: z.string().min(2, { message: 'Specialty is required.' }),
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
@@ -50,6 +52,11 @@ export async function saveDoctor(
     delete rawData.image;
   }
 
+  // For new doctors, we don't require a password in the form anymore
+  if (!doctorId) {
+    delete rawData.password;
+  }
+
   const validatedFields = DoctorFormSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
@@ -75,12 +82,10 @@ export async function saveDoctor(
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
-      if (!password) {
-        return { message: 'Password is required for new doctors.', success: false };
-      }
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const rawPassword = crypto.randomBytes(8).toString('hex');
+      const hashedPassword = await bcrypt.hash(rawPassword, 10);
       
-      await prisma.doctor.create({
+      const newDoctor = await prisma.doctor.create({
         data: {
           ...dataToUpdate,
           password: hashedPassword,
@@ -88,6 +93,9 @@ export async function saveDoctor(
           hospitals: { create: { hospitalId } },
         },
       });
+
+      // Send welcome email
+      await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact!, rawPassword }, hospitalId);
     }
     revalidatePath('/hospital-admin/doctors');
     return {

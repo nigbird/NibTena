@@ -382,7 +382,7 @@ function UserManagementTab({ users, roles, onCreateUser, onEditUser, onDeleteUse
 function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospitalId }: any) {
   const isEditing = !!role;
   const [name, setName] = useState(role?.name || '');
-  const [selectedPerms, setSelectedPerms] = useState<number[]>(role?.permissions.map((p: any) => p.permissionId) || []);
+  const [selectedPerms, setSelectedPerms] = useState<number[]>(role?.permissions.map((p: any) => p.permission.id) || []);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -498,7 +498,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
       }
 
       if (result.success) {
-        toast({ title: 'Success', description: `User ${isEditing ? 'updated' : 'created'}.` });
+        toast({ title: 'Success', description: `User ${isEditing ? 'updated' : 'created'}. An email with credentials has been sent.` });
         onSuccess();
         onOpenChange(false);
       } else {
@@ -513,7 +513,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit User Role' : 'Create New User'}</SheetTitle>
           <SheetDescription>
-            {isEditing ? `Assign a new role to ${user.name}.` : 'Create a new staff member and assign them a role.'}
+            {isEditing ? `Assign a new role to ${user.name}.` : 'Create a new staff member and assign them a role. A password will be auto-generated and emailed.'}
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} id="user-form" className="py-4 space-y-4">
@@ -526,10 +526,6 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required />
               </div>
             </>
           )}

@@ -73,12 +73,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               // If a staff user, attempt to load their Role and permission keys
               let roleName: string | null = null;
               let permissionKeys: string[] = [];
+              let isRoleAdmin = false;
               if (isStaff && (user as any).roleId) {
                 const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
                 if (staffRole) {
                   roleName = staffRole.name;
-                  permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
+                  isRoleAdmin = !!(staffRole as any).isAdmin;
+                  if (isRoleAdmin) {
+                    const all = await prisma.permission.findMany({ select: { key: true } });
+                    permissionKeys = all.map(a => a.key);
+                  } else {
+                    permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
+                  }
                 }
+              }
+
+              // If login matched a Hospital record (not a staff user), treat it as the hospital owner/admin and grant all permissions
+              let hospitalIsAdmin = false;
+              if (!isStaff && role === 'hospital') {
+                hospitalIsAdmin = true;
+                const all = await prisma.permission.findMany({ select: { key: true } });
+                permissionKeys = all.map(a => a.key);
               }
 
               return {
@@ -92,6 +107,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 imageUrl: userImage,
                 staffRoleName: roleName,
                 staffPermissionKeys: permissionKeys,
+                isAdmin: hospitalIsAdmin || isRoleAdmin,
               };
           }
         }
@@ -115,6 +131,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if ((user as any).staffPermissionKeys) {
           token.staffPermissionKeys = (user as any).staffPermissionKeys;
         }
+        if ((user as any).isAdmin) {
+          token.isAdmin = true;
+        }
       }
       return token;
     },
@@ -128,6 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // surface staff role and permissions in the session (use any to avoid TS model mismatch)
   (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
   (session.user as any).permissionKeys = (token as any).staffPermissionKeys as string[] | undefined;
+  (session.user as any).isAdmin = (token as any).isAdmin === true;
       }
       return session;
     },
@@ -173,6 +193,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // For hospital staff we want to redirect to a role-specific landing page based on their permissions
         if (role === 'hospital') {
+          // If the hospital account is marked admin, allow full access / redirect to hospital index
+          const isAdmin = (auth?.user as any)?.isAdmin === true;
+          if (isAdmin) return Response.redirect(new URL('/hospital-admin', nextUrl));
+
           const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
           // map permission keys to preferred landing paths
           const PERM_PATH_MAP: Record<string, string> = {
@@ -202,6 +226,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // --- additional enforcement for hospital staff: restrict access to pages according to permission keys ---
       if (isHospitalAdminRoute && role === 'hospital') {
+        // allow hospital accounts marked as admin to access any hospital-admin page
+        if ((auth?.user as any)?.isAdmin === true) return true;
         const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
         const PERM_PATH_MAP: Record<string, string> = {
           'QUEUE_MANAGE': '/hospital-admin/queue',

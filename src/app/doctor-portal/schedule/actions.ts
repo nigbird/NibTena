@@ -62,6 +62,18 @@ export async function saveDoctorSchedulesForHospital(
   hospitalId: number,
   schedules: DaySchedule[]
 ): Promise<{ success: boolean; message: string; }> {
+        // permission guard: allow if caller has schedule management/create/edit/delete or is hospital owner
+        try {
+            const { requireAnyPermission, isHospitalOwnerFor } = await import('@/lib/permissions');
+            const allowed = await requireAnyPermission(['SCHEDULE_MANAGE', 'SCHEDULE_CREATE', 'SCHEDULE_EDIT', 'SCHEDULE_DELETE']);
+            if (!allowed) {
+                const ownerOk = await isHospitalOwnerFor(hospitalId);
+                if (!ownerOk) return { success: false, message: 'Unauthorized' };
+            }
+        } catch (e) {
+            console.error('[saveDoctorSchedulesForHospital] permission check error', e);
+            return { success: false, message: 'Unauthorized' };
+        }
     const activeSchedules = schedules.filter(s => s.active);
 
     try {

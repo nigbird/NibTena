@@ -82,7 +82,29 @@ export async function saveHospital(
       if (!password) {
           return { success: false, message: 'Password is required for new hospitals.' };
       }
-      await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+      // create hospital and then create default Owner role with full permissions
+      const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+
+      try {
+        // create Owner role
+        const ownerRole = await prisma.role.create({ data: { name: 'Owner', hospitalId: created.id, isAdmin: true } });
+
+        // attach all existing permissions to Owner (auditability)
+        const allPerms = await prisma.permission.findMany({ select: { id: true } });
+        if (allPerms.length > 0) {
+          const rp = allPerms.map((p) => ({ roleId: ownerRole.id, permissionId: p.id, allowed: true }));
+          await prisma.rolePermission.createMany({ data: rp });
+        }
+
+        // if there is an existing User with the same contactEmail, assign ownerRole to that user
+        const existingUser = await prisma.user.findUnique({ where: { email: created.contactEmail } });
+        if (existingUser) {
+          await prisma.user.update({ where: { id: existingUser.id }, data: { roleId: ownerRole.id } });
+        }
+      } catch (err) {
+        // non-fatal: log and continue (hospital was created)
+        console.error('[create hospital owner role] error', err);
+      }
     }
 
     revalidatePath('/super-admin/hospitals');

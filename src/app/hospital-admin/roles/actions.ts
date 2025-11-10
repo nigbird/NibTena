@@ -2,18 +2,21 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { requirePermission, isHospitalOwnerFor } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 
 const CreateRoleSchema = z.object({
   name: z.string().min(2, 'Role name must be at least 2 characters'),
   permissions: z.array(z.number()).optional(), // array of permission ids
+  isAdmin: z.boolean().optional(),
 });
 
 const UpdateRoleSchema = z.object({
   id: z.number(),
   name: z.string().min(2, 'Role name must be at least 2 characters'),
   permissions: z.array(z.number()).optional(),
+  isAdmin: z.boolean().optional(),
 });
 
 const CreateUserSchema = z.object({
@@ -47,17 +50,30 @@ export async function getRoleById(roleId: number) {
 }
 
 export async function createRole(hospitalId: number, formData: FormData) {
+  // permission guard: only admin or users with USER_MANAGE can create roles
+  let allowed = await requirePermission('USER_MANAGE');
+  // fallback: if caller is the hospital account and the hospital has an Owner (isAdmin) role, allow
+  if (!allowed) {
+    try {
+      const ownerOk = await isHospitalOwnerFor(hospitalId);
+      if (ownerOk) allowed = true;
+    } catch (e) {
+      console.error('[createRole] owner fallback error', e);
+    }
+  }
+  if (!allowed) return { success: false, message: 'Unauthorized' };
   const raw = Object.fromEntries(formData.entries());
   const parsed = CreateRoleSchema.safeParse({
     name: String(raw.name || ''),
     permissions: raw.permissions ? JSON.parse(String(raw.permissions)) : undefined,
+    isAdmin: raw.isAdmin === 'true' || raw.isAdmin === true,
   });
 
   if (!parsed.success) {
     return { success: false, errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, permissions } = parsed.data;
+  const { name, permissions, isAdmin } = parsed.data;
 
   try {
     // prevent duplicate names per hospital: unique constraint exists but handle gracefully
@@ -66,9 +82,10 @@ export async function createRole(hospitalId: number, formData: FormData) {
       return { success: false, message: 'A role with this name already exists.' };
     }
 
-    const role = await prisma.role.create({ data: { name, hospitalId } });
+    const role = await prisma.role.create({ data: { name, hospitalId, isAdmin: !!isAdmin } });
 
-    if (permissions && permissions.length > 0) {
+    // if not an admin role, persist explicit role permissions
+    if (!isAdmin && permissions && permissions.length > 0) {
       const rp = permissions.map((pid) => ({ roleId: role.id, permissionId: pid, allowed: true }));
       await prisma.rolePermission.createMany({ data: rp });
     }
@@ -82,23 +99,46 @@ export async function createRole(hospitalId: number, formData: FormData) {
 }
 
 export async function updateRole(formData: FormData) {
+  // permission guard
+  let allowed = await requirePermission('USER_MANAGE');
+  if (!allowed) {
+    // try to resolve hospitalId from the role being updated and allow if caller is hospital Owner
+    try {
+      const raw = Object.fromEntries(formData.entries());
+      const roleId = Number(raw.id);
+      if (!isNaN(roleId)) {
+        const roleRec = await prisma.role.findUnique({ where: { id: roleId } });
+        if (roleRec) {
+          const ownerOk = await isHospitalOwnerFor(roleRec.hospitalId);
+          if (ownerOk) allowed = true;
+        }
+      }
+    } catch (e) {
+      console.error('[updateRole] owner fallback error', e);
+    }
+  }
+  if (!allowed) return { success: false, message: 'Unauthorized' };
   const raw = Object.fromEntries(formData.entries());
   const parsed = UpdateRoleSchema.safeParse({
     id: Number(raw.id),
     name: String(raw.name || ''),
     permissions: raw.permissions ? JSON.parse(String(raw.permissions)) : undefined,
+    isAdmin: raw.isAdmin === 'true' || raw.isAdmin === true,
   });
 
   if (!parsed.success) {
     return { success: false, errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { id, name, permissions } = parsed.data;
+  const { id, name, permissions, isAdmin } = parsed.data;
 
   try {
-    await prisma.role.update({ where: { id }, data: { name } });
+    await prisma.role.update({ where: { id }, data: { name, isAdmin: !!isAdmin } });
 
-    if (permissions) {
+    if (isAdmin) {
+      // admin role doesn't need per-permission rows; remove any existing explicit permissions to avoid confusion
+      await prisma.rolePermission.deleteMany({ where: { roleId: id } });
+    } else if (permissions) {
       // simple approach: delete existing rolePermissions and recreate
       await prisma.rolePermission.deleteMany({ where: { roleId: id } });
       if (permissions.length > 0) {
@@ -117,6 +157,19 @@ export async function updateRole(formData: FormData) {
 
 export async function deleteRole(roleId: number) {
   try {
+    let allowed = await requirePermission('USER_MANAGE');
+    if (!allowed) {
+      try {
+        const roleRec = await prisma.role.findUnique({ where: { id: roleId } });
+        if (roleRec) {
+          const ownerOk = await isHospitalOwnerFor(roleRec.hospitalId);
+          if (ownerOk) allowed = true;
+        }
+      } catch (e) {
+        console.error('[deleteRole] owner fallback error', e);
+      }
+    }
+    if (!allowed) return { success: false, message: 'Unauthorized' };
     // disassociate users first
     await prisma.user.updateMany({ where: { roleId }, data: { roleId: null } });
     await prisma.rolePermission.deleteMany({ where: { roleId } });
@@ -134,6 +187,17 @@ export async function getUsersByHospitalId(hospitalId: number) {
 }
 
 export async function createUser(hospitalId: number, formData: FormData) {
+  // permission guard
+  let allowed = await requirePermission('USER_MANAGE');
+  if (!allowed) {
+    try {
+      const ownerOk = await isHospitalOwnerFor(hospitalId);
+      if (ownerOk) allowed = true;
+    } catch (e) {
+      console.error('[createUser] owner fallback error', e);
+    }
+  }
+  if (!allowed) return { success: false, message: 'Unauthorized' };
   const raw = Object.fromEntries(formData.entries());
   const parsed = CreateUserSchema.safeParse({
     name: String(raw.name || ''),
@@ -165,6 +229,24 @@ export async function createUser(hospitalId: number, formData: FormData) {
 
 export async function updateUserRole(userId: number, roleId: number | null) {
   try {
+    let allowed = await requirePermission('USER_MANAGE');
+    if (!allowed) {
+      try {
+        // determine hospital context from either the user or the target role
+        const [userRec, roleRec] = await Promise.all([
+          prisma.user.findUnique({ where: { id: userId } }),
+          roleId ? prisma.role.findUnique({ where: { id: roleId } }) : Promise.resolve(null),
+        ]);
+        const hospitalId = userRec?.hospitalId ?? roleRec?.hospitalId ?? null;
+        if (hospitalId) {
+          const ownerOk = await isHospitalOwnerFor(hospitalId as number);
+          if (ownerOk) allowed = true;
+        }
+      } catch (e) {
+        console.error('[updateUserRole] owner fallback error', e);
+      }
+    }
+    if (!allowed) return { success: false, message: 'Unauthorized' };
     await prisma.user.update({ where: { id: userId }, data: { roleId } });
     revalidatePath('/hospital-admin/roles');
     return { success: true };
@@ -176,6 +258,19 @@ export async function updateUserRole(userId: number, roleId: number | null) {
 
 export async function deleteUser(userId: number) {
   try {
+    let allowed = await requirePermission('USER_MANAGE');
+    if (!allowed) {
+      try {
+        const userRec = await prisma.user.findUnique({ where: { id: userId } });
+        if (userRec && userRec.hospitalId) {
+          const ownerOk = await isHospitalOwnerFor(userRec.hospitalId);
+          if (ownerOk) allowed = true;
+        }
+      } catch (e) {
+        console.error('[deleteUser] owner fallback error', e);
+      }
+    }
+    if (!allowed) return { success: false, message: 'Unauthorized' };
     await prisma.user.delete({ where: { id: userId } });
     revalidatePath('/hospital-admin/roles');
     return { success: true };

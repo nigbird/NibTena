@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { TimeSlot } from '@/lib/definitions';
@@ -83,6 +84,19 @@ export async function saveDoctorSchedule(
     prevState: ScheduleSaveState,
     formData: FormData
 ): Promise<ScheduleSaveState> {
+    // permission guard: allow if user has full schedule manage OR create/edit permissions
+    const { requireAnyPermission, isHospitalOwnerFor } = await import('@/lib/permissions');
+    // include delete as a valid permission for full CRUD
+    let allowed = await requireAnyPermission(['SCHEDULE_MANAGE', 'SCHEDULE_CREATE', 'SCHEDULE_EDIT', 'SCHEDULE_DELETE']);
+    if (!allowed) {
+        try {
+            const ownerOk = await isHospitalOwnerFor(hospitalId);
+            if (ownerOk) allowed = true;
+        } catch (e) {
+            console.error('[saveDoctorSchedule] owner fallback error', e);
+        }
+    }
+    if (!allowed) return { success: false, message: 'Unauthorized' };
     const rawData = formData.get('scheduleData');
 
     if (!rawData || typeof rawData !== 'string') {

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -9,16 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { EmailSettingsType } from '@/lib/email-actions';
-import { Mail, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Mail, Eye, EyeOff, Loader2, CheckCircle, XCircle, Info } from 'lucide-react';
 import { updateEmailSettings, testEmailConnection, setHospitalEmailPreference } from '@/lib/email-actions';
 import type { Hospital } from '@/lib/definitions';
 import type { EmailSettings as EmailConfigType } from '@prisma/client';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const emptySettings: EmailSettingsType = {
-    name: 'Custom',
-    smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', smtpEncryption: 'tls',
-    imapHost: '', imapPort: 993, imapUser: '', imapPass: '', imapEncryption: 'ssl',
+    name: 'Custom Gmail',
+    smtpHost: 'smtp.gmail.com', smtpPort: 587, smtpUser: '', smtpPass: '', smtpEncryption: 'tls',
+    imapHost: 'imap.gmail.com', imapPort: 993, imapUser: '', imapPass: '', imapEncryption: 'ssl',
     configured: false
 };
 
@@ -36,8 +36,7 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
   const [selectedGlobalId, setSelectedGlobalId] = useState<string | undefined>(hospital.useGlobalEmailId?.toString());
   const [customSettings, setCustomSettings] = useState<EmailSettingsType>(initialCustomSettings || emptySettings);
   
-  const [showSmtpPass, setShowSmtpPass] = useState(false);
-  const [showImapPass, setShowImapPass] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -46,7 +45,8 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
   useEffect(() => {
     setConfigType(hospital.useGlobalEmailId ? 'global' : 'custom');
     setSelectedGlobalId(hospital.useGlobalEmailId?.toString());
-    setCustomSettings(initialCustomSettings || emptySettings);
+    const settings = initialCustomSettings ? { ...initialCustomSettings, name: initialCustomSettings.name || 'Custom Gmail' } : emptySettings;
+    setCustomSettings(settings);
   }, [hospital, initialCustomSettings]);
 
   const handleFieldChange = (field: keyof EmailSettingsType, value: string | number) => {
@@ -60,7 +60,14 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
     if (configType === 'global' && selectedGlobalId) {
         settingsToTest = globalSettings.find(g => g.id === Number(selectedGlobalId));
     } else {
-        settingsToTest = customSettings;
+        // For custom, ensure we have the user/pass set for both SMTP/IMAP
+        settingsToTest = {
+            ...customSettings,
+            smtpUser: customSettings.smtpUser,
+            smtpPass: customSettings.smtpPass,
+            imapUser: customSettings.smtpUser, // Use same user for IMAP
+            imapPass: customSettings.smtpPass, // Use same pass for IMAP
+        };
     }
 
     if (!settingsToTest) {
@@ -73,11 +80,11 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
     setTestResult(data);
 
     if (data.smtp.success && data.imap.success) {
-      toast({ title: "Connection Successful!", description: "Both SMTP and IMAP connections were successful."});
+      toast({ title: "Connection Successful!", description: `Successfully connected using ${settingsToTest.name}.`});
     } else {
       let errorParts = [];
-      if (!data.smtp.success) errorParts.push(`SMTP: ${data.smtp.error}`);
-      if (!data.imap.success) errorParts.push(`IMAP: ${data.imap.error}`);
+      if (!data.smtp.success) errorParts.push(`Sending (SMTP): ${data.smtp.error}`);
+      if (!data.imap.success) errorParts.push(`Receiving (IMAP): ${data.imap.error}`);
       toast({ variant: "destructive", title: "Connection Failed", description: errorParts.join('\n'), duration: 9000 });
     }
     setIsTesting(false);
@@ -91,7 +98,13 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
             await setHospitalEmailPreference(hospital.id, 'global', Number(selectedGlobalId));
         } else {
             await setHospitalEmailPreference(hospital.id, 'custom', null);
-            await updateEmailSettings(hospital.id, { ...customSettings, configured: true });
+            // Before saving, ensure IMAP fields mirror SMTP fields for Gmail
+            const settingsToSave = {
+                ...customSettings,
+                imapUser: customSettings.smtpUser,
+                imapPass: customSettings.smtpPass,
+            }
+            await updateEmailSettings(hospital.id, { ...settingsToSave, configured: true });
         }
         toast({ title: "Settings Saved", description: "Your email configuration has been updated." });
         onUpdate();
@@ -101,22 +114,21 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
     setIsSaving(false);
   };
   
-
   return (
     <Card>
         <CardHeader>
             <CardTitle className="flex items-center gap-2"><Mail /> Email Configuration</CardTitle>
-            <CardDescription>Choose a global email account or set up your own custom SMTP/IMAP server for sending notifications.</CardDescription>
+            <CardDescription>Choose a global email account or set up your own custom Gmail account for sending notifications.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
             <RadioGroup value={configType} onValueChange={(value) => setConfigType(value as 'global' | 'custom')} className="flex gap-4">
-                <Label htmlFor="global-radio" className="flex items-center gap-2 border p-4 rounded-md has-[:checked]:border-primary flex-1">
+                <Label htmlFor="global-radio" className="flex items-center gap-2 border p-4 rounded-md has-[:checked]:border-primary flex-1 cursor-pointer">
                     <RadioGroupItem value="global" id="global-radio" />
                     Use a Global Configuration
                 </Label>
-                <Label htmlFor="custom-radio" className="flex items-center gap-2 border p-4 rounded-md has-[:checked]:border-primary flex-1">
+                <Label htmlFor="custom-radio" className="flex items-center gap-2 border p-4 rounded-md has-[:checked]:border-primary flex-1 cursor-pointer">
                     <RadioGroupItem value="custom" id="custom-radio" />
-                    Use Custom Configuration
+                    Use Custom Gmail Account
                 </Label>
             </RadioGroup>
 
@@ -136,49 +148,41 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
             )}
             
             {configType === 'custom' && (
-                <div className="border p-4 rounded-md animate-in fade-in-50">
-                    <Tabs defaultValue="smtp" className="pt-4">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="smtp">Sending (SMTP)</TabsTrigger>
-                            <TabsTrigger value="imap">Receiving (IMAP)</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="smtp" className="space-y-4 pt-4">
-                            <div><Label>Host</Label><Input placeholder="smtp.example.com" value={customSettings.smtpHost} onChange={e => handleFieldChange('smtpHost', e.target.value)} /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Port</Label><Input type="number" placeholder="587" value={customSettings.smtpPort} onChange={e => handleFieldChange('smtpPort', parseInt(e.target.value, 10))} /></div>
-                                <div><Label>Encryption</Label>
-                                    <Select value={customSettings.smtpEncryption} onValueChange={(v) => handleFieldChange('smtpEncryption', v)}><SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent><SelectItem value="tls">TLS</SelectItem><SelectItem value="ssl">SSL</SelectItem><SelectItem value="none">None</SelectItem></SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div><Label>Username</Label><Input placeholder="you@example.com" value={customSettings.smtpUser} onChange={e => handleFieldChange('smtpUser', e.target.value)} /></div>
-                            <div><Label>Password</Label>
-                                <div className="relative">
-                                    <Input type={showSmtpPass ? 'text' : 'password'} value={customSettings.smtpPass} onChange={e => handleFieldChange('smtpPass', e.target.value)} />
-                                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowSmtpPass(!showSmtpPass)}>{showSmtpPass ? <EyeOff /> : <Eye />}</Button>
-                                </div>
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="imap" className="space-y-4 pt-4">
-                            <div><Label>Host</Label><Input placeholder="imap.example.com" value={customSettings.imapHost} onChange={e => handleFieldChange('imapHost', e.target.value)} /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Port</Label><Input type="number" placeholder="993" value={customSettings.imapPort} onChange={e => handleFieldChange('imapPort', parseInt(e.target.value, 10))} /></div>
-                                <div><Label>Encryption</Label>
-                                    <Select value={customSettings.imapEncryption} onValueChange={(v) => handleFieldChange('imapEncryption', v)}><SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent><SelectItem value="ssl">SSL</SelectItem><SelectItem value="tls">TLS</SelectItem></SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div><Label>Username</Label><Input placeholder="you@example.com" value={customSettings.imapUser} onChange={e => handleFieldChange('imapUser', e.target.value)} /></div>
-                            <div><Label>Password</Label>
-                                <div className="relative">
-                                    <Input type={showImapPass ? 'text' : 'password'} value={customSettings.imapPass} onChange={e => handleFieldChange('imapPass', e.target.value)} />
-                                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowImapPass(!showImapPass)}>{showImapPass ? <EyeOff /> : <Eye />}</Button>
-                                </div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+                <div className="border p-4 rounded-md animate-in fade-in-50 space-y-4">
+                     <h3 className="font-medium">Custom Gmail Configuration</h3>
+                     <div>
+                        <Label htmlFor="configName">Configuration Name</Label>
+                        <Input id="configName" placeholder="e.g., Hospital Notifications" value={customSettings.name} onChange={e => handleFieldChange('name', e.target.value)} />
+                     </div>
+                     <div>
+                        <Label htmlFor="gmailAddress">Gmail Address</Label>
+                        <Input id="gmailAddress" placeholder="your-hospital@gmail.com" value={customSettings.smtpUser} onChange={e => handleFieldChange('smtpUser', e.target.value)} />
+                     </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                             <Label htmlFor="appPassword">App Password</Label>
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button type="button" className="text-muted-foreground"><Info className="h-4 w-4" /></button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                        <p className="font-bold mb-2">How to get a Google App Password:</p>
+                                        <ol className="list-decimal list-inside space-y-1 text-xs">
+                                            <li>Go to <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-primary underline">myaccount.google.com/security</a>.</li>
+                                            <li>Under "Signing in to Google," select "App passwords".</li>
+                                            <li>Generate a 16-character password and paste it here.</li>
+                                        </ol>
+                                         <p className="text-xs mt-2 text-muted-foreground">Note: 2-Step Verification must be enabled on the Google account.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                             </TooltipProvider>
+                        </div>
+                        <div className="relative">
+                            <Input id="appPassword" type={showPass ? 'text' : 'password'} value={customSettings.smtpPass} onChange={e => handleFieldChange('smtpPass', e.target.value)} />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPass(!showPass)}>{showPass ? <EyeOff /> : <Eye />}</Button>
+                        </div>
+                    </div>
                 </div>
             )}
             
@@ -187,14 +191,14 @@ export default function EmailSettingsTab({ hospital, initialCustomSettings, glob
                     <div className={`flex items-center gap-2 rounded-md border p-3 ${testResult.smtp.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
                         {testResult.smtp.success ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
                         <div>
-                            <p className="font-semibold">SMTP Test</p>
+                            <p className="font-semibold">Sending Test</p>
                             <p className="text-xs">{testResult.smtp.success ? 'Success' : `Failed: ${testResult.smtp.error}`}</p>
                         </div>
                     </div>
                     <div className={`flex items-center gap-2 rounded-md border p-3 ${testResult.imap.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
                          {testResult.imap.success ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
                         <div>
-                            <p className="font-semibold">IMAP Test</p>
+                            <p className="font-semibold">Receiving Test</p>
                             <p className="text-xs">{testResult.imap.success ? 'Success' : `Failed: ${testResult.imap.error}`}</p>
                         </div>
                     </div>

@@ -10,7 +10,7 @@ const AppointmentFormSchema = z.object({
   phone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
   age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
   gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
-  symptoms: z.string().min(10, { message: 'Please describe symptoms in at least 10 characters.' }),
+  symptoms: z.string().optional(),
 });
 
 export type State = {
@@ -72,7 +72,7 @@ export async function bookAppointment(
         patientPhone: phone,
         patientAge: age,
         patientGender: gender,
-        symptoms,
+        symptoms: symptoms || '',
         doctorId,
         hospitalId,
         appointmentSlot,

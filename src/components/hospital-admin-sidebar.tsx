@@ -50,6 +50,8 @@ export default function HospitalAdminSidebar() {
   const { data: session } = useSession();
   const [localHospitalName, setLocalHospitalName] = useState<string | null>(null);
   const [localImage, setLocalImage] = useState<string | null>(null);
+  const [fetchedPermissionKeys, setFetchedPermissionKeys] = useState<string[] | null>(null);
+  const [fetchedIsAdmin, setFetchedIsAdmin] = useState<boolean | null>(null);
 
   const hospitalName = localHospitalName ?? session?.user?.name ?? 'Hospital Admin';
 
@@ -116,9 +118,36 @@ export default function HospitalAdminSidebar() {
     };
   }, [session?.user?.hospitalId]);
 
+  // fetch authoritative permissions for the current caller so UI reflects DB changes immediately
+  useEffect(() => {
+    let mounted = true;
+    async function fetchPerms() {
+      try {
+        const res = await fetch('/api/me/permissions');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        setFetchedPermissionKeys(Array.isArray(data?.permissionKeys) ? data.permissionKeys : []);
+        setFetchedIsAdmin(!!data?.isAdmin);
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    fetchPerms();
+
+    return () => {
+      mounted = false;
+    };
+  }, [session?.user?.id]);
+
   // decide which links to show based on session permissions
-  const permissionKeys: string[] = (session as any)?.user?.permissionKeys || [];
-  const role = (session as any)?.user?.role;
+  const permissionKeysFromSession: string[] = (session as any)?.user?.permissionKeys || [];
+  const roleFromSession = (session as any)?.user?.role;
+
+  // Prefer authoritative server-driven permission keys (so newly-seeded/updated roles take effect immediately)
+  const permissionKeys: string[] = fetchedPermissionKeys ?? permissionKeysFromSession;
+  const role = fetchedIsAdmin ? 'superadmin' : roleFromSession;
 
   const visibleNavLinks = navLinks.filter(link => {
     // superadmins see everything

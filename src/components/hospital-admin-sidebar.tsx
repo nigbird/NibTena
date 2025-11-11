@@ -123,14 +123,30 @@ export default function HospitalAdminSidebar() {
     let mounted = true;
     async function fetchPerms() {
       try {
-        const res = await fetch('/api/me/permissions');
-        if (!res.ok) return;
+        // explicitly include credentials to ensure cookies are sent in deployed environments
+        let res = await fetch('/api/me/permissions', { credentials: 'include' });
+        // some hosting / basePath setups may not resolve relative paths the same way; try absolute origin as a retry
+        if (res.status === 0 || res.status === 404) {
+          try {
+            res = await fetch(window.location.origin + '/api/me/permissions', { credentials: 'include' });
+          } catch (e) {
+            // ignore, we'll handle below
+          }
+        }
+
+        if (!res || !res.ok) {
+          // helpful console output for debugging deployed env issues
+          console.warn('[hospital-admin-sidebar] /api/me/permissions fetch failed', res && res.status, res && res.statusText);
+          return;
+        }
+
         const data = await res.json();
         if (!mounted) return;
         setFetchedPermissionKeys(Array.isArray(data?.permissionKeys) ? data.permissionKeys : []);
         setFetchedIsAdmin(!!data?.isAdmin);
       } catch (err) {
-        // ignore
+        // log so deployed errors are visible in browser console
+        console.error('[hospital-admin-sidebar] error fetching /api/me/permissions', err);
       }
     }
 

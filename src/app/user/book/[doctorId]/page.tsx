@@ -297,13 +297,12 @@ export default function BookingPage() {
             </Card>
 
             <div className="space-y-2">
-              <Label htmlFor="symptoms">Symptoms & Concerns</Label>
+              <Label htmlFor="symptoms">Symptoms & Concerns (Optional)</Label>
               <Textarea
                 id="symptoms"
                 name="symptoms"
                 placeholder="Briefly describe the patient's symptoms."
                 className="min-h-[120px]"
-                required
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>

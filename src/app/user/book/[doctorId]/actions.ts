@@ -32,7 +32,7 @@ const PatientInfoSchema = z.object({
 
 const AppointmentFormSchema = PatientInfoSchema.extend({
   bookingFor: z.enum(['myself', 'someoneElse']),
-  symptoms: z.string().min(10, { message: 'Please describe symptoms in at least 10 characters.' }),
+  symptoms: z.string().optional(),
 });
 
 export type State = {
@@ -161,7 +161,7 @@ export async function completeBooking(bookingData: any) {
 
     newAppointment = await prisma.appointment.create({
       data: {
-        symptoms: bookingData.symptoms,
+        symptoms: bookingData.symptoms || '',
         patientId: patient.id,
         doctorId: bookingData.doctorId,
         hospitalId: bookingData.hospitalId,
@@ -284,7 +284,7 @@ export async function initiateBookingAndPayment(
     // 1. Create the appointment first
     const newAppointment = await prisma.appointment.create({
       data: {
-        symptoms,
+        symptoms: symptoms || '',
         patientId: patient.id,
         doctorId,
         hospitalId,

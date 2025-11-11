@@ -144,13 +144,12 @@ export default function BookingPage() {
                 </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="symptoms">Symptoms & Concerns</Label>
+              <Label htmlFor="symptoms">Symptoms & Concerns (Optional)</Label>
               <Textarea
                 id="symptoms"
                 name="symptoms"
                 placeholder="Briefly describe your symptoms."
                 className="min-h-[120px]"
-                required
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>

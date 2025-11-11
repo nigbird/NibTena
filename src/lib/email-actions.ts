@@ -29,6 +29,16 @@ const EmailSettingsSchema = z.object({
   configured: z.boolean().optional(),
 });
 
+// Simplified schema for the new UI
+const SimplifiedEmailSettingsSchema = z.object({
+    id: z.number().optional(),
+    hospitalId: z.number().optional().nullable(),
+    name: z.string().min(1, 'Configuration name is required.'),
+    smtpUser: z.string().email('Please enter a valid Gmail address.'),
+    smtpPass: z.string().min(1, 'App Password is required.'),
+});
+
+
 export type EmailSettingsType = z.infer<typeof EmailSettingsSchema>;
 
 export async function getEmailSettings(hospitalId: number) {
@@ -44,8 +54,32 @@ export async function getEmailSettings(hospitalId: number) {
   return { customSettings, globalSettings };
 }
 
-export async function updateEmailSettings(hospitalId: number, data: EmailSettingsType) {
-  const validatedData = EmailSettingsSchema.parse(data);
+export async function updateEmailSettings(hospitalId: number, data: Partial<EmailSettingsType>) {
+  // Check if this is a simplified payload from the new UI
+  const isSimplified = !data.smtpHost && data.smtpUser && data.smtpPass;
+
+  let validatedData;
+
+  if (isSimplified) {
+      const parsed = SimplifiedEmailSettingsSchema.parse(data);
+      validatedData = {
+          name: parsed.name,
+          smtpUser: parsed.smtpUser,
+          smtpPass: parsed.smtpPass,
+          // Set Gmail defaults
+          smtpHost: 'smtp.gmail.com',
+          smtpPort: 587,
+          smtpEncryption: 'tls',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          imapUser: parsed.smtpUser, // Use same user for IMAP
+          imapPass: parsed.smtpPass, // Use same pass for IMAP
+          imapEncryption: 'ssl',
+      };
+  } else {
+      validatedData = EmailSettingsSchema.parse(data);
+  }
+
   const settingsData = {
     ...validatedData,
     configured: true,
@@ -73,17 +107,27 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     imap: { success: false, error: 'Unknown error' },
   };
 
-  if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPass) {
+  const settingsToTest = { ...settings };
+  // If it's a gmail setup, ensure imap fields are set correctly
+  if (settings.smtpHost === 'smtp.gmail.com') {
+      settingsToTest.imapHost = 'imap.gmail.com';
+      settingsToTest.imapPort = 993;
+      settingsToTest.imapEncryption = 'ssl';
+      settingsToTest.imapUser = settings.smtpUser;
+      settingsToTest.imapPass = settings.smtpPass;
+  }
+
+  if (!settingsToTest.smtpHost || !settingsToTest.smtpPort || !settingsToTest.smtpUser || !settingsToTest.smtpPass) {
     results.smtp.error = 'SMTP settings are incomplete.';
   } else {
     try {
       const transporter = nodemailer.createTransport({
-        host: settings.smtpHost,
-        port: settings.smtpPort,
-        secure: settings.smtpEncryption === 'ssl',
+        host: settingsToTest.smtpHost,
+        port: settingsToTest.smtpPort,
+        secure: settingsToTest.smtpEncryption === 'ssl',
         auth: {
-          user: settings.smtpUser,
-          pass: settings.smtpPass,
+          user: settingsToTest.smtpUser,
+          pass: settingsToTest.smtpPass,
         },
         tls: {
           rejectUnauthorized: false
@@ -96,18 +140,18 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     }
   }
 
-  if (!settings.imapHost || !settings.imapPort || !settings.imapUser || !settings.imapPass) {
+  if (!settingsToTest.imapHost || !settingsToTest.imapPort || !settingsToTest.imapUser || !settingsToTest.imapPass) {
     results.imap.error = 'IMAP settings are incomplete.';
   } else {
     let imapConnection;
     try {
       const config = {
         imap: {
-          user: settings.imapUser,
-          password: settings.imapPass,
-          host: settings.imapHost,
-          port: settings.imapPort,
-          tls: settings.imapEncryption === 'tls' || settings.imapEncryption === 'ssl',
+          user: settingsToTest.imapUser,
+          password: settingsToTest.imapPass,
+          host: settingsToTest.imapHost,
+          port: settingsToTest.imapPort,
+          tls: settingsToTest.imapEncryption === 'tls' || settingsToTest.imapEncryption === 'ssl',
           tlsOptions: { rejectUnauthorized: false }
         }
       };

@@ -299,53 +299,63 @@ export async function initiateBookingAndPayment(
     const transactionTime = format(new Date(), 'yyyyMMddHHmmss');
     const amount = doctor.consultationFee;
 
-    const { 
-        ACCOUNT_NO, 
-        CALLBACK_URL, 
-        COMPANY_NAME, 
-        NIB_PAYMENT_KEY, 
-        NIB_PAYMENT_URL 
-    } = process.env;
+  const {
+    CALLBACK_URL,
+    COMPANY_NAME,
+    NIB_PAYMENT_KEY,
+    NIB_PAYMENT_URL,
+  } = process.env;
 
-    // Enhanced environment variable validation
-    const missingVars = [];
-    if (!ACCOUNT_NO) missingVars.push('ACCOUNT_NO');
-    if (!CALLBACK_URL) missingVars.push('CALLBACK_URL');
-    if (!COMPANY_NAME) missingVars.push('COMPANY_NAME');
-    if (!NIB_PAYMENT_KEY) missingVars.push('NIB_PAYMENT_KEY');
-    if (!NIB_PAYMENT_URL) missingVars.push('NIB_PAYMENT_URL');
+  // Find the hospital to use its account number for payments. Fall back to env var if missing.
+  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+  if (!hospital) {
+    console.error('Hospital not found for id', hospitalId);
+    return { success: false, message: 'Hospital not found.' };
+  }
 
-    if (missingVars.length > 0) {
-        console.error("Missing payment environment variables:", missingVars);
-        throw new Error(`Missing payment environment variables: ${missingVars.join(', ')}`);
-    }
+  const hospitalAccount = hospital.accountNumber?.trim();
 
-    
-    // Use superAppToken consistently for both signature and payload
-    const cleanCallbackURL = CALLBACK_URL?.trim();
-    const signatureString = [
-      `accountNo=${ACCOUNT_NO}`,
-      `amount=${amount}`,
-      `callBackURL=${cleanCallbackURL}`,
-      `companyName=${COMPANY_NAME}`,
-      `Key=${NIB_PAYMENT_KEY}`,
-      `token=${authToken}`,
-      `transactionId=${transactionId}`,
-      `transactionTime=${transactionTime}`
-    ].join('&');
+  // Require hospital account number (do not use env fallback)
+  const accountNoToUse = hospitalAccount;
 
-    const signature = crypto.createHash('sha256').update(signatureString, 'utf8').digest('hex');
+  // Enhanced configuration validation (require hospital account, callback, company name, key, and URL)
+  const missingVars = [];
+  if (!accountNoToUse) missingVars.push('hospital.accountNumber');
+  if (!CALLBACK_URL) missingVars.push('CALLBACK_URL');
+  if (!COMPANY_NAME) missingVars.push('COMPANY_NAME');
+  if (!NIB_PAYMENT_KEY) missingVars.push('NIB_PAYMENT_KEY');
+  if (!NIB_PAYMENT_URL) missingVars.push('NIB_PAYMENT_URL');
 
-    const payload = {
-        accountNo: ACCOUNT_NO,
-        amount: String(amount),
-        callBackURL: CALLBACK_URL?.trim(), // Trim any extra spaces
-        companyName: COMPANY_NAME,
-        token: authToken,
-        transactionId: transactionId,
-        transactionTime: transactionTime,
-        signature: signature
-    };    
+  if (missingVars.length > 0) {
+    console.error('Missing payment configuration:', missingVars);
+    throw new Error(`Missing payment configuration: ${missingVars.join(', ')}`);
+  }
+
+  // Use superAppToken consistently for both signature and payload
+  const cleanCallbackURL = CALLBACK_URL?.trim();
+  const signatureString = [
+    `accountNo=${accountNoToUse}`,
+    `amount=${amount}`,
+    `callBackURL=${cleanCallbackURL}`,
+    `companyName=${COMPANY_NAME}`,
+    `Key=${NIB_PAYMENT_KEY}`,
+    `token=${authToken}`,
+    `transactionId=${transactionId}`,
+    `transactionTime=${transactionTime}`
+  ].join('&');
+
+  const signature = crypto.createHash('sha256').update(signatureString, 'utf8').digest('hex');
+
+  const payload = {
+    accountNo: accountNoToUse,
+    amount: String(amount),
+    callBackURL: CALLBACK_URL?.trim(), // Trim any extra spaces
+    companyName: COMPANY_NAME,
+    token: authToken,
+    transactionId: transactionId,
+    transactionTime: transactionTime,
+    signature: signature
+  };
     // Update appointment with transaction ID
     await prisma.appointment.update({
         where: { id: newAppointment.id },

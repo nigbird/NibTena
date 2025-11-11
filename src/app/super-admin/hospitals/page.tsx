@@ -97,7 +97,7 @@ function HospitalsPageContent() {
       <Card>
         <CardHeader>
           <CardTitle>All Hospitals</CardTitle>
-          <CardDescription>A list of all hospitals registered in NibTena.</CardDescription>
+          <CardDescription>A list of all hospitals registered in NibAppointment.</CardDescription>
           <form onSubmit={handleSearch} className="relative pt-2">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

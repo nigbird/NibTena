@@ -67,7 +67,7 @@ export default function SuperAdminSidebar() {
                     </Avatar>
                     <div className="text-left overflow-hidden">
                         <p className="font-semibold text-sm leading-tight truncate">{session?.user?.name || 'Super Admin'}</p>
-                        <p className="text-xs text-muted-foreground truncate">NibTena Platform</p>
+                        <p className="text-xs text-muted-foreground truncate">NibAppointment Platform</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>

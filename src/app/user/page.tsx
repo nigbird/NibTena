@@ -74,7 +74,7 @@ export default async function Home() {
     const specialties = allSpecialties.map(s => s.specialty);
     const allData = { doctors: allDoctors, hospitals: allHospitalsWithCounts, specialties };
 
-    const heroImage = placeholderImages.find(p => p.id === 'NibTena-hero');
+    const heroImage = placeholderImages.find(p => p.id === 'NibAppointment-hero');
 
     return (
         <UserHomepageClient

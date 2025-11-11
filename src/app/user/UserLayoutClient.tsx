@@ -29,7 +29,7 @@ const getTitleForPath = (path: string) => {
   if (path.startsWith('/user/confirmation')) return 'Confirmation';
   if (path.startsWith('/user/verify/otp')) return 'Verify Account';
   if (path.startsWith('/user/profile/setup')) return 'Edit Profile';
-  return 'NibTena';
+  return 'NibAppointment';
 };
 
 export default function UserLayoutClient({

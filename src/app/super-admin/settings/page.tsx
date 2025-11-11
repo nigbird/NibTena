@@ -10,7 +10,7 @@ export default function SuperAdminSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight font-headline">System Settings</h1>
-        <p className="text-lg text-muted-foreground">Manage global configurations and roles for NibTena.</p>
+        <p className="text-lg text-muted-foreground">Manage global configurations and roles for NibAppointment.</p>
       </div>
 
       <Card>

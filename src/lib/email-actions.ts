@@ -192,14 +192,14 @@ export async function sendWelcomeEmail(
         return { success: false, error: "Password was not provided for the welcome email." };
     }
 
-    const subject = `Welcome to NibTena - Your Account is Ready`;
+    const subject = `Welcome to Nib Appointment - Your Account is Ready`;
     const loginUrl = entityType === 'doctor'
         ? `${process.env.NEXT_PUBLIC_BASE_URL}/doctor-portal/login`
         : `${process.env.NEXT_PUBLIC_BASE_URL}/hospital-admin/login`;
 
     const html = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2>Welcome to NibTena, ${details.name}!</h2>
+            <h2>Welcome to NibAppointment, ${details.name}!</h2>
             <p>Your ${entityType === 'hospital' ? '' : `${details.role} `}account has been successfully created.</p>
             <p>You can now log in to the portal using the following credentials:</p>
             <div style="background-color: #f2f2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -243,7 +243,7 @@ export async function sendHospitalEmail(
     const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
     
     const info = await transporter.sendMail({
-      from: `"${hospital?.name || 'NibTena System'}" <${fromUser}>`,
+      from: `"${hospital?.name || 'NibAppointment System'}" <${fromUser}>`,
       to,
       subject,
       text,

@@ -54,6 +54,7 @@ export default function HospitalAdminSidebar() {
   const [fetchedIsAdmin, setFetchedIsAdmin] = useState<boolean | null>(null);
 
   const hospitalName = localHospitalName ?? session?.user?.name ?? 'Hospital Admin';
+  const roleName = (session as any)?.user?.roleName;
 
   if (!session) {
     return (
@@ -157,30 +158,19 @@ export default function HospitalAdminSidebar() {
     };
   }, [session?.user?.id]);
 
-  // decide which links to show based on session permissions
-  const permissionKeysFromSession: string[] = (session as any)?.user?.permissionKeys || [];
-  const roleFromSession = (session as any)?.user?.role;
-
-  // Prefer authoritative server-driven permission keys (so newly-seeded/updated roles take effect immediately)
-  const permissionKeys: string[] = fetchedPermissionKeys ?? permissionKeysFromSession;
-  const role = fetchedIsAdmin ? 'superadmin' : roleFromSession;
+  const isAdmin = fetchedIsAdmin ?? (session as any)?.user?.isAdmin === true;
+  const permissionKeys = fetchedPermissionKeys ?? (session as any)?.user?.permissionKeys ?? [];
 
   const visibleNavLinks = navLinks.filter(link => {
-    // superadmins see everything
-    if (role === 'superadmin') return true;
-    // if link has no permissionKey, show it (e.g., Dashboard)
+    if (isAdmin) return true;
     if (!link.permissionKey) return true;
-    // hospital staff need the specific permission
-    if (role === 'hospital') return permissionKeys.includes(link.permissionKey);
-    // other roles default to hide
-    return false;
+    return permissionKeys.includes(link.permissionKey);
   });
 
   const visibleBottomNavLinks = bottomNavLinks.filter(link => {
-    if (role === 'superadmin') return true;
+    if (isAdmin) return true;
     if (!link.permissionKey) return true;
-    if (role === 'hospital') return permissionKeys.includes(link.permissionKey);
-    return false;
+    return permissionKeys.includes(link.permissionKey);
   });
 
   return (
@@ -231,13 +221,13 @@ export default function HospitalAdminSidebar() {
                         <AvatarFallback>{hospitalName.charAt(0)}</AvatarFallback>
                     </Avatar>
           <div className="text-left overflow-hidden">
-            <p className="font-semibold text-sm leading-tight truncate">{hospitalName}</p>
-            <p className="text-xs text-muted-foreground">Admin</p>
+            <p className="font-semibold text-sm leading-tight truncate">{session.user.name}</p>
+            <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : roleName || 'Staff'}</p>
           </div>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 mb-2">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{hospitalName}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                    <Link href="/hospital-admin/settings"></Link>

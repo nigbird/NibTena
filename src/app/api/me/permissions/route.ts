@@ -23,7 +23,8 @@ export async function GET() {
       // Superadmin -> has implicit access to everything
       if (role === 'superadmin') {
         isAdmin = true;
-        return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId });
+        const all = await prisma.permission.findMany({ select: { key: true } });
+        return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId });
       }
 
       const uid = sid ? Number(sid) : NaN;
@@ -35,7 +36,8 @@ export async function GET() {
             const owner = await prisma.role.findFirst({ where: { hospitalId: hid, isAdmin: true } });
             if (owner) {
               isAdmin = true;
-              return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId: hid });
+              const all = await prisma.permission.findMany({ select: { key: true } });
+              return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId: hid });
             }
           }
         }
@@ -45,7 +47,8 @@ export async function GET() {
         if (user && user.role) {
           if (user.role.isAdmin) {
             isAdmin = true;
-            return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId });
+            const all = await prisma.permission.findMany({ select: { key: true } });
+            return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId });
           }
           permissionKeys = user.role.permissions?.map((rp: any) => rp.permission.key) || [];
           return NextResponse.json({ permissionKeys, isAdmin, role, hospitalId });
@@ -79,7 +82,8 @@ export async function GET() {
 
       if (role === 'superadmin') {
         isAdmin = true;
-        return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId });
+        const all = await prisma.permission.findMany({ select: { key: true } });
+        return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId });
       }
 
       if (role === 'hospital') {
@@ -88,7 +92,8 @@ export async function GET() {
           const owner = await prisma.role.findFirst({ where: { hospitalId: hid, isAdmin: true } });
           if (owner) {
             isAdmin = true;
-            return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId: hid });
+            const all = await prisma.permission.findMany({ select: { key: true } });
+            return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId: hid });
           }
         }
       }
@@ -100,7 +105,8 @@ export async function GET() {
           if (user && user.role) {
             if (user.role.isAdmin) {
               isAdmin = true;
-              return NextResponse.json({ permissionKeys: [], isAdmin, role, hospitalId });
+              const all = await prisma.permission.findMany({ select: { key: true } });
+              return NextResponse.json({ permissionKeys: all.map(p => p.key), isAdmin, role, hospitalId });
             }
             permissionKeys = user.role.permissions?.map((rp: any) => rp.permission.key) || [];
             return NextResponse.json({ permissionKeys, isAdmin, role, hospitalId });

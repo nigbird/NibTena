@@ -7,7 +7,8 @@ import { prisma } from '@/lib/prisma';
 
 export function checkPermission(session: any, key: string) {
   if (!session || !session.user) return false;
-  if ((session.user as any).isAdmin) return true;
+  // if user is an admin for their role, they can do anything
+  if ((session.user as any).isAdmin === true) return true;
   const perms: string[] = (session.user as any).permissionKeys || [];
   return perms.includes(key);
 }

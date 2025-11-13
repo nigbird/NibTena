@@ -50,25 +50,12 @@ export default function HospitalAdminSidebar() {
   const { data: session } = useSession();
   const [localHospitalName, setLocalHospitalName] = useState<string | null>(null);
   const [localImage, setLocalImage] = useState<string | null>(null);
-  const [fetchedPermissionKeys, setFetchedPermissionKeys] = useState<string[] | null>(null);
-  const [fetchedIsAdmin, setFetchedIsAdmin] = useState<boolean | null>(null);
+  
+  const isAdmin = (session as any)?.user?.isAdmin === true;
+  const permissionKeys = (session as any)?.user?.permissionKeys ?? [];
 
   const hospitalName = localHospitalName ?? session?.user?.name ?? 'Hospital Admin';
   const roleName = (session as any)?.user?.roleName;
-
-  if (!session) {
-    return (
-       <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full p-4">
-        <Skeleton className="h-[60px] w-full mb-4" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-        <Skeleton className="h-12 w-full mt-auto" />
-      </aside>
-    );
-  }
 
   useEffect(() => {
     let mounted = true;
@@ -88,21 +75,15 @@ export default function HospitalAdminSidebar() {
       }
     }
 
-    fetchHospital();
+    if (session?.user?.hospitalId) {
+      fetchHospital();
+    }
 
     const handler = (e: any) => {
       try {
         const detail = e?.detail;
         const hid = (session as any)?.user?.hospitalId;
         if (!hid) return;
-
-        // if caller provided updatedHospital data, update immediately without extra fetch
-        if (detail?.hospitalId === hid && detail.updatedHospital) {
-          setLocalHospitalName(detail.updatedHospital.name ?? null);
-          setLocalImage(detail.updatedHospital.imageUrl ?? null);
-          return;
-        }
-
         if (!detail || detail.hospitalId === hid) {
           fetchHospital();
         }
@@ -119,47 +100,19 @@ export default function HospitalAdminSidebar() {
     };
   }, [session?.user?.hospitalId]);
 
-  // fetch authoritative permissions for the current caller so UI reflects DB changes immediately
-  useEffect(() => {
-    let mounted = true;
-    async function fetchPerms() {
-      try {
-        // explicitly include credentials to ensure cookies are sent in deployed environments
-        let res = await fetch('/api/me/permissions', { credentials: 'include' });
-        // some hosting / basePath setups may not resolve relative paths the same way; try absolute origin as a retry
-        if (res.status === 0 || res.status === 404) {
-          try {
-            res = await fetch(window.location.origin + '/api/me/permissions', { credentials: 'include' });
-          } catch (e) {
-            // ignore, we'll handle below
-          }
-        }
-
-        if (!res || !res.ok) {
-          // helpful console output for debugging deployed env issues
-          console.warn('[hospital-admin-sidebar] /api/me/permissions fetch failed', res && res.status, res && res.statusText);
-          return;
-        }
-
-        const data = await res.json();
-        if (!mounted) return;
-        setFetchedPermissionKeys(Array.isArray(data?.permissionKeys) ? data.permissionKeys : []);
-        setFetchedIsAdmin(!!data?.isAdmin);
-      } catch (err) {
-        // log so deployed errors are visible in browser console
-        console.error('[hospital-admin-sidebar] error fetching /api/me/permissions', err);
-      }
-    }
-
-    fetchPerms();
-
-    return () => {
-      mounted = false;
-    };
-  }, [session?.user?.id]);
-
-  const isAdmin = fetchedIsAdmin ?? (session as any)?.user?.isAdmin === true;
-  const permissionKeys = fetchedPermissionKeys ?? (session as any)?.user?.permissionKeys ?? [];
+  if (!session) {
+    return (
+       <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full p-4">
+        <Skeleton className="h-[60px] w-full mb-4" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-12 w-full mt-auto" />
+      </aside>
+    );
+  }
 
   const visibleNavLinks = navLinks.filter(link => {
     if (isAdmin) return true;
@@ -229,15 +182,10 @@ export default function HospitalAdminSidebar() {
             <DropdownMenuContent align="end" className="w-56 mb-2">
                 <DropdownMenuLabel>{hospitalName}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                   <Link href="/hospital-admin/settings"></Link>
-                    <CircleUser className="mr-2 h-4 w-4" />
-                    <span>Profile </span>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild>
                     <Link href="/hospital-admin/settings">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
+                      <CircleUser className="mr-2 h-4 w-4" />
+                      <span>Profile Settings</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

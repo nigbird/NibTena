@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
+import bcrypt from 'bcryptjs';
+import { auth } from '@/../../auth';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -100,4 +102,67 @@ export async function getDoctorById(id: number) {
     return await prisma.doctor.findUnique({
         where: { id },
     });
+}
+
+const PasswordChangeSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required.'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters.'),
+  confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: 'New passwords do not match.',
+  path: ['confirmPassword'],
+});
+
+export type PasswordChangeState = {
+  errors?: { currentPassword?: string[]; newPassword?: string[]; confirmPassword?: string[]; };
+  message?: string | null;
+  success?: boolean;
+};
+
+async function getHashedPasswordForDoctor(doctorId: number) {
+    const doctor = await prisma.doctor.findUnique({
+        where: { id: doctorId },
+        select: { password: true }
+    });
+    return doctor?.password;
+}
+
+export async function updateDoctorPassword(doctorId: number, prevState: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
+    const session = await auth();
+    if (!session?.user || Number(session.user.id) !== doctorId) {
+        return { success: false, message: 'Unauthorized.' };
+    }
+
+    const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+
+    if (!validatedFields.success) {
+        return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };
+    }
+    
+    const { currentPassword, newPassword } = validatedFields.data;
+
+    try {
+        const storedHash = await getHashedPasswordForDoctor(doctorId);
+        if (!storedHash) {
+             return { success: false, message: 'User not found.' };
+        }
+
+        const passwordsMatch = await bcrypt.compare(currentPassword, storedHash);
+        if (!passwordsMatch) {
+            return { errors: { currentPassword: ['Incorrect current password.'] }, message: 'Incorrect current password.' };
+        }
+
+        const newHashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        await prisma.doctor.update({
+            where: { id: doctorId },
+            data: { password: newHashedPassword },
+        });
+
+        // Sign out is handled on the client after success
+        return { success: true, message: 'Password updated successfully. You will be logged out shortly.' };
+
+    } catch (error) {
+        return { success: false, message: 'Failed to update password.' };
+    }
 }

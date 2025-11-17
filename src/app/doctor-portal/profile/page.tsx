@@ -17,6 +17,7 @@ import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-co
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { signOut } from 'next-auth/react';
 
 function ProfileSubmitButton() {
   const { pending } = useFormStatus();
@@ -77,6 +78,9 @@ export default function DoctorProfilePage() {
     if (passwordState.success) {
       toast({ title: 'Password Updated', description: passwordState.message });
       setPasswordFormKey(Date.now()); // Reset password form by changing its key
+      setTimeout(() => {
+        signOut({ callbackUrl: '/doctor-portal/login' });
+      }, 2000);
     } else if (passwordState.message) {
       toast({ variant: 'destructive', title: 'Update Failed', description: passwordState.message });
     }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Stethoscope, Loader2 } from 'lucide-react';
+import { Stethoscope, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -36,6 +37,7 @@ export default function DoctorLoginPage() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/doctor-portal';
     const [error, setError] = useState<string | null>(searchParams.get('error'));
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (error) {
@@ -106,7 +108,12 @@ export default function DoctorLoginPage() {
                                 Forgot password?
                             </Link>
                         </div>
-                        <Input id="password" name="password" type="password" required />
+                        <div className="relative">
+                            <Input id="password" name="password" type={showPassword ? 'text' : 'password'} required />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
                     </div>
                     <SubmitButton />
                 </form>

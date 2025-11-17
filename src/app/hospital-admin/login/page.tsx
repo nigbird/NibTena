@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Hospital, Loader2, AlertCircle } from 'lucide-react';
+import { Hospital, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -35,6 +36,7 @@ export default function HospitalAdminLoginPage() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/hospital-admin';
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -94,7 +96,12 @@ export default function HospitalAdminLoginPage() {
                                 Forgot password?
                             </Link>
                         </div>
-                        <Input id="password" name="password" type="password" required />
+                        <div className="relative">
+                            <Input id="password" name="password" type={showPassword ? 'text' : 'password'} required />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
                     </div>
                     {error && (
                         <Alert variant="destructive">

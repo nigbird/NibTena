@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveDoctor, type DoctorFormState } from "@/app/hospital-admin/doctors/actions";
 import { getSpecialties } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
@@ -43,6 +43,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const [isPending, startTransition] = useTransition();
   const [imagePreview, setImagePreview] = useState<string | null>(doctorToEdit?.imageUrl || null);
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
 
   useEffect(() => {
@@ -190,10 +191,13 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                     <Label htmlFor="password" className="text-right">
                     Password
                     </Label>
-                    <div className="col-span-3">
-                    <Input id="password" name="password" type="password" placeholder="Leave blank to keep unchanged" />
-                    {state.errors?.password && <p className="text-sm font-medium text-destructive">{state.errors.password[0]}</p>}
+                    <div className="col-span-3 relative">
+                      <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Leave blank to keep unchanged" />
+                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff /> : <Eye />}
+                      </Button>
                     </div>
+                     {state.errors?.password && <p className="text-sm font-medium text-destructive col-start-2 col-span-3">{state.errors.password[0]}</p>}
                 </div>
               )}
             <div className="grid grid-cols-4 items-center gap-4">

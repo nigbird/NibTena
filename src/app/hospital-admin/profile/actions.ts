@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { auth, signOut } from '@/../../auth';
+import type { User as AuthUser } from 'next-auth';
 
 const UserProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -67,19 +68,23 @@ export type PasswordChangeState = {
   success?: boolean;
 };
 
-async function getHashedPasswordForUser(userId: number, userRole: string) {
-    if (userRole === 'hospital') {
+async function getHashedPasswordForUser(user: AuthUser) {
+    const userId = Number(user.id);
+    // The main hospital account's credentials are in the Hospital table.
+    // The isAdmin flag from the session distinguishes it from staff users.
+    if ((user as any).isAdmin) {
          const hospital = await prisma.hospital.findUnique({
             where: { id: userId },
             select: { password: true }
         });
         return hospital?.password;
     } else {
-        const user = await prisma.user.findUnique({
+        // All other staff users are in the User table.
+        const staffUser = await prisma.user.findUnique({
             where: { id: userId },
             select: { password: true }
         });
-        return user?.password;
+        return staffUser?.password;
     }
 }
 
@@ -98,7 +103,7 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     const { currentPassword, newPassword } = validatedFields.data;
 
     try {
-        const storedHash = await getHashedPasswordForUser(userId, session.user.role);
+        const storedHash = await getHashedPasswordForUser(session.user);
         if (!storedHash) {
              return { success: false, message: 'User not found.' };
         }
@@ -110,7 +115,8 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
 
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
         
-        if (session.user.role === 'hospital') {
+        // Update the correct table based on isAdmin flag
+        if ((session.user as any).isAdmin) {
             await prisma.hospital.update({
                 where: { id: userId },
                 data: { password: newHashedPassword },
@@ -130,5 +136,3 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
         return { success: false, message: 'Failed to update password.' };
     }
 }
-
-    

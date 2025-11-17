@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-context';
@@ -43,6 +43,10 @@ export default function DoctorProfilePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(doctor?.imageUrl || null);
   const { toast } = useToast();
   const [passwordFormKey, setPasswordFormKey] = useState(Date.now());
+  
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -195,17 +199,32 @@ export default function DoctorProfilePage() {
                     <form action={dispatchPassword} key={passwordFormKey} className="space-y-6 max-w-md">
                          <div className="space-y-2">
                             <Label htmlFor="currentPassword">Current Password</Label>
-                            <Input id="currentPassword" name="currentPassword" type="password" required />
+                             <div className="relative">
+                                <Input id="currentPassword" name="currentPassword" type={showCurrentPassword ? 'text' : 'password'} required />
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                                    {showCurrentPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
                             {passwordState.errors?.currentPassword && <p className="text-sm font-medium text-destructive">{passwordState.errors.currentPassword[0]}</p>}
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="newPassword">New Password</Label>
-                            <Input id="newPassword" name="newPassword" type="password" required />
+                             <div className="relative">
+                                <Input id="newPassword" name="newPassword" type={showNewPassword ? 'text' : 'password'} required />
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                    {showNewPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
                              {passwordState.errors?.newPassword && <p className="text-sm font-medium text-destructive">{passwordState.errors.newPassword[0]}</p>}
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                            <Input id="confirmPassword" name="confirmPassword" type="password" required />
+                            <div className="relative">
+                                <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required />
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    {showConfirmPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
                              {passwordState.errors?.confirmPassword && <p className="text-sm font-medium text-destructive">{passwordState.errors.confirmPassword[0]}</p>}
                         </div>
                         <div className="flex justify-end">

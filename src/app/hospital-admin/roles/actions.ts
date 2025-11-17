@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, isHospitalOwnerFor } from '@/lib/permissions';
+import { requirePermission, isHospitalOwnerFor, requireAnyPermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -53,18 +53,9 @@ export async function getRoleById(roleId: number) {
 }
 
 export async function createRole(hospitalId: number, formData: FormData) {
-  // permission guard: only admin or users with USER_MANAGE can create roles
-  let allowed = await requirePermission('USER_MANAGE');
-  // fallback: if caller is the hospital account and the hospital has an Owner (isAdmin) role, allow
-  if (!allowed) {
-    try {
-      const ownerOk = await isHospitalOwnerFor(hospitalId);
-      if (ownerOk) allowed = true;
-    } catch (e) {
-      console.error('[createRole] owner fallback error', e);
-    }
-  }
+  const allowed = await requirePermission('USER_MANAGE');
   if (!allowed) return { success: false, message: 'Unauthorized' };
+  
   const raw = Object.fromEntries(formData.entries());
   const parsed = CreateRoleSchema.safeParse({
     name: String(raw.name || ''),
@@ -102,25 +93,9 @@ export async function createRole(hospitalId: number, formData: FormData) {
 }
 
 export async function updateRole(formData: FormData) {
-  // permission guard
-  let allowed = await requirePermission('USER_MANAGE');
-  if (!allowed) {
-    // try to resolve hospitalId from the role being updated and allow if caller is hospital Owner
-    try {
-      const raw = Object.fromEntries(formData.entries());
-      const roleId = Number(raw.id);
-      if (!isNaN(roleId)) {
-        const roleRec = await prisma.role.findUnique({ where: { id: roleId } });
-        if (roleRec) {
-          const ownerOk = await isHospitalOwnerFor(roleRec.hospitalId);
-          if (ownerOk) allowed = true;
-        }
-      }
-    } catch (e) {
-      console.error('[updateRole] owner fallback error', e);
-    }
-  }
+  const allowed = await requirePermission('USER_MANAGE');
   if (!allowed) return { success: false, message: 'Unauthorized' };
+
   const raw = Object.fromEntries(formData.entries());
   const parsed = UpdateRoleSchema.safeParse({
     id: Number(raw.id),
@@ -159,20 +134,10 @@ export async function updateRole(formData: FormData) {
 }
 
 export async function deleteRole(roleId: number) {
+  const allowed = await requirePermission('USER_MANAGE');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+  
   try {
-    let allowed = await requirePermission('USER_MANAGE');
-    if (!allowed) {
-      try {
-        const roleRec = await prisma.role.findUnique({ where: { id: roleId } });
-        if (roleRec) {
-          const ownerOk = await isHospitalOwnerFor(roleRec.hospitalId);
-          if (ownerOk) allowed = true;
-        }
-      } catch (e) {
-        console.error('[deleteRole] owner fallback error', e);
-      }
-    }
-    if (!allowed) return { success: false, message: 'Unauthorized' };
     // disassociate users first
     await prisma.user.updateMany({ where: { roleId }, data: { roleId: null } });
     await prisma.rolePermission.deleteMany({ where: { roleId } });
@@ -190,16 +155,7 @@ export async function getUsersByHospitalId(hospitalId: number) {
 }
 
 export async function createUser(hospitalId: number, formData: FormData) {
-  // permission guard
-  let allowed = await requirePermission('USER_MANAGE');
-  if (!allowed) {
-    try {
-      const ownerOk = await isHospitalOwnerFor(hospitalId);
-      if (ownerOk) allowed = true;
-    } catch (e) {
-      console.error('[createUser] owner fallback error', e);
-    }
-  }
+  const allowed = await requirePermission('USER_MANAGE');
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
@@ -238,25 +194,10 @@ export async function createUser(hospitalId: number, formData: FormData) {
 }
 
 export async function updateUserRole(userId: number, roleId: number | null) {
+  const allowed = await requirePermission('USER_MANAGE');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   try {
-    let allowed = await requirePermission('USER_MANAGE');
-    if (!allowed) {
-      try {
-        // determine hospital context from either the user or the target role
-        const [userRec, roleRec] = await Promise.all([
-          prisma.user.findUnique({ where: { id: userId } }),
-          roleId ? prisma.role.findUnique({ where: { id: roleId } }) : Promise.resolve(null),
-        ]);
-        const hospitalId = userRec?.hospitalId ?? roleRec?.hospitalId ?? null;
-        if (hospitalId) {
-          const ownerOk = await isHospitalOwnerFor(hospitalId as number);
-          if (ownerOk) allowed = true;
-        }
-      } catch (e) {
-        console.error('[updateUserRole] owner fallback error', e);
-      }
-    }
-    if (!allowed) return { success: false, message: 'Unauthorized' };
     await prisma.user.update({ where: { id: userId }, data: { roleId } });
     revalidatePath('/hospital-admin/roles');
     return { success: true };
@@ -267,20 +208,10 @@ export async function updateUserRole(userId: number, roleId: number | null) {
 }
 
 export async function deleteUser(userId: number) {
+  const allowed = await requirePermission('USER_MANAGE');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   try {
-    let allowed = await requirePermission('USER_MANAGE');
-    if (!allowed) {
-      try {
-        const userRec = await prisma.user.findUnique({ where: { id: userId } });
-        if (userRec && userRec.hospitalId) {
-          const ownerOk = await isHospitalOwnerFor(userRec.hospitalId);
-          if (ownerOk) allowed = true;
-        }
-      } catch (e) {
-        console.error('[deleteUser] owner fallback error', e);
-      }
-    }
-    if (!allowed) return { success: false, message: 'Unauthorized' };
     await prisma.user.delete({ where: { id: userId } });
     revalidatePath('/hospital-admin/roles');
     return { success: true };

@@ -1,3 +1,4 @@
+
 export const runtime = "nodejs";
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
@@ -7,7 +8,7 @@ import bcrypt from 'bcryptjs';
 
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: process.env.NEXTAUTH_TRUST_HOST === 'true',
+  trustHost: true,
   // Enforce finite session lifetime so authenticated users are logged out after inactivity/expiry
   session: {
     strategy: 'jwt',
@@ -70,31 +71,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
                   : null;
 
-              // If a staff user, attempt to load their Role and permission keys
+              // --- Authoritative Permission Fetching ---
               let roleName: string | null = null;
               let permissionKeys: string[] = [];
-              let isRoleAdmin = false;
-              if (isStaff && (user as any).roleId) {
-                const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
-                if (staffRole) {
-                  roleName = staffRole.name;
-                  isRoleAdmin = !!(staffRole as any).isAdmin;
-                  if (isRoleAdmin) {
-                    const all = await prisma.permission.findMany({ select: { key: true } });
-                    permissionKeys = all.map(a => a.key);
-                  } else {
-                    permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
-                  }
-                }
-              }
+              let isAdmin = false;
 
-              // If login matched a Hospital record (not a staff user), treat it as the hospital owner/admin and grant all permissions
-              let hospitalIsAdmin = false;
-              if (!isStaff && role === 'hospital') {
-                hospitalIsAdmin = true;
+              if (role === 'superadmin') {
+                isAdmin = true;
                 const all = await prisma.permission.findMany({ select: { key: true } });
-                permissionKeys = all.map(a => a.key);
+                permissionKeys = all.map(p => p.key);
+              } else if (role === 'hospital') {
+                  if (isStaff) {
+                    if ((user as any).roleId) {
+                      const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
+                      if (staffRole) {
+                        roleName = staffRole.name;
+                        isAdmin = !!staffRole.isAdmin;
+                        if (isAdmin) {
+                          const all = await prisma.permission.findMany({ select: { key: true } });
+                          permissionKeys = all.map(a => a.key);
+                        } else {
+                          permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
+                        }
+                      }
+                    }
+                  } else { // This is the main hospital account, not a staff member
+                      isAdmin = true; // Treat main hospital account as admin
+                      const all = await prisma.permission.findMany({ select: { key: true } });
+                      permissionKeys = all.map(p => p.key);
+                  }
               }
+              // --- End Authoritative Permission Fetching ---
 
               return {
                 id: user.id.toString(),
@@ -105,9 +112,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 hospitalId: role === 'hospital' ? (isStaff ? (user as any).hospitalId : user.id) : null,
                 doctorHospitalIds,
                 imageUrl: userImage,
+                // Attach authoritative permissions to the user object for the session
                 staffRoleName: roleName,
-                staffPermissionKeys: permissionKeys,
-                isAdmin: hospitalIsAdmin || isRoleAdmin,
+                permissionKeys,
+                isAdmin,
               };
           }
         }
@@ -128,8 +136,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if ((user as any).staffRoleName) {
           token.staffRoleName = (user as any).staffRoleName;
         }
-        if ((user as any).staffPermissionKeys) {
-          token.staffPermissionKeys = (user as any).staffPermissionKeys;
+        if ((user as any).permissionKeys) {
+          token.permissionKeys = (user as any).permissionKeys;
         }
         if ((user as any).isAdmin) {
           token.isAdmin = true;
@@ -144,10 +152,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.hospitalId = token.hospitalId as number | null;
         session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
         session.user.image = token.picture as string | null;
-  // surface staff role and permissions in the session (use any to avoid TS model mismatch)
-  (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
-  (session.user as any).permissionKeys = (token as any).staffPermissionKeys as string[] | undefined;
-  (session.user as any).isAdmin = (token as any).isAdmin === true;
+        // surface staff role and permissions in the session (use any to avoid TS model mismatch)
+        (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
+        (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
+        (session.user as any).isAdmin = (token as any).isAdmin === true;
       }
       return session;
     },
@@ -238,8 +246,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           'REPORTS_VIEW': '/hospital-admin/reports',
         };
 
-        // allow access to general hospital-admin index
-        if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') return true;
+        // allow access to general hospital-admin index and settings
+        if (pathname === '/hospital-admin' || pathname === '/hospital-admin/' || pathname.startsWith('/hospital-admin/settings')) return true;
 
         // Build a set of allowed prefixes from permissions
         const allowedPrefixes = new Set<string>(permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[]);

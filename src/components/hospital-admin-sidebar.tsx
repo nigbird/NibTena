@@ -1,3 +1,4 @@
+
  'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -183,9 +184,15 @@ export default function HospitalAdminSidebar() {
                 <DropdownMenuLabel>{hospitalName}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <Link href="/hospital-admin/settings">
+                    <Link href="/hospital-admin/profile">
                       <CircleUser className="mr-2 h-4 w-4" />
-                      <span>Profile Settings</span>
+                      <span>Profile & Settings</span>
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href="/hospital-admin/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Hospital Settings</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

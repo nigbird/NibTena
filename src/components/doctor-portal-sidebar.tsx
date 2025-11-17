@@ -97,12 +97,8 @@ export default function DoctorPortalSidebar() {
                 <DropdownMenuItem asChild>
                     <Link href="/doctor-portal/profile">
                         <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
+                        <span>Profile & Settings</span>
                     </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/doctor-portal/login' })}>

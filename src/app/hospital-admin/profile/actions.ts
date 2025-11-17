@@ -35,6 +35,8 @@ export async function updateUserProfile(
   }
 
   try {
+    // Note: This action only updates staff users in the User table.
+    // Hospital owner details are updated via the general settings page.
     await prisma.user.update({
       where: { id: userId },
       data: validatedFields.data,
@@ -65,12 +67,20 @@ export type PasswordChangeState = {
   success?: boolean;
 };
 
-async function getHashedPasswordForUser(userId: number) {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { password: true }
-    });
-    return user?.password;
+async function getHashedPasswordForUser(userId: number, userRole: string) {
+    if (userRole === 'hospital') {
+         const hospital = await prisma.hospital.findUnique({
+            where: { id: userId },
+            select: { password: true }
+        });
+        return hospital?.password;
+    } else {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { password: true }
+        });
+        return user?.password;
+    }
 }
 
 export async function updateUserPassword(userId: number, prevState: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
@@ -88,7 +98,7 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     const { currentPassword, newPassword } = validatedFields.data;
 
     try {
-        const storedHash = await getHashedPasswordForUser(userId);
+        const storedHash = await getHashedPasswordForUser(userId, session.user.role);
         if (!storedHash) {
              return { success: false, message: 'User not found.' };
         }
@@ -100,15 +110,25 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
 
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
         
-        await prisma.user.update({
-            where: { id: userId },
-            data: { password: newHashedPassword },
-        });
+        if (session.user.role === 'hospital') {
+            await prisma.hospital.update({
+                where: { id: userId },
+                data: { password: newHashedPassword },
+            });
+        } else {
+             await prisma.user.update({
+                where: { id: userId },
+                data: { password: newHashedPassword },
+            });
+        }
 
         // Sign out is handled on the client after success
         return { success: true, message: 'Password updated successfully. You will be logged out shortly.' };
 
     } catch (error) {
+        console.error('Password update failed:', error);
         return { success: false, message: 'Failed to update password.' };
     }
 }
+
+    

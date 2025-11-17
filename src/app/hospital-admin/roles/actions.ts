@@ -39,7 +39,7 @@ export async function getRolesByHospitalId(hospitalId: number) {
     where: { hospitalId },
     include: {
       permissions: { include: { permission: true } },
-      users: true,
+      _count: { select: { users: true } },
     },
     orderBy: { name: 'asc' },
   });
@@ -70,7 +70,6 @@ export async function createRole(hospitalId: number, formData: FormData) {
   const { name, permissions, isAdmin } = parsed.data;
 
   try {
-    // prevent duplicate names per hospital: unique constraint exists but handle gracefully
     const existing = await prisma.role.findFirst({ where: { hospitalId, name } });
     if (existing) {
       return { success: false, message: 'A role with this name already exists.' };
@@ -78,7 +77,6 @@ export async function createRole(hospitalId: number, formData: FormData) {
 
     const role = await prisma.role.create({ data: { name, hospitalId, isAdmin: !!isAdmin } });
 
-    // if not an admin role, persist explicit role permissions
     if (!isAdmin && permissions && permissions.length > 0) {
       const rp = permissions.map((pid) => ({ roleId: role.id, permissionId: pid, allowed: true }));
       await prisma.rolePermission.createMany({ data: rp });
@@ -114,10 +112,8 @@ export async function updateRole(formData: FormData) {
     await prisma.role.update({ where: { id }, data: { name, isAdmin: !!isAdmin } });
 
     if (isAdmin) {
-      // admin role doesn't need per-permission rows; remove any existing explicit permissions to avoid confusion
       await prisma.rolePermission.deleteMany({ where: { roleId: id } });
     } else if (permissions) {
-      // simple approach: delete existing rolePermissions and recreate
       await prisma.rolePermission.deleteMany({ where: { roleId: id } });
       if (permissions.length > 0) {
         const rp = permissions.map((pid) => ({ roleId: id, permissionId: pid, allowed: true }));
@@ -138,7 +134,6 @@ export async function deleteRole(roleId: number) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   try {
-    // disassociate users first
     await prisma.user.updateMany({ where: { roleId }, data: { roleId: null } });
     await prisma.rolePermission.deleteMany({ where: { roleId } });
     await prisma.role.delete({ where: { id: roleId } });
@@ -151,7 +146,25 @@ export async function deleteRole(roleId: number) {
 }
 
 export async function getUsersByHospitalId(hospitalId: number) {
-  return await prisma.user.findMany({ where: { hospitalId }, include: { role: true }, orderBy: { name: 'asc' } });
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+    select: { contactEmail: true },
+  });
+  if (!hospital) return [];
+
+  // Fetch users and specifically exclude the main hospital admin account by email
+  return await prisma.user.findMany({
+    where: {
+      hospitalId,
+      email: {
+        not: hospital.contactEmail,
+      },
+    },
+    include: {
+      role: true,
+    },
+    orderBy: { name: 'asc' },
+  });
 }
 
 export async function createUser(hospitalId: number, formData: FormData) {
@@ -159,7 +172,6 @@ export async function createUser(hospitalId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
-  // Password is not required in the form anymore, it will be generated
   if (raw.password === '') {
     delete raw.password;
   }
@@ -179,7 +191,6 @@ export async function createUser(hospitalId: number, formData: FormData) {
     
     const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
 
-    // Send welcome email
     await sendWelcomeEmail('staff', { name, email, rawPassword, role: role?.name }, hospitalId);
     
     revalidatePath('/hospital-admin/roles');
@@ -220,3 +231,5 @@ export async function deleteUser(userId: number) {
     return { success: false, message: 'Failed to delete user.' };
   }
 }
+
+    

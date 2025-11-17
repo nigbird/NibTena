@@ -35,18 +35,18 @@ function PasswordSubmitButton() {
 
 export default function HospitalUserProfilePage() {
   const { data: session, status, update } = useSession();
-  const router = useRouter();
   const { toast } = useToast();
   const [passwordFormKey, setPasswordFormKey] = useState(Date.now());
   const user = session?.user;
-  const userId = user?.id;
+  const userId = user?.id ? Number(user.id) : null;
+  const isHospitalAdmin = (session?.user as any)?.isAdmin;
 
   const profileInitialState: UserProfileState = { message: null, errors: {} };
-  const updateUserAction = userId ? updateUserProfile.bind(null, Number(userId)) : null;
+  const updateUserAction = userId ? updateUserProfile.bind(null, userId) : null;
   const [profileState, dispatchProfile] = useActionState(updateUserAction || (async () => profileInitialState), profileInitialState);
 
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };
-  const updatePasswordAction = userId ? updateUserPassword.bind(null, Number(userId)) : null;
+  const updatePasswordAction = userId ? updateUserPassword.bind(null, userId) : null;
   const [passwordState, dispatchPassword] = useActionState(updatePasswordAction || (async () => passwordInitialState), passwordInitialState);
 
   useEffect(() => {
@@ -107,7 +107,8 @@ export default function HospitalUserProfilePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" name="email" type="email" defaultValue={user.email} required />
+                            <Input id="email" name="email" type="email" defaultValue={user.email} required readOnly={isHospitalAdmin} className={isHospitalAdmin ? 'bg-muted' : ''}/>
+                             {isHospitalAdmin && <p className="text-xs text-muted-foreground pt-1">The primary hospital email cannot be changed here. Please contact support.</p>}
                             {profileState.errors?.email && <p className="text-sm font-medium text-destructive">{profileState.errors.email[0]}</p>}
                         </div>
                         <div className="flex justify-end">
@@ -151,3 +152,5 @@ export default function HospitalUserProfilePage() {
     </div>
   );
 }
+
+    

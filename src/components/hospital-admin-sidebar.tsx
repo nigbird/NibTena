@@ -42,28 +42,28 @@ const navLinks: { href: string; label: string; icon: any; permissionKey?: string
   { href: '/hospital-admin/roles', label: 'Roles', icon: Shield, permissionKey: 'USER_MANAGE' },
 ];
 
-const bottomNavLinks: { href: string; label: string; icon: any; permissionKey?: string }[] = [
-  { href: '/hospital-admin/settings', label: 'Settings', icon: Settings },
-];
+// The main settings link, only for admins
+const settingsLink = { href: '/hospital-admin/settings', label: 'Settings', icon: Settings, permissionKey: 'SETTINGS_MANAGE' };
 
 export default function HospitalAdminSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [localHospitalName, setLocalHospitalName] = useState<string | null>(null);
   const [localImage, setLocalImage] = useState<string | null>(null);
   
-  const isAdmin = (session as any)?.user?.isAdmin === true;
-  const permissionKeys = (session as any)?.user?.permissionKeys ?? [];
+  const user = (session as any)?.user;
+  const isAdmin = user?.isAdmin === true;
+  const permissionKeys = user?.permissionKeys || [];
 
-  const hospitalName = localHospitalName ?? session?.user?.name ?? 'Hospital Admin';
-  const roleName = (session as any)?.user?.roleName;
+  const hospitalName = localHospitalName ?? user?.name ?? 'Hospital Admin';
+  const roleName = user?.roleName;
 
   useEffect(() => {
     let mounted = true;
 
     async function fetchHospital() {
       try {
-        const hid = (session as any)?.user?.hospitalId;
+        const hid = user?.hospitalId;
         if (!hid) return;
         const res = await fetch(`/api/hospital/${hid}`);
         if (!res.ok) return;
@@ -76,30 +76,33 @@ export default function HospitalAdminSidebar() {
       }
     }
 
-    if (session?.user?.hospitalId) {
+    if (user?.hospitalId) {
       fetchHospital();
     }
-
-    const handler = (e: any) => {
-      try {
-        const detail = e?.detail;
-        const hid = (session as any)?.user?.hospitalId;
-        if (!hid) return;
-        if (!detail || detail.hospitalId === hid) {
-          fetchHospital();
-        }
-      } catch (err) {
-        // ignore
+    
+    // Listen for custom event to refetch data when hospital details change
+    const handleHospitalUpdate = () => {
+      if (user?.hospitalId) {
+        fetchHospital();
       }
     };
-
-    window.addEventListener('hospital-updated', handler as EventListener);
+    window.addEventListener('hospital-updated', handleHospitalUpdate);
 
     return () => {
       mounted = false;
-      window.removeEventListener('hospital-updated', handler as EventListener);
+      window.removeEventListener('hospital-updated', handleHospitalUpdate);
     };
-  }, [session?.user?.hospitalId]);
+  }, [user?.hospitalId]);
+  
+   // Filter navigation links based on permissions
+  const visibleNavLinks = navLinks.filter(link => {
+    if (isAdmin) return true; // Admins see everything
+    if (!link.permissionKey) return true; // Links without a key are public
+    return permissionKeys.includes(link.permissionKey);
+  });
+  
+  // The main settings link is only visible to admins
+  const canSeeSettings = isAdmin || permissionKeys.includes('SETTINGS_MANAGE');
 
   if (!session) {
     return (
@@ -114,18 +117,6 @@ export default function HospitalAdminSidebar() {
       </aside>
     );
   }
-
-  const visibleNavLinks = navLinks.filter(link => {
-    if (isAdmin) return true;
-    if (!link.permissionKey) return true;
-    return permissionKeys.includes(link.permissionKey);
-  });
-
-  const visibleBottomNavLinks = bottomNavLinks.filter(link => {
-    if (isAdmin) return true;
-    if (!link.permissionKey) return true;
-    return permissionKeys.includes(link.permissionKey);
-  });
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -148,36 +139,34 @@ export default function HospitalAdminSidebar() {
             {label}
           </Link>
         ))}
+         {canSeeSettings && (
+            <Link
+                key={settingsLink.label}
+                href={settingsLink.href}
+                className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-secondary hover:bg-muted/50',
+                pathname.startsWith(settingsLink.href) && 'bg-primary text-secondary font-bold'
+                )}
+            >
+                <Settings className="h-4 w-4" />
+                {settingsLink.label}
+            </Link>
+        )}
       </nav>
       <div className="mt-auto p-4 space-y-2 border-t">
-        <nav className="space-y-1">
-            {visibleBottomNavLinks.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={label}
-                href={href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                  (pathname === href || pathname.startsWith(href)) && 'bg-muted text-primary'
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
-        </nav>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
                     <Avatar className="h-10 w-10 border">
-                        {(localImage ?? session.user.image) && (
-                          <AvatarImage src={(localImage ?? session.user.image) ?? undefined} alt={hospitalName} />
+                        {(localImage ?? user.image) && (
+                          <AvatarImage src={(localImage ?? user.image) ?? undefined} alt={hospitalName} />
                         )}
                         <AvatarFallback>{hospitalName.charAt(0)}</AvatarFallback>
                     </Avatar>
-          <div className="text-left overflow-hidden">
-            <p className="font-semibold text-sm leading-tight truncate">{session.user.name}</p>
-            <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : roleName || 'Staff'}</p>
-          </div>
+                    <div className="text-left overflow-hidden">
+                        <p className="font-semibold text-sm leading-tight truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : roleName || 'Staff'}</p>
+                    </div>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 mb-2">
@@ -186,13 +175,7 @@ export default function HospitalAdminSidebar() {
                 <DropdownMenuItem asChild>
                     <Link href="/hospital-admin/profile">
                       <CircleUser className="mr-2 h-4 w-4" />
-                      <span>Profile & Settings</span>
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href="/hospital-admin/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Hospital Settings</span>
+                      <span>Profile</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -205,3 +188,5 @@ export default function HospitalAdminSidebar() {
     </aside>
   );
 }
+
+    

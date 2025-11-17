@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -104,7 +104,7 @@ export default function DoctorLoginPage() {
                     <div className="grid gap-2">
                         <div className="flex items-center">
                             <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
-                            <Link href="#" className="ml-auto inline-block text-sm underline text-muted-foreground">
+                            <Link href="/forgot-password" prefetch={false} className="ml-auto inline-block text-sm underline text-muted-foreground">
                                 Forgot password?
                             </Link>
                         </div>

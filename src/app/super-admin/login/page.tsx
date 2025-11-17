@@ -89,7 +89,12 @@ export default function SuperAdminLoginPage() {
                             <Input id="email" name="email" type="email" placeholder="super@NibAppointment.com" required />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
+                            <div className="flex items-center">
+                                <Label htmlFor="password" className="text-[#2E2E2E]">Password</Label>
+                                <Link href="/forgot-password" prefetch={false} className="ml-auto inline-block text-sm underline text-muted-foreground">
+                                    Forgot password?
+                                </Link>
+                            </div>
                             <div className="relative">
                                 <Input id="password" name="password" type={showPassword ? 'text' : 'password'} required />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>

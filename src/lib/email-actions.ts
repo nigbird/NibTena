@@ -358,3 +358,41 @@ export async function setHospitalEmailPreference(hospitalId: number, type: 'cust
   }
   revalidatePath('/hospital-admin/settings');
 }
+
+export async function sendPasswordResetEmail(email: string, token: string) {
+    const subject = `Reset Your NibAppointment Password`;
+    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}`;
+
+    const html = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Password Reset Request</h2>
+            <p>You are receiving this email because a password reset was requested for your account.</p>
+            <p>To reset your password, please click the link below. This link is valid for 15 minutes.</p>
+            <p style="margin: 20px 0;">
+                <a href="${resetUrl}" style="background-color: #F7D488; color: #2E2E2E; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                    Reset Your Password
+                </a>
+            </p>
+            <p>If you did not request a password reset, you can safely ignore this email.</p>
+            <p>Thank you!</p>
+        </div>
+    `;
+
+    try {
+        // For password resets, we'll try to find a global email configuration first.
+        const { transporter, fromUser, fromName } = await getEmailTransporter();
+
+        const info = await transporter.sendMail({
+            from: `"${fromName}" <${fromUser}>`,
+            to: email,
+            subject: subject,
+            html: html,
+        });
+
+        console.log("Password reset email sent to %s: %s", email, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+        console.error(`Failed to send password reset email to ${email}:`, error);
+        return { success: false, error: error.message };
+    }
+}

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { addMinutes, format } from 'date-fns';
+import { addMinutes, format, parseISO, startOfDay } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 
@@ -166,7 +166,7 @@ export async function completeBooking(bookingData: any) {
         doctorId: bookingData.doctorId,
         hospitalId: bookingData.hospitalId,
         appointmentSlot: bookingData.appointmentSlot,
-        appointmentDate: new Date(bookingData.appointmentDate),
+        appointmentDate: startOfDay(parseISO(bookingData.appointmentDate)),
         status: 'confirmed',
       },
     });
@@ -289,7 +289,7 @@ export async function initiateBookingAndPayment(
         doctorId,
         hospitalId,
         appointmentSlot,
-        appointmentDate: new Date(appointmentDate),
+        appointmentDate: startOfDay(parseISO(appointmentDate)),
         status: 'pending-payment', // New status
       },
     });

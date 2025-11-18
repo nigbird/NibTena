@@ -3,7 +3,7 @@
 
 import { prisma } from '@/lib/prisma';
 import type { TimeSlot } from '@/lib/definitions';
-import { parse as parseTime, addMinutes, format as formatTime, isBefore, isEqual, isAfter, startOfHour } from 'date-fns';
+import { parse as parseTime, addMinutes, format as formatTime, isBefore, isEqual, isAfter, startOfHour, parseISO, startOfDay, addDays } from 'date-fns';
 
 /**
  * Parses a time string (HH:mm) into a Date object for today.
@@ -33,7 +33,8 @@ function isTimeInRanges(timeToCheck: Date, ranges: { startTime: string; endTime:
 export async function getAvailableTimeWindows(doctorId: number, date: string, hospitalId: number): Promise<string[]> {
     if (!doctorId || !date || !hospitalId) return [];
 
-    const dayIndex = new Date(date).getDay();
+    const parsedDate = parseISO(date); // parse 'yyyy-MM-dd' as local date
+    const dayIndex = parsedDate.getDay();
     const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayOfWeek = weekDays[dayIndex];
 
@@ -51,7 +52,10 @@ export async function getAvailableTimeWindows(doctorId: number, date: string, ho
             where: {
                 doctorId,
                 hospitalId,
-                appointmentDate: new Date(date),
+                appointmentDate: {
+                    gte: startOfDay(parsedDate),
+                    lt: addDays(startOfDay(parsedDate), 1),
+                },
                 status: { in: ['confirmed', 'rescheduled'] }
             },
             select: {

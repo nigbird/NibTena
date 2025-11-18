@@ -28,6 +28,10 @@ export type DoctorProfileState = {
   };
   message?: string | null;
   success?: boolean;
+  updatedDoctor?: {
+    name: string;
+    imageUrl?: string | null;
+  }
 };
 
 export async function updateDoctorProfile(
@@ -72,6 +76,10 @@ export async function updateDoctorProfile(
       return {
         success: true,
         message: 'Your profile has been updated successfully.',
+        updatedDoctor: {
+            name: updatedDoctor.name,
+            imageUrl: updatedDoctor.imageUrl
+        }
       };
     } else {
         return {

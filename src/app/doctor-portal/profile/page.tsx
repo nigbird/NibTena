@@ -17,7 +17,7 @@ import { DoctorPortalContext } from '@/components/doctor-portal/doctor-portal-co
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 
 function ProfileSubmitButton() {
   const { pending } = useFormStatus();
@@ -39,6 +39,7 @@ function PasswordSubmitButton() {
 
 export default function DoctorProfilePage() {
   const { doctor } = useContext(DoctorPortalContext);
+  const { update: updateSession } = useSession();
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(doctor?.imageUrl || null);
   const { toast } = useToast();
@@ -73,10 +74,16 @@ export default function DoctorProfilePage() {
   useEffect(() => {
     if (profileState.success) {
       toast({ title: 'Profile Updated', description: profileState.message });
+      if (profileState.updatedDoctor) {
+        updateSession({ 
+            name: profileState.updatedDoctor.name, 
+            picture: profileState.updatedDoctor.imageUrl 
+        });
+      }
     } else if (profileState.message) {
       toast({ variant: 'destructive', title: 'Update Failed', description: profileState.message });
     }
-  }, [profileState, toast]);
+  }, [profileState, toast, updateSession]);
   
   useEffect(() => {
     if (passwordState.success) {

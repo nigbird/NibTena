@@ -56,7 +56,12 @@ export default function HospitalUserProfilePage() {
   useEffect(() => {
     if (profileState.success) {
       toast({ title: 'Profile Updated', description: profileState.message });
-      update(); // This re-fetches the session
+      if (profileState.updatedUser) {
+        update({ 
+            name: profileState.updatedUser.name, 
+            email: profileState.updatedUser.email 
+        });
+      }
     } else if (profileState.message) {
       toast({ variant: 'destructive', title: 'Update Failed', description: profileState.message });
     }

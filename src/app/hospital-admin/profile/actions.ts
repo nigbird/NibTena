@@ -17,6 +17,10 @@ export type UserProfileState = {
   errors?: { name?: string[]; email?: string[] };
   message?: string | null;
   success?: boolean;
+  updatedUser?: {
+    name: string;
+    email: string;
+  }
 };
 
 export async function updateUserProfile(
@@ -36,14 +40,19 @@ export async function updateUserProfile(
   }
 
   try {
-    // Note: This action only updates staff users in the User table.
-    // Hospital owner details are updated via the general settings page.
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: validatedFields.data,
     });
     revalidatePath('/hospital-admin/profile');
-    return { success: true, message: 'Your profile has been updated.' };
+    return { 
+        success: true, 
+        message: 'Your profile has been updated.',
+        updatedUser: {
+            name: updatedUser.name,
+            email: updatedUser.email
+        }
+    };
   } catch (error: any) {
     if (error.code === 'P2002') {
       return { success: false, message: 'An account with this email already exists.' };

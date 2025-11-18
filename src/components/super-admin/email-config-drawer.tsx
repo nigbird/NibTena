@@ -57,7 +57,7 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
     setTestResult(null);
     
     // Ensure IMAP user/pass mirror SMTP for Gmail setup
-    const settingsToTest = {
+    const settingsToTest: EmailSettingsType = {
         ...currentSettings,
         imapUser: currentSettings.smtpUser,
         imapPass: currentSettings.smtpPass,
@@ -80,7 +80,12 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
   const handleSave = async () => {
     setIsSaving(true);
     try {
-        await saveGlobalEmailSettings(currentSettings);
+        const settingsToSave: EmailSettingsType = {
+            ...currentSettings,
+            imapUser: currentSettings.smtpUser,
+            imapPass: currentSettings.smtpPass,
+        };
+        await saveGlobalEmailSettings(settingsToSave);
         toast({ title: "Settings Saved", description: "Global email configuration has been saved." });
         onSave();
         setIsOpen(false);

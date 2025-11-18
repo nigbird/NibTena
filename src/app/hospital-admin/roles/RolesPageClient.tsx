@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
@@ -7,7 +8,7 @@ import {
   updateRole,
   deleteRole,
   createUser,
-  updateUserRole,
+  updateUser,
   deleteUser,
   getAllPermissions,
   getRolesByHospitalId,
@@ -57,6 +58,8 @@ import {
   UserPlus,
   ShieldCheck,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -484,6 +487,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
   const isEditing = !!user;
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -492,13 +496,13 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
     startTransition(async () => {
       let result;
       if (isEditing) {
-        result = await updateUserRole(user.id, Number(formData.get('roleId')));
+        result = await updateUser(user.id, formData);
       } else {
         result = await createUser(hospitalId, formData);
       }
 
       if (result.success) {
-        toast({ title: 'Success', description: `User ${isEditing ? 'updated' : 'created'}. An email with credentials has been sent.` });
+        toast({ title: 'Success', description: `User ${isEditing ? 'updated' : 'created'}.` + (!isEditing ? ' An email with credentials has been sent.' : '') });
         onSuccess();
         onOpenChange(false);
       } else {
@@ -511,24 +515,32 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{isEditing ? 'Edit User Role' : 'Create New User'}</SheetTitle>
+          <SheetTitle>{isEditing ? 'Edit User' : 'Create New User'}</SheetTitle>
           <SheetDescription>
-            {isEditing ? `Assign a new role to ${user.name}.` : 'Create a new staff member and assign them a role. A password will be auto-generated and emailed.'}
+            {isEditing ? `Modify details for ${user.name}.` : 'Create a new staff member and assign them a role. A password will be auto-generated and emailed.'}
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} id="user-form" className="py-4 space-y-4">
-          {!isEditing && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" required />
-              </div>
-            </>
-          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input id="name" name="name" defaultValue={user?.name} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" defaultValue={user?.email} required />
+          </div>
+
+          <div className="space-y-2">
+             <Label htmlFor="password">Password</Label>
+             <div className="relative">
+                <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Auto-generated if blank'} />
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+            </div>
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="roleId">Role</Label>
             <Select name="roleId" defaultValue={user?.roleId?.toString()}>
@@ -546,7 +558,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
          <SheetFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" form="user-form" disabled={isPending} variant="accent">
-                {isPending ? <><Loader2 className="animate-spin mr-2"/> Saving...</> : 'Save User'}
+                {isPending ? <><Loader2 className="animate-spin mr-2"/> Saving...</> : isEditing ? 'Save Changes' : 'Create User'}
             </Button>
         </SheetFooter>
       </SheetContent>

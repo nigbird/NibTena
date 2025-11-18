@@ -30,6 +30,10 @@ const CreateUserSchema = z.object({
   roleId: z.coerce.number().optional(),
 });
 
+const UpdateUserSchema = CreateUserSchema.extend({
+    id: z.coerce.number(),
+});
+
 export async function getAllPermissions() {
   return await prisma.permission.findMany({ orderBy: { id: 'asc' } });
 }
@@ -172,26 +176,27 @@ export async function createUser(hospitalId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
-  if (raw.password === '') {
-    delete raw.password;
+  // if password is not provided or is empty, we will auto-generate it.
+  if (!raw.password) {
+    raw.password = crypto.randomBytes(8).toString('hex');
   }
+
   const parsed = CreateUserSchema.safeParse(raw);
 
   if (!parsed.success) {
     return { success: false, message: parsed.error.flatten().fieldErrors.toString() };
   }
 
-  const { name, email, phone, roleId } = parsed.data;
+  const { name, email, password, phone, roleId } = parsed.data;
 
   try {
-    const rawPassword = crypto.randomBytes(8).toString('hex');
-    const hashed = await bcrypt.hash(rawPassword, 10);
+    const hashed = await bcrypt.hash(password!, 10);
     
     const user = await prisma.user.create({ data: { name, email, password: hashed, phone, roleId, hospitalId } });
     
     const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
 
-    await sendWelcomeEmail('staff', { name, email, rawPassword, role: role?.name }, hospitalId);
+    await sendWelcomeEmail('staff', { name, email, rawPassword: password, role: role?.name }, hospitalId);
     
     revalidatePath('/hospital-admin/roles');
     return { success: true, user };
@@ -204,17 +209,44 @@ export async function createUser(hospitalId: number, formData: FormData) {
   }
 }
 
-export async function updateUserRole(userId: number, roleId: number | null) {
+export async function updateUser(userId: number, formData: FormData) {
   const allowed = await requirePermission('USER_MANAGE');
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
+  const raw = Object.fromEntries(formData.entries()) as any;
+  if (raw.password === '') {
+    delete raw.password;
+  }
+  
+  const parsed = UpdateUserSchema.safeParse({ ...raw, id: userId });
+
+  if (!parsed.success) {
+    return { success: false, message: 'Invalid data provided.' };
+  }
+
+  const { id, name, email, password, roleId } = parsed.data;
+
   try {
-    await prisma.user.update({ where: { id: userId }, data: { roleId } });
+    const dataToUpdate: any = {
+      name,
+      email,
+      roleId,
+    };
+    
+    if (password) {
+      dataToUpdate.password = await bcrypt.hash(password, 10);
+    }
+    
+    await prisma.user.update({ where: { id }, data: dataToUpdate });
+
     revalidatePath('/hospital-admin/roles');
     return { success: true };
   } catch (error) {
-    console.error('[updateUserRole] error', error);
-    return { success: false, message: 'Failed to update user role.' };
+    console.error('[updateUser] error', error);
+    if ((error as any)?.code === 'P2002') {
+      return { success: false, message: 'A user with this email already exists.' };
+    }
+    return { success: false, message: 'Failed to update user.' };
   }
 }
 
@@ -231,5 +263,3 @@ export async function deleteUser(userId: number) {
     return { success: false, message: 'Failed to delete user.' };
   }
 }
-
-    

@@ -59,9 +59,9 @@ export default function ForgotPasswordPage() {
                 <MailCheck className="h-16 w-16 text-green-500 mx-auto" />
                 <h3 className="text-xl font-semibold">Check Your Email</h3>
                 <p className="text-muted-foreground">{state.message}</p>
-                <Button asChild variant="secondary">
+                {/* <Button asChild variant="secondary">
                   <Link href="/">Back to Home</Link>
-                </Button>
+                </Button> */}
               </div>
             ) : (
               <form action={formAction} className="grid gap-4">

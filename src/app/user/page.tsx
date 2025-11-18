@@ -6,10 +6,10 @@ import { cookies } from 'next/headers';
 import type { Hospital, Doctor } from '@prisma/client';
 
 const allQuickActions = [
-    { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-primary/20 text-primary-foreground' },
-    { href: '/user/doctors', label: 'Doctors', icon: 'Stethoscope', color: 'bg-primary/20 text-primary-foreground' },
-    { href: '/user/appointments', label: 'Bookings', icon: 'CalendarCheck', color: 'bg-primary/20 text-primary-foreground' },
-    { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-primary/20 text-primary-foreground' },
+    { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-primary/40 text-primary-foreground' },
+    { href: '/user/doctors', label: 'Doctors', icon: 'Stethoscope', color: 'bg-primary/40 text-primary-foreground' },
+    { href: '/user/appointments', label: 'Bookings', icon: 'CalendarCheck', color: 'bg-primary/40 text-primary-foreground' },
+    { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-primary/40 text-primary-foreground' },
 ];
 
 export default async function Home() {

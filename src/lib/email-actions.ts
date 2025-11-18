@@ -29,7 +29,7 @@ const EmailSettingsSchema = z.object({
   configured: z.boolean().optional(),
 });
 
-// Simplified schema for the new UI
+// Schema for the simplified Gmail forms
 const SimplifiedEmailSettingsSchema = z.object({
     id: z.number().optional(),
     hospitalId: z.number().optional().nullable(),
@@ -55,30 +55,22 @@ export async function getEmailSettings(hospitalId: number) {
 }
 
 export async function updateEmailSettings(hospitalId: number, data: Partial<EmailSettingsType>) {
-  // Check if this is a simplified payload from the new UI
-  const isSimplified = !data.smtpHost && data.smtpUser && data.smtpPass;
-
-  let validatedData;
-
-  if (isSimplified) {
-      const parsed = SimplifiedEmailSettingsSchema.parse(data);
-      validatedData = {
-          name: parsed.name,
-          smtpUser: parsed.smtpUser,
-          smtpPass: parsed.smtpPass,
-          // Set Gmail defaults
-          smtpHost: 'smtp.gmail.com',
-          smtpPort: 587,
-          smtpEncryption: 'tls',
-          imapHost: 'imap.gmail.com',
-          imapPort: 993,
-          imapUser: parsed.smtpUser, // Use same user for IMAP
-          imapPass: parsed.smtpPass, // Use same pass for IMAP
-          imapEncryption: 'ssl',
-      };
-  } else {
-      validatedData = EmailSettingsSchema.parse(data);
-  }
+    // This action is now simplified for Gmail only for the hospital-facing UI
+    const parsed = SimplifiedEmailSettingsSchema.parse(data);
+    const validatedData = {
+        name: parsed.name,
+        smtpUser: parsed.smtpUser,
+        smtpPass: parsed.smtpPass,
+        // Set Gmail defaults
+        smtpHost: 'smtp.gmail.com',
+        smtpPort: 587,
+        smtpEncryption: 'tls',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        imapUser: parsed.smtpUser, // Use same user for IMAP
+        imapPass: parsed.smtpPass, // Use same pass for IMAP
+        imapEncryption: 'ssl',
+    };
 
   const settingsData = {
     ...validatedData,
@@ -107,15 +99,15 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     imap: { success: false, error: 'Unknown error' },
   };
 
-  const settingsToTest = { ...settings };
-  // If it's a gmail setup, ensure imap fields are set correctly
-  if (settings.smtpHost === 'smtp.gmail.com') {
-      settingsToTest.imapHost = 'imap.gmail.com';
-      settingsToTest.imapPort = 993;
-      settingsToTest.imapEncryption = 'ssl';
-      settingsToTest.imapUser = settings.smtpUser;
-      settingsToTest.imapPass = settings.smtpPass;
-  }
+    // If it's a gmail setup from a simplified form, ensure imap fields are set correctly for testing
+    const settingsToTest = { ...settings };
+    if (settings.smtpHost === 'smtp.gmail.com' || !settings.imapHost) {
+        settingsToTest.imapHost = 'imap.gmail.com';
+        settingsToTest.imapPort = 993;
+        settingsToTest.imapEncryption = 'ssl';
+        settingsToTest.imapUser = settings.smtpUser;
+        settingsToTest.imapPass = settings.smtpPass;
+    }
 
   if (!settingsToTest.smtpHost || !settingsToTest.smtpPort || !settingsToTest.smtpUser || !settingsToTest.smtpPass) {
     results.smtp.error = 'SMTP settings are incomplete.';
@@ -312,27 +304,41 @@ export async function getGlobalEmailSettings() {
 }
 
 export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hospitalId'>) {
-  const validatedData = EmailSettingsSchema.parse(data);
-  const settingsData = {
-    ...validatedData,
-    configured: true,
-    isGlobal: true,
-    hospitalId: null,
-  };
-  
-  if(data.id) {
-    return await prisma.emailSettings.update({
-      where: { id: data.id },
-      data: settingsData,
-    });
-  } else {
-    // Check for unique name on creation
-   const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
-    if (existing) {
-        throw new Error("A global email configuration with this name already exists.");
+    const isSimplified = !data.smtpHost && data.smtpUser && data.smtpPass;
+
+    let validatedData;
+    if (isSimplified) {
+        const parsed = SimplifiedEmailSettingsSchema.parse(data);
+        validatedData = {
+            name: parsed.name,
+            smtpUser: parsed.smtpUser,
+            smtpPass: parsed.smtpPass,
+            smtpHost: 'smtp.gmail.com', smtpPort: 587, smtpEncryption: 'tls',
+            imapHost: 'imap.gmail.com', imapPort: 993, imapUser: parsed.smtpUser, imapPass: parsed.smtpPass, imapEncryption: 'ssl',
+        };
+    } else {
+        validatedData = EmailSettingsSchema.parse(data);
     }
-   return await prisma.emailSettings.create({ data: settingsData });
-  }
+    
+    const settingsData = {
+        ...validatedData,
+        configured: true,
+        isGlobal: true,
+        hospitalId: null,
+    };
+  
+    if(data.id) {
+        return await prisma.emailSettings.update({
+            where: { id: data.id },
+            data: settingsData,
+        });
+    } else {
+        const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
+        if (existing) {
+            throw new Error("A global email configuration with this name already exists.");
+        }
+        return await prisma.emailSettings.create({ data: settingsData });
+    }
 }
 
 export async function deleteGlobalEmailSetting(id: number) {

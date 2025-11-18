@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter } from "lucide-react";
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
+import { getReportData } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
@@ -35,6 +35,9 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  const [stats, setStats] = useState({ totalRevenue: 0, upcomingAppointments: 0, completedAppointments: 0, cancelledAppointments: 0 });
+  const [doctorRevenueBreakdown, setDoctorRevenueBreakdown] = useState<{name: string, appointments: number, revenue: number}[]>([]);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(addDays(new Date(), -29)),
     to: startOfDay(new Date()),
@@ -44,12 +47,11 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [appointmentsData, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(hospitalId),
-        getDoctorsByHospitalId(hospitalId)
-      ]);
-      setAppointments(appointmentsData as Appointment[]);
-      setDoctors(doctorsData as Doctor[]);
+      const reportData = await getReportData(hospitalId);
+      setAppointments(reportData.appointments as Appointment[]);
+      setDoctors(reportData.doctors as Doctor[]);
+      setStats(reportData.stats);
+      setDoctorRevenueBreakdown(reportData.doctorRevenueBreakdown);
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Failed to fetch report data:", error);
@@ -71,21 +73,19 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
     });
   }, [appointments, dateRange, doctorFilter]);
   
-  const { totalAppointments, completedAppointments, cancelledAppointments, totalRevenue } = useMemo(() => {
-    if (!filteredAppointments || !doctors) {
-      return { totalAppointments: 0, completedAppointments: 0, cancelledAppointments: 0, totalRevenue: 0 };
-    }
-    const completed = filteredAppointments.filter(a => a.status === 'completed');
-    const revenue = completed.reduce((sum, appt) => {
-        const doctor = doctors.find(d => d.id === appt.doctorId);
-        return sum + (doctor?.consultationFee || 0);
-    }, 0);
+  const { totalRevenue, upcomingAppointments, completedAppointments, cancelledAppointments } = useMemo(() => {
+    const revenue = filteredAppointments
+        .filter(a => a.status === 'completed')
+        .reduce((sum, appt) => {
+            const doctor = doctors.find(d => d.id === appt.doctorId);
+            return sum + (doctor?.consultationFee || 0);
+        }, 0);
 
     return {
-        totalAppointments: filteredAppointments.length,
-        completedAppointments: completed.length,
-        cancelledAppointments: filteredAppointments.filter(a => a.status === 'cancelled').length,
         totalRevenue: revenue,
+        upcomingAppointments: filteredAppointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
+        completedAppointments: filteredAppointments.filter(a => a.status === 'completed').length,
+        cancelledAppointments: filteredAppointments.filter(a => a.status === 'cancelled').length,
     };
   }, [filteredAppointments, doctors]);
 
@@ -112,30 +112,30 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
   }, [filteredAppointments, dateRange]);
 
 
-  const doctorUtilizationData = useMemo(() => {
-    const utilization = doctors.map(doctor => ({
-      name: doctor.name.replace('Dr. ', ''),
-      appointments: filteredAppointments.filter(a => a.doctorId === doctor.id).length
-    }));
-    return utilization.filter(u => u.appointments > 0).sort((a,b) => b.appointments - a.appointments);
-  }, [filteredAppointments, doctors]);
-
-  const revenueBreakdownData = useMemo(() => {
-    const revenueByDoctor: { [key: string]: { name: string; value: number } } = {};
-    doctors.forEach(doc => {
-      revenueByDoctor[doc.id] = { name: doc.name, value: 0 };
+  const doctorRevenueData = useMemo(() => {
+    const revenueByDoctor: { [key: string]: { name: string, revenue: number } } = {};
+     doctors.forEach(doc => {
+      revenueByDoctor[doc.id] = { name: doc.name.replace('Dr. ', ''), revenue: 0 };
     });
 
     filteredAppointments.forEach(appt => {
       if (appt.status === 'completed') {
         const doctor = doctors.find(d => d.id === appt.doctorId);
         if (doctor && revenueByDoctor[doctor.id]) {
-          revenueByDoctor[doctor.id].value += doctor.consultationFee;
+          revenueByDoctor[doctor.id].revenue += doctor.consultationFee;
         }
       }
     });
-    return Object.values(revenueByDoctor).filter(r => r.value > 0);
+    return Object.values(revenueByDoctor).filter(r => r.revenue > 0).sort((a,b) => b.revenue - a.revenue);
   }, [filteredAppointments, doctors]);
+
+  const appointmentStatusData = useMemo(() => {
+    return [
+      { name: 'Upcoming', value: upcomingAppointments },
+      { name: 'Completed', value: completedAppointments },
+      { name: 'Cancelled', value: cancelledAppointments },
+    ].filter(item => item.value > 0);
+  }, [upcomingAppointments, completedAppointments, cancelledAppointments]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -172,11 +172,11 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="shadow-sm bg-blue-50 dark:bg-blue-900/30">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+              <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
               <BriefcaseMedical className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalAppointments}</div>
+              <div className="text-2xl font-bold">{upcomingAppointments}</div>
             </CardContent>
           </Card>
           <Card className="shadow-sm bg-green-50 dark:bg-green-900/30">
@@ -203,7 +203,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
               <DollarSign className="h-5 w-5 text-yellow-700 dark:text-yellow-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}ETB</div>
+              <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} ETB</div>
             </CardContent>
           </Card>
         </div>
@@ -238,30 +238,30 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="font-headline flex items-center gap-2"><Users className="h-5 w-5" /> Doctor Utilization</CardTitle>
-                  <CardDescription>Appointments handled by each doctor.</CardDescription>
+                  <CardTitle className="font-headline flex items-center gap-2"><Users className="h-5 w-5" /> Doctor Revenue</CardTitle>
+                  <CardDescription>Revenue generated by each doctor from completed appointments.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={doctorUtilizationData} layout="vertical" margin={{ left: 10, right: 30, top: 5, bottom: 5 }}>
+                    <RechartsBarChart data={doctorRevenueData} layout="vertical" margin={{ left: 10, right: 30, top: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" fontSize={12} allowDecimals={false} />
                       <YAxis type="category" dataKey="name" fontSize={12} width={80} interval={0} />
-                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}/>
-                      <Bar dataKey="appointments" name="Total Appointments" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} formatter={(value: number) => `${value.toLocaleString()} ETB`} />
+                      <Bar dataKey="revenue" name="Total Revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="font-headline flex items-center gap-2"><DollarSign className="h-5 w-5" /> Revenue Breakdown</CardTitle>
-                  <CardDescription>Share of total revenue per doctor.</CardDescription>
+                  <CardTitle className="font-headline flex items-center gap-2"><BriefcaseMedical className="h-5 w-5" /> Appointment Status</CardTitle>
+                  <CardDescription>Share of appointments by status.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <RechartsPieChart>
-                      <Pie data={revenueBreakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                      <Pie data={appointmentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                           const RADIAN = Math.PI / 180;
                           const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                           const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -272,11 +272,11 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
                               </text>
                           );
                       }}>
-                          {revenueBreakdownData.map((entry, index) => (
+                          {appointmentStatusData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} />
                       <Legend wrapperStyle={{ fontSize: '14px' }} />
                     </RechartsPieChart>
                   </ResponsiveContainer>

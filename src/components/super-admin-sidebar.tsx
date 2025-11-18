@@ -7,7 +7,7 @@ import {
   Bell,
   Hospital,
   LayoutGrid,
-  Settings,
+  // Settings,
   CircleUser,
   Mail,
 } from 'lucide-react';
@@ -29,7 +29,7 @@ const navLinks = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/super-admin/hospitals', label: 'Hospitals', icon: Hospital },
   { href: '/super-admin/email', label: 'Email', icon: Mail },
-  { href: '/super-admin/settings', label: 'Settings', icon: Settings },
+  // { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function SuperAdminSidebar() {
@@ -78,10 +78,10 @@ export default function SuperAdminSidebar() {
                     <CircleUser className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                 </DropdownMenuItem>
-                 <DropdownMenuItem>
+                 {/* <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/super-admin/login' })}>
                   Logout

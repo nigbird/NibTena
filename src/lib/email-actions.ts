@@ -1,4 +1,3 @@
-
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -6,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import type { EmailSettings } from '@prisma/client';
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
-import imaps from 'imap-simple';
+import { ImapFlow } from 'imapflow';
 
 const EmailSettingsSchema = z.object({
   id: z.number().optional(),
@@ -100,7 +99,7 @@ export async function testEmailConnection(settings: EmailSettingsType) {
   };
 
     // If it's a gmail setup from a simplified form, ensure imap fields are set correctly for testing
-    const settingsToTest = { ...settings };
+    const settingsToTest = { ...settings } as EmailSettingsType;
     if (settings.smtpHost === 'smtp.gmail.com' || !settings.imapHost) {
         settingsToTest.imapHost = 'imap.gmail.com';
         settingsToTest.imapPort = 993;
@@ -135,28 +134,34 @@ export async function testEmailConnection(settings: EmailSettingsType) {
   if (!settingsToTest.imapHost || !settingsToTest.imapPort || !settingsToTest.imapUser || !settingsToTest.imapPass) {
     results.imap.error = 'IMAP settings are incomplete.';
   } else {
-    let imapConnection;
+    let client: ImapFlow | null = null;
     try {
-      const config = {
-        imap: {
+      client = new ImapFlow({
+        host: settingsToTest.imapHost,
+        port: Number(settingsToTest.imapPort),
+        secure: settingsToTest.imapEncryption === 'ssl',
+        auth: {
           user: settingsToTest.imapUser,
-          password: settingsToTest.imapPass,
-          host: settingsToTest.imapHost,
-          port: settingsToTest.imapPort,
-          tls: settingsToTest.imapEncryption === 'tls' || settingsToTest.imapEncryption === 'ssl',
-          tlsOptions: { rejectUnauthorized: false }
-        }
-      };
-      imapConnection = await imaps.connect(config);
+          pass: settingsToTest.imapPass,
+        },
+        tls: { rejectUnauthorized: false }
+      });
+
+      // Simple test: connect and immediately logout to verify credentials and connectivity
+      await client.connect();
+      await client.logout();
       results.imap = { success: true, error: '' };
     } catch (error: any) {
       results.imap = { success: false, error: error.message };
     } finally {
-      if (imapConnection) {
+      if (client) {
         try {
-          await imapConnection.end();
+          // ensure client is closed if still connected
+          if (!client.closed) {
+            await client.logout().catch(() => null);
+          }
         } catch (e) {
-          console.error("Failed to end IMAP connection:", e);
+          console.error('Failed to close IMAP client:', e);
         }
       }
     }

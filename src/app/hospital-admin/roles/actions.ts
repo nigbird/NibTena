@@ -176,12 +176,13 @@ export async function createUser(hospitalId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
-  // if password is not provided or is empty, we will auto-generate it.
-  if (!raw.password) {
-    raw.password = crypto.randomBytes(8).toString('hex');
+  
+  let rawPassword = String(raw.password || '');
+  if (!rawPassword) {
+    rawPassword = crypto.randomBytes(8).toString('hex');
   }
 
-  const parsed = CreateUserSchema.safeParse(raw);
+  const parsed = CreateUserSchema.safeParse({ ...raw, password: rawPassword });
 
   if (!parsed.success) {
     return { success: false, message: parsed.error.flatten().fieldErrors.toString() };
@@ -196,6 +197,7 @@ export async function createUser(hospitalId: number, formData: FormData) {
     
     const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
 
+    // Use the plain text password (rawPassword) for the email
     await sendWelcomeEmail('staff', { name, email, rawPassword: password, role: role?.name }, hospitalId);
     
     revalidatePath('/hospital-admin/roles');

@@ -1,13 +1,14 @@
 
 export const runtime = "nodejs";
 import NextAuth from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const authOptions = {
   trustHost: true,
   // Enforce finite session lifetime so authenticated users are logged out after inactivity/expiry
   session: {
@@ -261,8 +262,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
   },
-  secret: process.env.AUTH_SECRET,
-});
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+};
+
+const handler = NextAuth(authOptions as any);
+
+export const handlers = { GET: handler, POST: handler };
+
+async function auth(req?: any, res?: any) {
+  // If called with `req` and `res` (e.g., route handlers), call the 3-arg signature.
+  if (req && res) {
+    return await getServerSession(req as any, res as any, authOptions as any);
+  }
+
+  // In server components / no-arg usage, call the auth-options form.
+  return await getServerSession(authOptions as any);
+}
+
+// Make the function also carry the options shape so it can be passed to APIs expecting the options object
+Object.assign(auth, authOptions as any);
+
+export { auth };
     
 
     

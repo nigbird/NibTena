@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { auth } from '../../../../../../auth';
+import { auth } from '../../../../../auth';
 
 export async function GET(req: Request) {
   try {

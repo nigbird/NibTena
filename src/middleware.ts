@@ -2,7 +2,14 @@
 import { withAuth } from 'next-auth/middleware';
 
 export default withAuth({
+  // Use a single sign-in redirect page so we can route users to the
+  // appropriate custom login page instead of NextAuth's default UI.
+  pages: {
+    signIn: '/auth/redirect',
+  },
   callbacks: {
+    // Return a boolean only. Actual redirect logic is handled by
+    // the `/auth/redirect` page which NextAuth will send users to.
     authorized({ token, req }) {
       const pathname = req.nextUrl?.pathname || new URL(req.url).pathname;
 
@@ -19,14 +26,18 @@ export default withAuth({
       const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
 
       if (!isLoggedIn) {
+        // allow access to public pages and to the login pages themselves
         if (isAnyLogin) return true;
-        // Allow public pages like `/user` or root
         if (pathname === '/' || pathname.startsWith('/user')) return true;
-        return false; // triggers default redirect to sign-in
+        // return false -> NextAuth will redirect to `pages.signIn` (/auth/redirect)
+        return false;
       }
 
       if (isAnyLogin) return true;
 
+      // if logged in but role doesn't match required, return false so
+      // the user is sent to the sign-in redirect where we can route them
+      // to the appropriate login page.
       if (isSuperAdminRoute && token?.role !== 'superadmin') return false;
       if (isHospitalAdminRoute && token?.role !== 'hospital') return false;
       if (isDoctorPortalRoute && token?.role !== 'doctor') return false;

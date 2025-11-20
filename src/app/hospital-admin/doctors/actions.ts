@@ -43,18 +43,15 @@ export async function saveDoctor(
 ): Promise<DoctorFormState> {
   const rawData = Object.fromEntries(formData.entries());
   
+  // If editing and password is blank, don't validate or update it
   if (doctorId && !rawData.password) {
     delete rawData.password;
   }
+  
   // Handle file upload
   const imageFile = formData.get('image') as File | null;
   if (!imageFile || imageFile.size === 0) {
     delete rawData.image;
-  }
-
-  // For new doctors, we don't require a password in the form anymore
-  if (!doctorId) {
-    delete rawData.password;
   }
 
   const validatedFields = DoctorFormSchema.safeParse(rawData);
@@ -68,6 +65,7 @@ export async function saveDoctor(
   }
 
   const { password, image, ...doctorData } = validatedFields.data;
+  let rawPassword = password; // Capture manually entered password
 
   try {
     const dataToUpdate: any = { ...doctorData };
@@ -82,7 +80,10 @@ export async function saveDoctor(
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
-      const rawPassword = crypto.randomBytes(8).toString('hex');
+      // If password was not manually entered for a new doctor, generate one.
+      if (!rawPassword) {
+        rawPassword = crypto.randomBytes(8).toString('hex');
+      }
       const hashedPassword = await bcrypt.hash(rawPassword, 10);
       
       const newDoctor = await prisma.doctor.create({
@@ -94,7 +95,7 @@ export async function saveDoctor(
         },
       });
 
-      // Send welcome email
+      // Send welcome email with the plain-text password
       await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact!, rawPassword }, hospitalId);
     }
     revalidatePath('/hospital-admin/doctors');

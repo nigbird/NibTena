@@ -239,8 +239,11 @@ export default function RolesPageClient({ hospitalId }: { hospitalId: number }) 
 
 // #region Role Management Tab
 function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDeleteRole, onSuccess }: any) {
-    const [selectedRoleId, setSelectedRoleId] = useState<number | null>(roles[0]?.id || null);
+    const displayRoles = useMemo(() => roles.filter((r: Role) => r.name !== 'Owner'), [roles]);
+    const [selectedRoleId, setSelectedRoleId] = useState<number | null>(displayRoles[0]?.id || null);
+
     const selectedRole = useMemo(() => roles.find((r: Role) => r.id === selectedRoleId), [roles, selectedRoleId]);
+    
     const groupedPermissions = useMemo(() => {
         return permissions.reduce((acc: any, p: Permission) => {
             (acc[p.category] = acc[p.category] || []).push(p);
@@ -266,7 +269,7 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
                         <CardContent className="p-4 pt-0">
                            <ScrollArea className="h-80">
                             <div className="space-y-2">
-                                {roles.map((role: Role) => (
+                                {displayRoles.map((role: Role) => (
                                     <button
                                         key={role.id}
                                         onClick={() => setSelectedRoleId(role.id)}
@@ -342,6 +345,7 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
 
 // #region User Management Tab
 function UserManagementTab({ users, roles, onCreateUser, onEditUser, onDeleteUser }: any) {
+    const displayRoles = useMemo(() => roles.filter((r: Role) => r.name !== 'Owner'), [roles]);
     return (
         <Card>
              <CardHeader>
@@ -488,6 +492,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const displayRoles = useMemo(() => roles.filter((r: Role) => r.name !== 'Owner'), [roles]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -548,7 +553,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
                 <SelectValue placeholder="Assign a role" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map((role: Role) => (
+                {displayRoles.map((role: Role) => (
                   <SelectItem key={role.id} value={role.id.toString()}>{role.name}</SelectItem>
                 ))}
               </SelectContent>

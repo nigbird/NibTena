@@ -12,6 +12,35 @@ const allQuickActions = [
     { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-primary/40 text-primary-foreground' },
 ];
 
+const safeDoctorSelect = {
+    id: true,
+    name: true,
+    specialty: true,
+    imageUrl: true,
+    bio: true,
+    consultationFee: true,
+    rating: true,
+    experience: true,
+    contact: true,
+    status: true,
+};
+
+const safeHospitalSelect = {
+    id: true,
+    name: true,
+    city: true,
+    imageUrl: true,
+    description: true,
+    contactEmail: true,
+    contactPhone: true,
+    status: true,
+    bookingWindow: true,
+    startTime: true,
+    endTime: true,
+    accountNumber: true,
+};
+
+
 export default async function Home() {
     const cookieStore = cookies();
     const hasMiniAppSession = !!cookieStore.get('miniapp_session');
@@ -21,7 +50,8 @@ export default async function Home() {
         : allQuickActions;
 
     const allHospitalsWithCounts = await prisma.hospital.findMany({
-        include: {
+        select: {
+            ...safeHospitalSelect,
             _count: {
                 select: { appointments: true, doctors: true },
             },
@@ -46,6 +76,7 @@ export default async function Home() {
                 },
             },
         },
+        select: safeDoctorSelect,
         take: 10,
     });
     
@@ -55,6 +86,7 @@ export default async function Home() {
                 rating: { gt: 4.5 },
                 id: { notIn: featuredDoctors.map(d => d.id) }
             },
+            select: safeDoctorSelect,
             take: 5 - featuredDoctors.length
         });
         featuredDoctors = [...featuredDoctors, ...fallbackDoctors];
@@ -64,7 +96,7 @@ export default async function Home() {
 
 
     const [allDoctors, allSpecialties] = await Promise.all([
-        prisma.doctor.findMany(),
+        prisma.doctor.findMany({ select: safeDoctorSelect }),
         prisma.doctor.findMany({
             distinct: ['specialty'],
             select: { specialty: true },

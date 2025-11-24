@@ -38,6 +38,7 @@ async function main() {
       endTime: '19:00',
       bookingWindow: 30,
       accountNumber: 'ACCT-TAS-001',
+      mustChangePassword: true,
     },
   });
 
@@ -49,7 +50,7 @@ async function main() {
       description:
         'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
       city: 'Hawassa',
-      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto=format',
+      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto-format',
       contactEmail: 'admin@hu.com',
       contactPhone: '+251-46-220-5576',
       password: hospitalPassword,
@@ -58,6 +59,7 @@ async function main() {
       endTime: '18:30',
       bookingWindow: 14,
       accountNumber: 'ACCT-HUCSH-003',
+      mustChangePassword: true,
     },
   });
 
@@ -69,7 +71,7 @@ async function main() {
       description:
         'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
       city: 'Addis Ababa',
-      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto=format',
+      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto-format',
       contactEmail: 'admin@ethiotibeb.com',
       contactPhone: '+251-46-220-5576',
       password: hospitalPassword,
@@ -78,6 +80,7 @@ async function main() {
       endTime: '18:30',
       bookingWindow: 14,
       accountNumber: '7000023456',
+      mustChangePassword: true,
     },
   });
   const hospital5 = await prisma.hospital.upsert({
@@ -88,7 +91,7 @@ async function main() {
       description:
         'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
       city: 'Hawassa',
-      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto=format',
+      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto-format',
       contactEmail: 'admin@lancet.com',
       contactPhone: '+251-46-220-5576',
       password: hospitalPassword,
@@ -97,6 +100,7 @@ async function main() {
       endTime: '18:30',
       bookingWindow: 14,
       accountNumber: '7003546565',
+      mustChangePassword: true,
     },
   });
   const hospital7 = await prisma.hospital.upsert({
@@ -107,7 +111,7 @@ async function main() {
       description:
         'A major referral hospital in the Sidama region, providing a wide range of medical services and serving as a teaching center for Hawassa University.',
       city: 'Addis Ababa',
-      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto=format',
+      imageUrl: 'https://img.semafor.com/a65644297a8e84eb692c88504ba4123a2e7e5679-1600x900.jpg?rect=200,0,1200,900&w=800&h=600&q=75&auto-format',
       contactEmail: 'admin@mekrez.com',
       contactPhone: '+251-46-220-5576',
       password: hospitalPassword,
@@ -116,6 +120,7 @@ async function main() {
       endTime: '18:30',
       bookingWindow: 14,
       accountNumber: '7000067678',
+      mustChangePassword: true,
     },
   });
 
@@ -136,6 +141,7 @@ async function main() {
       rating: 4.8,
       experience: 15,
       status: 'active',
+      mustChangePassword: true,
     },
   });
 
@@ -153,6 +159,7 @@ async function main() {
       rating: 4.9,
       experience: 10,
       status: 'active',
+      mustChangePassword: true,
     },
   });
   const doctor3 = await prisma.doctor.upsert({
@@ -169,6 +176,7 @@ async function main() {
       rating: 4.9,
       experience: 10,
       status: 'active',
+      mustChangePassword: true,
     },
   });
   const doctor4 = await prisma.doctor.upsert({
@@ -185,6 +193,7 @@ async function main() {
       rating: 4.9,
       experience: 10,
       status: 'active',
+      mustChangePassword: true,
     },
   });
   // --- Seed Permissions ---
@@ -258,3 +267,5 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+
+    

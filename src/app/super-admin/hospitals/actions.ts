@@ -76,18 +76,18 @@ export async function saveHospital(
     if (hospitalId) {
       if (password) {
         dataToSave.password = await bcrypt.hash(password, 10);
+        dataToSave.mustChangePassword = true; // Force password change if manually set
       }
       await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
     } else {
       if (!password) {
-        // Generate a random password for new hospitals
         rawPassword = crypto.randomBytes(8).toString('hex');
       }
       dataToSave.password = await bcrypt.hash(rawPassword!, 10);
+      dataToSave.mustChangePassword = true; // New accounts must change password
 
       const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
       
-      // Send welcome email
       await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail, rawPassword });
 
       try {
@@ -138,9 +138,7 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
   try {
-    // Transaction to ensure all or nothing is deleted
     await prisma.$transaction(async (tx) => {
-      // Find all doctors associated ONLY with this hospital
       const doctorsInHospital = await tx.doctor.findMany({
         where: { hospitals: { some: { hospitalId } } },
         include: { hospitals: true },
@@ -150,7 +148,6 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
         .filter(d => d.hospitals.length === 1 && d.hospitals[0].hospitalId === hospitalId)
         .map(d => d.id);
 
-      // Delete records that have a direct relation to the hospital
       await tx.appointment.deleteMany({ where: { hospitalId } });
       await tx.doctorSchedule.deleteMany({ where: { hospitalId } });
       await tx.rolePermission.deleteMany({ where: { role: { hospitalId } } });
@@ -159,15 +156,12 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
       await tx.specialty.deleteMany({ where: { hospitalId } });
       await tx.emailSettings.deleteMany({ where: { hospitalId } });
       
-      // Delete join table records
       await tx.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
 
-      // Delete doctors that are only in this hospital
       if (doctorsToDelete.length > 0) {
         await tx.doctor.deleteMany({ where: { id: { in: doctorsToDelete } } });
       }
 
-      // Finally, delete the hospital itself
       await tx.hospital.delete({ where: { id: hospitalId } });
     });
 
@@ -190,6 +184,18 @@ export async function getHospitals(page: number, limit: number, query: string) {
     : {};
   const results = await prisma.hospital.findMany({
     where,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      city: true,
+      contactEmail: true,
+      contactPhone: true,
+      status: true,
+      imageUrl: true,
+      accountNumber: true,
+      mustChangePassword: true,
+    },
     orderBy: { name: 'asc' },
     skip: (page - 1) * limit,
     take: limit,
@@ -208,3 +214,5 @@ export async function getHospitalsCount(query: string) {
     : {};
   return await prisma.hospital.count({ where });
 }
+
+    

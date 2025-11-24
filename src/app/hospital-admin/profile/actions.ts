@@ -128,12 +128,18 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
         if ((session.user as any).isAdmin) {
             await prisma.hospital.update({
                 where: { id: userId },
-                data: { password: newHashedPassword },
+                data: { 
+                    password: newHashedPassword,
+                    mustChangePassword: false,
+                },
             });
         } else {
              await prisma.user.update({
                 where: { id: userId },
-                data: { password: newHashedPassword },
+                data: { 
+                    password: newHashedPassword,
+                    mustChangePassword: false,
+                },
             });
         }
 
@@ -145,3 +151,5 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
         return { success: false, message: 'Failed to update password.' };
     }
 }
+
+    

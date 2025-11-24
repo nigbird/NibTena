@@ -109,6 +109,12 @@ export async function getSpecialties() {
 export async function getDoctorById(id: number) {
     return await prisma.doctor.findUnique({
         where: { id },
+        select: {
+            id: true, name: true, specialty: true, imageUrl: true,
+            bio: true, consultationFee: true, rating: true,
+            experience: true, contact: true, status: true,
+            mustChangePassword: true
+        }
     });
 }
 
@@ -164,7 +170,10 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
         
         await prisma.doctor.update({
             where: { id: doctorId },
-            data: { password: newHashedPassword },
+            data: { 
+                password: newHashedPassword,
+                mustChangePassword: false, // User has now changed their password
+            },
         });
 
         // Sign out is handled on the client after success
@@ -174,3 +183,5 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
         return { success: false, message: 'Failed to update password.' };
     }
 }
+
+    

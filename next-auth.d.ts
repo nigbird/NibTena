@@ -17,6 +17,7 @@ declare module 'next-auth' {
   interface User {
       role?: string;
       imageUrl?: string | null;
+      mustChangePassword?: boolean;
   }
 }
 
@@ -26,5 +27,8 @@ declare module 'next-auth/jwt' {
     role: string;
     hospitalId?: number | null;
     doctorHospitalIds?: number[] | null;
+    mustChangePassword?: boolean;
   }
 }
+
+    

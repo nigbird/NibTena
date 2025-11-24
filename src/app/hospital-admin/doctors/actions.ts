@@ -43,12 +43,10 @@ export async function saveDoctor(
 ): Promise<DoctorFormState> {
   const rawData = Object.fromEntries(formData.entries());
   
-  // If editing and password is blank, don't validate or update it
   if (doctorId && !rawData.password) {
     delete rawData.password;
   }
   
-  // Handle file upload
   const imageFile = formData.get('image') as File | null;
   if (!imageFile || imageFile.size === 0) {
     delete rawData.image;
@@ -65,7 +63,7 @@ export async function saveDoctor(
   }
 
   const { password, image, ...doctorData } = validatedFields.data;
-  let rawPassword = password; // Capture manually entered password
+  let rawPassword = password;
 
   try {
     const dataToUpdate: any = { ...doctorData };
@@ -77,10 +75,10 @@ export async function saveDoctor(
     if (doctorId) {
       if (password) {
         dataToUpdate.password = await bcrypt.hash(password, 10);
+        dataToUpdate.mustChangePassword = true;
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
-      // If password was not manually entered for a new doctor, generate one.
       if (!rawPassword) {
         rawPassword = crypto.randomBytes(8).toString('hex');
       }
@@ -90,12 +88,12 @@ export async function saveDoctor(
         data: {
           ...dataToUpdate,
           password: hashedPassword,
+          mustChangePassword: true,
           rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
           hospitals: { create: { hospitalId } },
         },
       });
 
-      // Send welcome email with the plain-text password
       await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact!, rawPassword }, hospitalId);
     }
     revalidatePath('/hospital-admin/doctors');
@@ -147,6 +145,12 @@ export async function getDoctors(hospitalId: number, page: number, limit: number
 
     return await prisma.doctor.findMany({
         where,
+        select: {
+            id: true, name: true, specialty: true, imageUrl: true,
+            bio: true, consultationFee: true, rating: true,
+            experience: true, contact: true, status: true,
+            mustChangePassword: true
+        },
         orderBy: { name: 'asc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -165,3 +169,5 @@ export async function getDoctorsCount(hospitalId: number, query: string) {
     };
   return await prisma.doctor.count({ where });
 }
+
+    

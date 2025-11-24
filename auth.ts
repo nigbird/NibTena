@@ -46,7 +46,6 @@ const authOptions = {
           if (role === 'superadmin') {
             user = await prisma.superAdmin.findUnique({ where: { email } });
           } else if (role === 'hospital') {
-            // A hospital-role login can be EITHER a Hospital record OR a User (staff) record.
             const hospitalAccount = await prisma.hospital.findUnique({ where: { contactEmail: email } });
             if (hospitalAccount) {
               user = hospitalAccount;
@@ -71,6 +70,7 @@ const authOptions = {
               const userEmail = isStaff ? user.email : (role === 'hospital' ? (user as any).contactEmail : (role === 'doctor' ? (user as any).contact : user.email));
               const userName = user.name;
               const userImage = role === 'hospital' ? (user as any).imageUrl ?? null : (role === 'doctor' ? (user as any).imageUrl : null);
+              const mustChangePassword = user.mustChangePassword === true;
               const doctorHospitalIds = role === 'doctor'
                   ? (await prisma.doctorsOnHospitals.findMany({ where: { doctorId: user.id }, select: { hospitalId: true }})).map(h => h.hospitalId)
                   : null;
@@ -86,12 +86,11 @@ const authOptions = {
                 permissionKeys = all.map(p => p.key);
               } else if (role === 'hospital') {
                   if (isStaff) {
-                    // This is a User record
                     if ((user as any).roleId) {
                       const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
                       if (staffRole) {
                         roleName = staffRole.name;
-                        isAdmin = !!staffRole.isAdmin; // Only true if role.isAdmin is explicitly true
+                        isAdmin = !!staffRole.isAdmin;
                         if (isAdmin) {
                           const all = await prisma.permission.findMany({ select: { key: true } });
                           permissionKeys = all.map(a => a.key);
@@ -101,13 +100,11 @@ const authOptions = {
                       }
                     }
                   } else { 
-                    // This is a Hospital record (owner/admin account)
                     isAdmin = true; // Treat main hospital account as admin by default
                     const all = await prisma.permission.findMany({ select: { key: true } });
                     permissionKeys = all.map(p => p.key);
                   }
               }
-              // --- End Authoritative Permission Fetching ---
 
               return {
                 id: user.id.toString(),
@@ -117,10 +114,10 @@ const authOptions = {
                 hospitalId: role === 'hospital' ? (isStaff ? (user as any).hospitalId : user.id) : null,
                 doctorHospitalIds,
                 imageUrl: userImage,
-                // Attach authoritative permissions to the user object for the session
                 staffRoleName: roleName,
                 permissionKeys,
                 isAdmin,
+                mustChangePassword,
               };
           }
         }
@@ -144,6 +141,7 @@ const authOptions = {
           token.permissionKeys = (user as any).permissionKeys;
         }
         token.isAdmin = (user as any).isAdmin === true;
+        token.mustChangePassword = (user as any).mustChangePassword === true;
       }
       return token;
     },
@@ -157,6 +155,7 @@ const authOptions = {
         (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
         (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
         (session.user as any).isAdmin = (token as any).isAdmin === true;
+        (session.user as any).mustChangePassword = (token as any).mustChangePassword === true;
       }
       return session;
     },
@@ -164,6 +163,8 @@ const authOptions = {
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role;
       const { pathname } = nextUrl;
+      const user: any = auth?.user;
+      const mustChangePassword = user?.mustChangePassword === true;
 
       const isSuperAdminRoute = pathname.startsWith('/super-admin');
       const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
@@ -172,9 +173,15 @@ const authOptions = {
       const isSuperAdminLogin = pathname === '/super-admin/login';
       const isHospitalAdminLogin = pathname === '/hospital-admin/login';
       const isDoctorPortalLogin = pathname === '/doctor-portal/login';
+      const isPasswordResetPage = pathname.startsWith('/reset-password') || pathname.startsWith('/forgot-password');
 
       const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
 
+      // Allow access to password reset pages regardless of login state
+      if (isPasswordResetPage) {
+        return true;
+      }
+      
       if (!isLoggedIn) {
         if (isAnyLogin) {
           return true;
@@ -188,6 +195,18 @@ const authOptions = {
              return Response.redirect(new URL(loginUrl, nextUrl));
         }
         return true;
+      }
+      
+      // If user must change password, redirect to their profile page,
+      // but allow access to the API routes required for the page to function.
+      if (mustChangePassword && role) {
+        let profileUrl = '';
+        if (role === 'hospital') profileUrl = '/hospital-admin/profile';
+        if (role === 'doctor') profileUrl = '/doctor-portal/profile';
+
+        if (profileUrl && !pathname.startsWith(profileUrl) && !pathname.startsWith('/api')) {
+           return Response.redirect(new URL(profileUrl, nextUrl));
+        }
       }
 
       if (isAnyLogin) {
@@ -225,7 +244,6 @@ const authOptions = {
       if (isHospitalAdminRoute && role === 'hospital') {
         if ((auth?.user as any)?.isAdmin === true) return true;
 
-        // Allow access to dashboard and profile by default for all staff
         if (pathname === '/hospital-admin' || pathname === '/hospital-admin/' || pathname.startsWith('/hospital-admin/profile')) return true;
 
         const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
@@ -242,7 +260,6 @@ const authOptions = {
         const allowedPrefixes = new Set<string>(permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[]);
 
         if (allowedPrefixes.size === 0) {
-           // If user has no specific page permissions, but is logged in, redirect them to their profile.
           if (pathname.startsWith('/hospital-admin/profile')) {
             return true;
           }
@@ -283,8 +300,5 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
-    
-
-    
 
     

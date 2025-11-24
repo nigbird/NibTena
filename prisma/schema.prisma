@@ -31,6 +31,7 @@ model Hospital {
   contactEmail      String               @unique
   contactPhone      String
   password          String
+  mustChangePassword Boolean            @default(false)
   status            String               @default("active") // active, inactive
   startTime         String               @default("08:00")
   endTime           String               @default("19:00")
@@ -74,6 +75,7 @@ model Doctor {
   name            String
   contact         String               @unique
   password        String
+  mustChangePassword Boolean            @default(false)
   specialty       String
   imageUrl        String?
   bio             String
@@ -171,6 +173,7 @@ model User {
   name       String
   phone      String?
   password   String
+  mustChangePassword Boolean  @default(false)
   // Optional relation to a role; staff users belong to a hospital
   role       Role?     @relation(fields: [roleId], references: [id])
   roleId     Int?

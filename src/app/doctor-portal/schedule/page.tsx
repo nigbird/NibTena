@@ -162,12 +162,12 @@ export default function DoctorSchedulePage() {
                                             <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'startTime', e.target.value)} />
                                             <span>-</span>
                                             <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', index, 'endTime', e.target.value)} />
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                            {/* <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button> */}
                                         </div>
                                     ))}
-                                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}>
+                                    {/* <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}>
                                         <PlusCircle className="mr-2 h-4 w-4" /> Add Working Slot
-                                    </Button>
+                                    </Button> */}
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-semibold">Break Hours</Label>
@@ -176,12 +176,12 @@ export default function DoctorSchedulePage() {
                                             <Input type="time" value={slot.startTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'startTime', e.target.value)} />
                                             <span>-</span>
                                             <Input type="time" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', index, 'endTime', e.target.value)} />
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                            {/* <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', index)}><Trash2 className="h-4 w-4 text-destructive"/></Button> */}
                                         </div>
                                     ))}
-                                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}>
+                                    {/* <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}>
                                         <PlusCircle className="mr-2 h-4 w-4" /> Add Break Slot
-                                    </Button>
+                                    </Button> */}
                                 </div>
                             </CardContent>
                          )}
@@ -213,11 +213,11 @@ export default function DoctorSchedulePage() {
           <CardContent className="space-y-8">
             {renderSchedule()}
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
+          {/* <CardFooter className="border-t px-6 py-4">
             <Button type="submit" disabled={isPending || isLoading} variant="accent">
               {isPending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Changes'}
             </Button>
-          </CardFooter>
+          </CardFooter> */}
         </Card>
       </form>
     </div>

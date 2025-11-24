@@ -103,10 +103,10 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
           <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
              {appointment.status === 'confirmed' && (
                 <div className="flex w-full justify-end gap-2">
-                    <Button variant="destructive" size="sm" onClick={() => setIsCancelAlertOpen(true)}>
+                    {/* <Button variant="destructive" size="sm" onClick={() => setIsCancelAlertOpen(true)}>
                         <X className="mr-2 h-4 w-4" />
                         Cancel Appointment
-                    </Button>
+                    </Button> */}
                 </div>
               )}
                {appointment.status === 'completed' && (

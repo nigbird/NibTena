@@ -64,16 +64,16 @@ export default function DoctorLoginPage() {
             callbackUrl,
         });
 
-        if (result?.error) {
-           setError(result.error);
-           router.push(`/doctor-portal/login?error=CredentialsSignin`);
-        } else if (result?.url) {
-             toast({
-                title: 'Login Successful',
-                description: 'Redirecting to your dashboard...',
-            });
-            router.push(result.url);
-        }
+          if (result?.error) {
+              setError(result.error);
+              router.push(`/doctor-portal/login?error=CredentialsSignin`);
+          } else if (result?.url) {
+                 toast({
+                     title: 'Login Successful',
+                     description: 'Redirecting to your dashboard...',
+                });
+                window.location.href = result.url;
+          }
     }
 
 

@@ -4,9 +4,8 @@
 import HospitalAdminSidebar from '@/components/hospital-admin-sidebar';
 import Header from '@/components/hospital-admin-header';
 import { useSession } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function HospitalAdminLayout({
   children,
@@ -16,12 +15,14 @@ export default function HospitalAdminLayout({
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isLoginPage = pathname === '/hospital-admin/login';
+  const isChangePasswordPage = pathname === '/hospital-admin/change-password';
   const router = useRouter();
+
   useEffect(() => {
-    if (!isLoginPage && status === 'unauthenticated') {
+    if (!isLoginPage && !isChangePasswordPage && status === 'unauthenticated') {
       router.push('/hospital-admin/login');
     }
-  }, [isLoginPage, status, router]);
+  }, [isLoginPage, isChangePasswordPage, status, router]);
 
   if (isLoginPage) {
     return <>{children}</>;
@@ -37,6 +38,15 @@ export default function HospitalAdminLayout({
   }
   if (status === 'unauthenticated') {
     return null;
+  }
+
+  const mustChangePassword = (session?.user as any)?.mustChangePassword === true;
+  if (isChangePasswordPage || mustChangePassword) {
+    return (
+      <div className="flex min-h-screen w-full bg-muted/40">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">{children}</main>
+      </div>
+    );
   }
 
   return (

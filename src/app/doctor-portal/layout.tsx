@@ -2,13 +2,12 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import DoctorPortalSidebar from '@/components/doctor-portal-sidebar';
 import DoctorPortalHeader from '@/components/doctor-portal-header';
 import { DoctorPortalProvider } from '@/components/doctor-portal/doctor-portal-context';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function DoctorPortalLayout({
   children,
@@ -20,22 +19,29 @@ export default function DoctorPortalLayout({
   const router = useRouter();
   const [doctorData, setDoctorData] = useState<{ doctor: Doctor | null; doctorHospitals: Hospital[] }>({ doctor: null, doctorHospitals: [] });
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const isLoginPage = pathname === '/doctor-portal/login';
+  const isChangePasswordPage = pathname === '/doctor-portal/change-password';
+  const skipChrome = isLoginPage || isChangePasswordPage;
 
   // Redirect to login if session is unauthenticated
   useEffect(() => {
-    if (pathname !== '/doctor-portal/login' && status === 'unauthenticated') {
+    if (!skipChrome && status === 'unauthenticated') {
       router.push('/doctor-portal/login');
     }
-  }, [pathname, status, router]);
+  }, [skipChrome, status, router]);
 
   // Redirect if session exists but doctor data load finished with no doctor
   useEffect(() => {
-    if (status === 'authenticated' && !isLoadingData && !doctorData.doctor && pathname !== '/doctor-portal/login') {
+    if (status === 'authenticated' && !isLoadingData && !doctorData.doctor && !skipChrome) {
       router.push('/doctor-portal/login');
     }
-  }, [status, isLoadingData, doctorData, pathname, router]);
+  }, [status, isLoadingData, doctorData, skipChrome, router]);
 
   useEffect(() => {
+    if (skipChrome) {
+      setIsLoadingData(false);
+      return;
+    }
     if (session?.user?.id) {
       setIsLoadingData(true);
       fetch(`/api/doctor-data?id=${session.user.id}`)
@@ -59,9 +65,9 @@ export default function DoctorPortalLayout({
       // If there's no session and not loading, we can stop loading
       setIsLoadingData(false);
     }
-  }, [session, status]);
+  }, [session, status, skipChrome]);
 
-  if (pathname === '/doctor-portal/login') {
+  if (skipChrome) {
     return <>{children}</>;
   }
 
@@ -82,6 +88,19 @@ export default function DoctorPortalLayout({
     }, [status, pathname, router]);
 
     return null;
+  }
+
+  const mustChangePassword = (session?.user as any)?.mustChangePassword === true;
+  if (mustChangePassword) {
+    return (
+      <DoctorPortalProvider doctor={doctorData.doctor} doctorHospitals={doctorData.doctorHospitals}>
+        <div className="flex min-h-screen w-full bg-muted/40">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+            {children}
+          </main>
+        </div>
+      </DoctorPortalProvider>
+    );
   }
 
   return (

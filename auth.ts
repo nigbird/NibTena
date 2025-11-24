@@ -161,31 +161,26 @@ const authOptions = {
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const role = auth?.user?.role;
       const { pathname } = nextUrl;
-      const user: any = auth?.user;
-      const mustChangePassword = user?.mustChangePassword === true;
 
-      const isSuperAdminRoute = pathname.startsWith('/super-admin');
-      const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
-      const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
+      // Allow access to password reset pages regardless of login state
+      if (pathname.startsWith('/reset-password') || pathname.startsWith('/forgot-password')) {
+        return true;
+      }
 
       const isSuperAdminLogin = pathname === '/super-admin/login';
       const isHospitalAdminLogin = pathname === '/hospital-admin/login';
       const isDoctorPortalLogin = pathname === '/doctor-portal/login';
-      const isPasswordResetPage = pathname.startsWith('/reset-password') || pathname.startsWith('/forgot-password');
-
       const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
 
-      // Allow access to password reset pages regardless of login state
-      if (isPasswordResetPage) {
-        return true;
-      }
-      
       if (!isLoggedIn) {
         if (isAnyLogin) {
           return true;
         }
+        const isSuperAdminRoute = pathname.startsWith('/super-admin');
+        const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
+        const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
+
         let loginUrl = '/user';
         if (isSuperAdminRoute) loginUrl = '/super-admin/login';
         if (isHospitalAdminRoute) loginUrl = '/hospital-admin/login';
@@ -197,27 +192,34 @@ const authOptions = {
         return true;
       }
       
-      // If user must change password, redirect to their profile page,
-      // but allow access to the API routes required for the page to function.
+      // If user is logged in, check for mandatory password change first.
+      const user: any = auth?.user;
+      const mustChangePassword = user?.mustChangePassword === true;
+      const role = user?.role;
+
       if (mustChangePassword && role) {
         let profileUrl = '';
+        if (role === 'superadmin') profileUrl = '/super-admin/profile'; // Or wherever superadmin profile is
         if (role === 'hospital') profileUrl = '/hospital-admin/profile';
         if (role === 'doctor') profileUrl = '/doctor-portal/profile';
 
+        // Allow access to the profile page itself and any API routes needed for it to function.
         if (profileUrl && !pathname.startsWith(profileUrl) && !pathname.startsWith('/api')) {
            return Response.redirect(new URL(profileUrl, nextUrl));
         }
       }
 
+      // If user is on a login page but is already logged in, redirect them.
       if (isAnyLogin) {
         if (role === 'superadmin') return Response.redirect(new URL('/super-admin', nextUrl));
         if (role === 'doctor') return Response.redirect(new URL('/doctor-portal', nextUrl));
 
         if (role === 'hospital') {
-          const isAdmin = (auth?.user as any)?.isAdmin === true;
-          if (isAdmin) return Response.redirect(new URL('/hospital-admin', nextUrl));
+          // If they are an admin, send to main dashboard
+          if (user?.isAdmin === true) return Response.redirect(new URL('/hospital-admin', nextUrl));
 
-          const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
+          // If not admin, redirect to first allowed page based on permissions
+          const permKeys: string[] = user?.permissionKeys || [];
           const PERM_PATH_MAP: Record<string, string> = {
             'QUEUE_MANAGE': '/hospital-admin/queue',
             'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
@@ -231,8 +233,13 @@ const authOptions = {
           const landing = allowedPaths[0] || '/hospital-admin/profile'; // Default to profile if no other page is allowed
           return Response.redirect(new URL(landing, nextUrl));
         }
-        return true;
+        return true; // Should not happen, but as a fallback.
       }
+      
+      // Role-based route protection
+      const isSuperAdminRoute = pathname.startsWith('/super-admin');
+      const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
+      const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
       
       if (isSuperAdminRoute && role !== 'superadmin') {
         return Response.redirect(new URL('/super-admin/login', nextUrl));
@@ -240,13 +247,16 @@ const authOptions = {
       if (isHospitalAdminRoute && role !== 'hospital') {
         return Response.redirect(new URL('/hospital-admin/login', nextUrl));
       }
+      if (isDoctorPortalRoute && role !== 'doctor') {
+        return Response.redirect(new URL('/doctor-portal/login', nextUrl));
+      }
 
-      if (isHospitalAdminRoute && role === 'hospital') {
-        if ((auth?.user as any)?.isAdmin === true) return true;
-
+      // Permission-based route protection for hospital staff
+      if (isHospitalAdminRoute && role === 'hospital' && user?.isAdmin === false) {
+        // Always allow access to the root dashboard and profile page for staff
         if (pathname === '/hospital-admin' || pathname === '/hospital-admin/' || pathname.startsWith('/hospital-admin/profile')) return true;
 
-        const permKeys: string[] = (auth?.user as any)?.permissionKeys || [];
+        const permKeys: string[] = user?.permissionKeys || [];
         const PERM_PATH_MAP: Record<string, string> = {
           'QUEUE_MANAGE': '/hospital-admin/queue',
           'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
@@ -259,23 +269,22 @@ const authOptions = {
 
         const allowedPrefixes = new Set<string>(permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[]);
 
+        // If user has no specific page permissions, lock them to their profile page.
         if (allowedPrefixes.size === 0) {
-          if (pathname.startsWith('/hospital-admin/profile')) {
-            return true;
-          }
+          if (pathname.startsWith('/hospital-admin/profile')) return true;
           return Response.redirect(new URL('/hospital-admin/profile', nextUrl));
         }
 
-        const allowed = Array.from(allowedPrefixes).some(p => pathname.startsWith(p));
-        if (!allowed) {
-          const first = Array.from(allowedPrefixes)[0];
-          return Response.redirect(new URL(first, nextUrl));
+        const isPathAllowed = Array.from(allowedPrefixes).some(p => pathname.startsWith(p));
+        
+        // If the current path is not in their allowed list, redirect them to the first page they ARE allowed to see.
+        if (!isPathAllowed) {
+          const firstAllowedPath = Array.from(allowedPrefixes)[0];
+          return Response.redirect(new URL(firstAllowedPath, nextUrl));
         }
       }
-      if (isDoctorPortalRoute && role !== 'doctor') {
-        return Response.redirect(new URL('/doctor-portal/login', nextUrl));
-      }
-
+      
+      // If no other rule matched, allow access.
       return true;
     },
   },
@@ -300,5 +309,3 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
-
-    

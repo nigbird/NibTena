@@ -7,6 +7,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
+type JwtCallbackArgs = { token: Record<string, any>; user?: Record<string, any> | null };
+type SessionCallbackArgs = { session: Record<string, any>; token: Record<string, any> };
+type AuthorizedCallbackArgs = { auth: Record<string, any> | null; request: { nextUrl: URL } };
+
 
 const authOptions = {
   trustHost: true,
@@ -127,7 +131,7 @@ const authOptions = {
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user }: JwtCallbackArgs) {
       if (user) {
         token.id = user.id;
         token.role = user.role as string;
@@ -145,7 +149,7 @@ const authOptions = {
       }
       return token;
     },
-    session({ session, token }) {
+    session({ session, token }: SessionCallbackArgs) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
@@ -159,7 +163,7 @@ const authOptions = {
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
+    authorized({ auth, request: { nextUrl } }: AuthorizedCallbackArgs) {
       const isLoggedIn = !!auth?.user;
       const { pathname } = nextUrl;
 
@@ -198,14 +202,15 @@ const authOptions = {
       const role = user?.role;
 
       if (mustChangePassword && role) {
-        let profileUrl = '';
-        if (role === 'superadmin') profileUrl = '/super-admin/profile'; // Or wherever superadmin profile is
-        if (role === 'hospital') profileUrl = '/hospital-admin/profile';
-        if (role === 'doctor') profileUrl = '/doctor-portal/profile';
+        const forcedChangeTarget: Record<string, string> = {
+          superadmin: '/super-admin/profile',
+          hospital: '/hospital-admin/change-password',
+          doctor: '/doctor-portal/change-password',
+        };
+        const targetUrl = forcedChangeTarget[role];
 
-        // Allow access to the profile page itself and any API routes needed for it to function.
-        if (profileUrl && !pathname.startsWith(profileUrl) && !pathname.startsWith('/api')) {
-           return Response.redirect(new URL(profileUrl, nextUrl));
+        if (targetUrl && !pathname.startsWith(targetUrl) && !pathname.startsWith('/api')) {
+           return Response.redirect(new URL(targetUrl, nextUrl));
         }
       }
 

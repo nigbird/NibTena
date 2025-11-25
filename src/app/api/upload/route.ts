@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { randomBytes } from 'crypto';
 
 // Maximum file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -60,10 +61,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid image file' }, { status: 400 });
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const filename = `${timestamp}_${randomString}.${detected.ext}`;
+    // Generate unique filename using a cryptographically secure random generator
+    // Use random bytes instead of Math.random for security and uniqueness
+    const randomString = randomBytes(12).toString('hex');
+    const filename = `${Date.now()}_${randomString}.${detected.ext}`;
 
     // Ensure uploads directory exists
     const uploadsDir = join(process.cwd(), 'uploads');

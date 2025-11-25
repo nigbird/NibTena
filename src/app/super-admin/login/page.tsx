@@ -57,8 +57,8 @@ export default function SuperAdminLoginPage() {
               const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
               const isFriendlyLock = errStr.includes('temporarily locked');
               const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
+              // Show inline error only; do not trigger a destructive toast for auth failures.
               setError(message);
-              toast({ variant: 'destructive', title: 'Login Failed', description: message });
         } else if (result?.url) {
             toast({
                 title: 'Login Successful',

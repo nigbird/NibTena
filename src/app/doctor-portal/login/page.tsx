@@ -14,9 +14,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Stethoscope, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Stethoscope, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
@@ -40,15 +41,14 @@ export default function DoctorLoginPage() {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        if (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'Invalid email or password. Please try again.',
-            })
-            setError(null); // Clear error after showing toast
+        const initErr = searchParams.get('error');
+        if (initErr) {
+            const errStr = typeof initErr === 'string' ? initErr.toLowerCase() : '';
+            const isFriendlyLock = errStr.includes('temporarily locked');
+            const message = isFriendlyLock ? initErr : 'Invalid email or password. Please try again.';
+            setError(message);
         }
-    }, [error, toast]);
+    }, [searchParams]);
     
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -65,11 +65,10 @@ export default function DoctorLoginPage() {
         });
 
         if (result?.error) {
-            // Only surface a known friendly lockout message to users; otherwise show a generic error.
+            // Only surface a known friendly lockout message to users; otherwise show a generic inline error.
             const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
             const isFriendlyLock = errStr.includes('temporarily locked');
             const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
-            toast({ variant: 'destructive', title: 'Login Failed', description: message });
             setError(message);
         } else if (result?.url) {
             toast({
@@ -119,6 +118,14 @@ export default function DoctorLoginPage() {
                             </Button>
                         </div>
                     </div>
+                    {error && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                {error}
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <SubmitButton />
                 </form>
                 </CardContent>

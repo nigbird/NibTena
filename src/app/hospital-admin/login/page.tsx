@@ -53,12 +53,12 @@ export default function HospitalAdminLoginPage() {
             callbackUrl
         });
 
-        if (result?.error) {
-            const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
-            const isFriendlyLock = errStr.includes('temporarily locked');
-            const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
-            setError(message);
-            toast({ variant: 'destructive', title: 'Login Failed', description: message });
+            if (result?.error) {
+                const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
+                const isFriendlyLock = errStr.includes('temporarily locked');
+                const message = isFriendlyLock ? result.error : 'Invalid email or password.';
+                // Only show the inline error message in the form; avoid toasts for failures.
+                setError(message);
         } else if (result?.url) {
             toast({
                 title: 'Login Successful',

@@ -174,15 +174,15 @@ const authOptions = {
             }
 
             // Log the detailed lock info server-side for diagnostics (includes exact timestamp).
-            try {
-              console.warn('[auth] Account locked', {
-                identifier: identKey,
-                lockedUntil: locked.until ? new Date(locked.until).toISOString() : null,
-                now: new Date().toISOString(),
-              });
-            } catch (e) {
-              // ignore logging errors
-            }
+            // try {
+            //   console.warn('[auth] Account locked', {
+            //     identifier: identKey,
+            //     lockedUntil: locked.until ? new Date(locked.until).toISOString() : null,
+            //     now: new Date().toISOString(),
+            //   });
+            // } catch (e) {
+            //   // ignore logging errors
+            // }
 
             // Throw a generic, non-technical message for the client.
             throw new Error(friendlyMsg);

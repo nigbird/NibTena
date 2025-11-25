@@ -141,7 +141,7 @@ export default function DoctorSchedulePage() {
              {schedules.map(daySchedule => (
                 <TabsContent key={daySchedule.dayOfWeek} value={daySchedule.dayOfWeek}>
                     <Card>
-                        <CardHeader>
+                        {/* <CardHeader>
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     id={`day-toggle-${daySchedule.dayOfWeek}`}
@@ -152,7 +152,7 @@ export default function DoctorSchedulePage() {
                                     {daySchedule.dayOfWeek} - {daySchedule.active ? 'Available' : 'Unavailable'}
                                 </Label>
                             </div>
-                        </CardHeader>
+                        </CardHeader> */}
                          {daySchedule.active && (
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">

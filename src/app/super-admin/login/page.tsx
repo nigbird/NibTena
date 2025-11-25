@@ -53,8 +53,12 @@ export default function SuperAdminLoginPage() {
             callbackUrl
         });
 
-        if (result?.error) {
-           setError("Invalid email or password. Please try again.");
+          if (result?.error) {
+              const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
+              const isFriendlyLock = errStr.includes('temporarily locked');
+              const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
+              setError(message);
+              toast({ variant: 'destructive', title: 'Login Failed', description: message });
         } else if (result?.url) {
             toast({
                 title: 'Login Successful',

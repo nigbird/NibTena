@@ -6,6 +6,119 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import Redis from 'ioredis';
+
+// Rate limit configuration
+const MAX_ATTEMPTS = 5; // max failed attempts before lockout
+const WINDOW_MS = 15 * 60 * 1000; // rolling window for attempts (15 minutes)
+const LOCKOUT_MS = 15 * 60 * 1000; // lockout duration after exceeding attempts (15 minutes)
+
+// In-memory fallback for single-process deployments
+type AttemptRecord = { attempts: number; firstAttemptAt: number; lockedUntil?: number };
+const loginAttempts = new Map<string, AttemptRecord>();
+
+// Optional Redis client (created if REDIS_URL is provided)
+let redisClient: Redis | null = null;
+if (process.env.REDIS_URL) {
+  try {
+    redisClient = new Redis(process.env.REDIS_URL);
+  } catch (err) {
+    console.warn('Failed to initialize Redis client for rate limiting:', err);
+    redisClient = null;
+  }
+}
+
+function getKeyForIdentifier(role: string, email: string) {
+  return `${role}:${email.toLowerCase()}`;
+}
+
+// Redis key helpers
+function attemptsKey(k: string) {
+  return `login:attempts:${k}`;
+}
+function lockKey(k: string) {
+  return `login:lock:${k}`;
+}
+
+async function isLockedRedis(k: string): Promise<{ locked: boolean; until?: number }> {
+  if (!redisClient) return { locked: false };
+  const lk = lockKey(k);
+  const ttl = await redisClient.pttl(lk);
+  if (ttl > 0) return { locked: true, until: Date.now() + ttl };
+  return { locked: false };
+}
+
+async function recordFailedAttemptRedis(k: string) {
+  if (!redisClient) return;
+  const aKey = attemptsKey(k);
+  const lKey = lockKey(k);
+
+  // Atomically increment attempts and set expiry if newly created
+  const attempts = await redisClient.incr(aKey);
+  if (attempts === 1) {
+    await redisClient.pexpire(aKey, WINDOW_MS);
+  }
+
+  if (attempts >= MAX_ATTEMPTS) {
+    // set the lock key and remove attempts key
+    await redisClient.set(lKey, '1', 'PX', LOCKOUT_MS);
+    await redisClient.del(aKey);
+  }
+}
+
+async function resetAttemptsRedis(k: string) {
+  if (!redisClient) return;
+  await redisClient.del(attemptsKey(k));
+  await redisClient.del(lockKey(k));
+}
+
+function isLockedInMemory(key: string): { locked: boolean; until?: number } {
+  const rec = loginAttempts.get(key);
+  if (!rec) return { locked: false };
+  if (rec.lockedUntil && rec.lockedUntil > Date.now()) return { locked: true, until: rec.lockedUntil };
+  if (rec.lockedUntil && rec.lockedUntil <= Date.now()) {
+    loginAttempts.delete(key);
+    return { locked: false };
+  }
+  return { locked: false };
+}
+
+function recordFailedAttemptInMemory(key: string) {
+  const now = Date.now();
+  const rec = loginAttempts.get(key);
+  if (!rec) {
+    loginAttempts.set(key, { attempts: 1, firstAttemptAt: now });
+    return;
+  }
+  if (now - rec.firstAttemptAt > WINDOW_MS) {
+    loginAttempts.set(key, { attempts: 1, firstAttemptAt: now });
+    return;
+  }
+  rec.attempts += 1;
+  if (rec.attempts >= MAX_ATTEMPTS) {
+    rec.lockedUntil = now + LOCKOUT_MS;
+  }
+  loginAttempts.set(key, rec);
+}
+
+function resetAttemptsInMemory(key: string) {
+  loginAttempts.delete(key);
+}
+
+async function isLocked(key: string): Promise<{ locked: boolean; until?: number }> {
+  if (redisClient) return await isLockedRedis(key);
+  return isLockedInMemory(key);
+}
+
+async function recordFailedAttempt(key: string) {
+  if (redisClient) return await recordFailedAttemptRedis(key);
+  return recordFailedAttemptInMemory(key);
+}
+
+async function resetAttempts(key: string) {
+  if (redisClient) return await resetAttemptsRedis(key);
+  return resetAttemptsInMemory(key);
+}
 
 type JwtCallbackArgs = { token: Record<string, any>; user?: Record<string, any> | null };
 type SessionCallbackArgs = { session: Record<string, any>; token: Record<string, any> };
@@ -43,6 +156,37 @@ const authOptions = {
 
         if (parsedCredentials.success) {
           const { email, password, role } = parsedCredentials.data;
+          const identKey = getKeyForIdentifier(role, email);
+          const locked = await isLocked(identKey);
+          if (locked.locked) {
+            // Compute a user-friendly relative message (minutes) and do NOT expose exact timestamps to the client.
+            let friendlyMsg = 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
+            if (locked.until) {
+              const remainingMs = locked.until - Date.now();
+              if (remainingMs > 0) {
+                const minutes = Math.ceil(remainingMs / 60000);
+                if (minutes <= 1) {
+                  friendlyMsg = 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
+                } else {
+                  friendlyMsg = `Your account has been temporarily locked due to multiple failed login attempts. Please try again later.`;
+                }
+              }
+            }
+
+            // Log the detailed lock info server-side for diagnostics (includes exact timestamp).
+            try {
+              console.warn('[auth] Account locked', {
+                identifier: identKey,
+                lockedUntil: locked.until ? new Date(locked.until).toISOString() : null,
+                now: new Date().toISOString(),
+              });
+            } catch (e) {
+              // ignore logging errors
+            }
+
+            // Throw a generic, non-technical message for the client.
+            throw new Error(friendlyMsg);
+          }
           
           let user: any = null;
           let isStaff = false; // Flag to identify if the logged-in user is a staff member
@@ -65,12 +209,16 @@ const authOptions = {
           }
 
           if (!user || !user.password) {
+            // record attempt for unknown user as well to avoid username enumeration abuse
+            await recordFailedAttempt(identKey);
             return null; // User not found
           }
           
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
-          if (passwordsMatch) {
+            if (passwordsMatch) {
+              // Successful login: reset any recorded failed attempts
+              await resetAttempts(identKey);
               const userEmail = isStaff ? user.email : (role === 'hospital' ? (user as any).contactEmail : (role === 'doctor' ? (user as any).contact : user.email));
               const userName = user.name;
               const userImage = role === 'hospital' ? (user as any).imageUrl ?? null : (role === 'doctor' ? (user as any).imageUrl : null);
@@ -124,6 +272,8 @@ const authOptions = {
                 mustChangePassword,
               };
           }
+          // If we reach here and passwords didn't match, record the failed attempt and throw a generic error
+          await recordFailedAttempt(identKey);
         }
         
         return null; // Invalid credentials

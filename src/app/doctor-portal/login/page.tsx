@@ -64,16 +64,20 @@ export default function DoctorLoginPage() {
             callbackUrl,
         });
 
-          if (result?.error) {
-              setError(result.error);
-              router.push(`/doctor-portal/login?error=CredentialsSignin`);
-          } else if (result?.url) {
-                 toast({
-                     title: 'Login Successful',
-                     description: 'Redirecting to your dashboard...',
-                });
-                window.location.href = result.url;
-          }
+        if (result?.error) {
+            // Only surface a known friendly lockout message to users; otherwise show a generic error.
+            const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
+            const isFriendlyLock = errStr.includes('temporarily locked');
+            const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
+            toast({ variant: 'destructive', title: 'Login Failed', description: message });
+            setError(message);
+        } else if (result?.url) {
+            toast({
+                title: 'Login Successful',
+                description: 'Redirecting to your dashboard...',
+            });
+            window.location.href = result.url;
+        }
     }
 
 

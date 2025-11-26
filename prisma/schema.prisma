@@ -218,3 +218,15 @@ model RolePermission {
 
   @@id([roleId, permissionId])
 }
+
+// Rate limiting store to track failed attempts per identifier (email) and per IP
+model RateLimit {
+  id            Int       @id @default(autoincrement())
+  key           String    @unique // e.g. "email:role:someone@example.com" or "ip:1.2.3.4"
+  type          String    // 'email' | 'ip'
+  attempts      Int       @default(0)
+  firstAttemptAt DateTime?
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}

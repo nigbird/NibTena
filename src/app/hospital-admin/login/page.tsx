@@ -55,7 +55,9 @@ export default function HospitalAdminLoginPage() {
 
             if (result?.error) {
                 const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
-                const isFriendlyLock = errStr.includes('temporarily locked');
+                const isFriendlyLock =
+                    errStr.includes('temporarily locked') ||
+                    errStr.includes('too many failed login attempts');
                 const message = isFriendlyLock ? result.error : 'Invalid email or password.';
                 // Only show the inline error message in the form; avoid toasts for failures.
                 setError(message);

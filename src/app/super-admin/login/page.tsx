@@ -55,7 +55,9 @@ export default function SuperAdminLoginPage() {
 
           if (result?.error) {
               const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
-              const isFriendlyLock = errStr.includes('temporarily locked');
+              const isFriendlyLock =
+                 errStr.includes('temporarily locked') ||
+                 errStr.includes('too many failed login attempts');
               const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
               // Show inline error only; do not trigger a destructive toast for auth failures.
               setError(message);

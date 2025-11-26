@@ -6,118 +6,87 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import Redis from 'ioredis';
 
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
 const WINDOW_MS = 15 * 60 * 1000; // rolling window for attempts (15 minutes)
 const LOCKOUT_MS = 15 * 60 * 1000; // lockout duration after exceeding attempts (15 minutes)
 
-// In-memory fallback for single-process deployments
-type AttemptRecord = { attempts: number; firstAttemptAt: number; lockedUntil?: number };
-const loginAttempts = new Map<string, AttemptRecord>();
-
-// Optional Redis client (created if REDIS_URL is provided)
-let redisClient: Redis | null = null;
-if (process.env.REDIS_URL) {
-  try {
-    redisClient = new Redis(process.env.REDIS_URL);
-  } catch (err) {
-    console.warn('Failed to initialize Redis client for rate limiting:', err);
-    redisClient = null;
-  }
-}
+// Database-backed rate limiting (Prisma RateLimit model)
+// We enforce two separate limits:
+// - Email-based: max 5 failed attempts in WINDOW_MS -> lock for LOCKOUT_MS
+// - IP-based: max 20 failed attempts in WINDOW_MS -> lock for LOCKOUT_MS
+const EMAIL_MAX_ATTEMPTS = 5;
+const IP_MAX_ATTEMPTS = 20;
 
 function getKeyForIdentifier(role: string, email: string) {
-  return `${role}:${email.toLowerCase()}`;
+  return `email:${role}:${email.toLowerCase()}`;
 }
 
-// Redis key helpers
-function attemptsKey(k: string) {
-  return `login:attempts:${k}`;
-}
-function lockKey(k: string) {
-  return `login:lock:${k}`;
-}
-
-async function isLockedRedis(k: string): Promise<{ locked: boolean; until?: number }> {
-  if (!redisClient) return { locked: false };
-  const lk = lockKey(k);
-  const ttl = await redisClient.pttl(lk);
-  if (ttl > 0) return { locked: true, until: Date.now() + ttl };
-  return { locked: false };
-}
-
-async function recordFailedAttemptRedis(k: string) {
-  if (!redisClient) return;
-  const aKey = attemptsKey(k);
-  const lKey = lockKey(k);
-
-  // Atomically increment attempts and set expiry if newly created
-  const attempts = await redisClient.incr(aKey);
-  if (attempts === 1) {
-    await redisClient.pexpire(aKey, WINDOW_MS);
-  }
-
-  if (attempts >= MAX_ATTEMPTS) {
-    // set the lock key and remove attempts key
-    await redisClient.set(lKey, '1', 'PX', LOCKOUT_MS);
-    await redisClient.del(aKey);
-  }
-}
-
-async function resetAttemptsRedis(k: string) {
-  if (!redisClient) return;
-  await redisClient.del(attemptsKey(k));
-  await redisClient.del(lockKey(k));
-}
-
-function isLockedInMemory(key: string): { locked: boolean; until?: number } {
-  const rec = loginAttempts.get(key);
-  if (!rec) return { locked: false };
-  if (rec.lockedUntil && rec.lockedUntil > Date.now()) return { locked: true, until: rec.lockedUntil };
-  if (rec.lockedUntil && rec.lockedUntil <= Date.now()) {
-    loginAttempts.delete(key);
-    return { locked: false };
-  }
-  return { locked: false };
-}
-
-function recordFailedAttemptInMemory(key: string) {
-  const now = Date.now();
-  const rec = loginAttempts.get(key);
-  if (!rec) {
-    loginAttempts.set(key, { attempts: 1, firstAttemptAt: now });
-    return;
-  }
-  if (now - rec.firstAttemptAt > WINDOW_MS) {
-    loginAttempts.set(key, { attempts: 1, firstAttemptAt: now });
-    return;
-  }
-  rec.attempts += 1;
-  if (rec.attempts >= MAX_ATTEMPTS) {
-    rec.lockedUntil = now + LOCKOUT_MS;
-  }
-  loginAttempts.set(key, rec);
-}
-
-function resetAttemptsInMemory(key: string) {
-  loginAttempts.delete(key);
+function getIpKey(ip: string) {
+  return `ip:${ip}`;
 }
 
 async function isLocked(key: string): Promise<{ locked: boolean; until?: number }> {
-  if (redisClient) return await isLockedRedis(key);
-  return isLockedInMemory(key);
+  try {
+    const rec = await prisma.rateLimit.findUnique({ where: { key } });
+    if (!rec) return { locked: false };
+    if (rec.lockedUntil && rec.lockedUntil.getTime() > Date.now()) return { locked: true, until: rec.lockedUntil.getTime() };
+    return { locked: false };
+  } catch (e) {
+    console.error('[auth] isLocked check failed', e);
+    return { locked: false };
+  }
 }
 
-async function recordFailedAttempt(key: string) {
-  if (redisClient) return await recordFailedAttemptRedis(key);
-  return recordFailedAttemptInMemory(key);
+function formatUnlockMessage(base: string, until?: number) {
+  try {
+    if (!until) return base;
+    const remainingMs = until - Date.now();
+    if (!remainingMs || remainingMs <= 0) return base;
+    const minutes = Math.ceil(remainingMs / 60000);
+    return `${base} Try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+  } catch (e) {
+    return base;
+  }
+}
+
+async function recordFailedAttempt(key: string, type: 'email' | 'ip') {
+  try {
+    const now = new Date();
+    const rec = await prisma.rateLimit.findUnique({ where: { key } });
+    const maxAttempts = type === 'email' ? EMAIL_MAX_ATTEMPTS : IP_MAX_ATTEMPTS;
+
+    if (!rec) {
+      await prisma.rateLimit.create({ data: { key, type, attempts: 1, firstAttemptAt: now } });
+      return;
+    }
+
+    // If window expired, reset
+    if (rec.firstAttemptAt && now.getTime() - rec.firstAttemptAt.getTime() > WINDOW_MS) {
+      await prisma.rateLimit.update({ where: { key }, data: { attempts: 1, firstAttemptAt: now, lockedUntil: null } });
+      return;
+    }
+
+    const attempts = rec.attempts + 1;
+    if (attempts >= maxAttempts) {
+      const lockedUntil = new Date(now.getTime() + LOCKOUT_MS);
+      await prisma.rateLimit.update({ where: { key }, data: { attempts: attempts, lockedUntil, firstAttemptAt: rec.firstAttemptAt ?? now } });
+      return;
+    }
+
+    await prisma.rateLimit.update({ where: { key }, data: { attempts } });
+  } catch (e) {
+    console.error('[auth] recordFailedAttempt failed', e);
+  }
 }
 
 async function resetAttempts(key: string) {
-  if (redisClient) return await resetAttemptsRedis(key);
-  return resetAttemptsInMemory(key);
+  try {
+    await prisma.rateLimit.deleteMany({ where: { key } });
+  } catch (e) {
+    console.error('[auth] resetAttempts failed', e);
+  }
 }
 
 type JwtCallbackArgs = { token: Record<string, any>; user?: Record<string, any> | null };
@@ -145,7 +114,7 @@ const authOptions = {
         password: { label: 'Password', type: 'password' },
         role: { label: 'Role', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const parsedCredentials = z
           .object({
             email: z.string().email(),
@@ -157,34 +126,31 @@ const authOptions = {
         if (parsedCredentials.success) {
           const { email, password, role } = parsedCredentials.data;
           const identKey = getKeyForIdentifier(role, email);
-          const locked = await isLocked(identKey);
-          if (locked.locked) {
-            // Compute a user-friendly relative message (minutes) and do NOT expose exact timestamps to the client.
-            let friendlyMsg = 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
-            if (locked.until) {
-              const remainingMs = locked.until - Date.now();
-              if (remainingMs > 0) {
-                const minutes = Math.ceil(remainingMs / 60000);
-                if (minutes <= 1) {
-                  friendlyMsg = 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
-                } else {
-                  friendlyMsg = `Your account has been temporarily locked due to multiple failed login attempts. Please try again later.`;
-                }
-              }
+
+          // Resolve IP for device-level rate limiting
+          let ip = 'unknown';
+          try {
+            const hdr = (req && req.headers) ? req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['x-forwarded'] : undefined;
+            if (hdr && typeof hdr === 'string') {
+              ip = hdr.split(',')[0].trim();
+            } else if (req && (req as any).socket && ((req as any).socket.remoteAddress)) {
+              ip = String((req as any).socket.remoteAddress);
             }
+          } catch (e) {
+            // ignore
+          }
+          const ipKey = getIpKey(ip);
 
-            // Log the detailed lock info server-side for diagnostics (includes exact timestamp).
-            // try {
-            //   console.warn('[auth] Account locked', {
-            //     identifier: identKey,
-            //     lockedUntil: locked.until ? new Date(locked.until).toISOString() : null,
-            //     now: new Date().toISOString(),
-            //   });
-            // } catch (e) {
-            //   // ignore logging errors
-            // }
-
-            // Throw a generic, non-technical message for the client.
+          // Check locks for both email and IP
+          const lockedEmail = await isLocked(identKey);
+          const lockedIp = await isLocked(ipKey);
+          if (lockedEmail.locked || lockedIp.locked) {
+            // Determine which lock to message (prefer device/IP lock message when applicable)
+            const locked = lockedIp.locked ? lockedIp : lockedEmail;
+            let friendlyMsg = lockedIp.locked
+              ? 'Too many failed login attempts were detected from this device. Please try again later.'
+              : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
+            friendlyMsg = formatUnlockMessage(friendlyMsg, locked.until);
             throw new Error(friendlyMsg);
           }
           
@@ -210,7 +176,20 @@ const authOptions = {
 
           if (!user || !user.password) {
             // record attempt for unknown user as well to avoid username enumeration abuse
-            await recordFailedAttempt(identKey);
+            await recordFailedAttempt(identKey, 'email');
+            await recordFailedAttempt(ipKey, 'ip');
+
+            // If this failed attempt caused a lock, surface the friendly lock message immediately
+            const nowLockedEmail = await isLocked(identKey);
+            const nowLockedIp = await isLocked(ipKey);
+            if (nowLockedIp.locked || nowLockedEmail.locked) {
+              const locked = nowLockedIp.locked ? nowLockedIp : nowLockedEmail;
+              const message = nowLockedIp.locked
+                ? 'Too many failed login attempts were detected from this device. Please try again later.'
+                : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
+              throw new Error(formatUnlockMessage(message, locked.until));
+            }
+
             return null; // User not found
           }
           
@@ -272,8 +251,20 @@ const authOptions = {
                 mustChangePassword,
               };
           }
-          // If we reach here and passwords didn't match, record the failed attempt and throw a generic error
-          await recordFailedAttempt(identKey);
+          // If we reach here and passwords didn't match, record the failed attempt for both email and IP
+          await recordFailedAttempt(identKey, 'email');
+          await recordFailedAttempt(ipKey, 'ip');
+
+          // If this failed attempt caused a lock, throw the friendly lock message immediately
+          const nowLockedEmail2 = await isLocked(identKey);
+          const nowLockedIp2 = await isLocked(ipKey);
+          if (nowLockedIp2.locked || nowLockedEmail2.locked) {
+            const locked = nowLockedIp2.locked ? nowLockedIp2 : nowLockedEmail2;
+            const message = nowLockedIp2.locked
+              ? 'Too many failed login attempts were detected from this device. Please try again later.'
+              : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
+            throw new Error(formatUnlockMessage(message, locked.until));
+          }
         }
         
         return null; // Invalid credentials

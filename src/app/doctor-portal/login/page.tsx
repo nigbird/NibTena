@@ -44,7 +44,9 @@ export default function DoctorLoginPage() {
         const initErr = searchParams.get('error');
         if (initErr) {
             const errStr = typeof initErr === 'string' ? initErr.toLowerCase() : '';
-            const isFriendlyLock = errStr.includes('temporarily locked');
+            const isFriendlyLock =
+                errStr.includes('temporarily locked') ||
+                errStr.includes('too many failed login attempts');
             const message = isFriendlyLock ? initErr : 'Invalid email or password. Please try again.';
             setError(message);
         }
@@ -67,7 +69,9 @@ export default function DoctorLoginPage() {
         if (result?.error) {
             // Only surface a known friendly lockout message to users; otherwise show a generic inline error.
             const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
-            const isFriendlyLock = errStr.includes('temporarily locked');
+            const isFriendlyLock =
+                errStr.includes('temporarily locked') ||
+                errStr.includes('too many failed login attempts');
             const message = isFriendlyLock ? result.error : 'Invalid email or password. Please try again.';
             setError(message);
         } else if (result?.url) {

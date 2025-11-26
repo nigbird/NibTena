@@ -53,7 +53,9 @@ export default withAuth(
         if (!isLoggedIn) {
           // allow access to public pages and to the login pages themselves
           if (isAnyLogin) return true;
+          // allow homepage, user area, and password reset flows
           if (pathname === '/' || pathname.startsWith('/user')) return true;
+          if (pathname === '/forgot-password' || pathname.startsWith('/reset-password')) return true;
           // return false -> NextAuth will redirect to `pages.signIn` (/auth/redirect)
           return false;
         }

@@ -112,17 +112,22 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     results.smtp.error = 'SMTP settings are incomplete.';
   } else {
     try {
+      const isSsl = settingsToTest.smtpPort === 465 || settingsToTest.smtpEncryption === 'ssl';
+      const isStartTls = !isSsl && (settingsToTest.smtpEncryption === 'tls' || settingsToTest.smtpPort === 587);
+      const tlsRejectUnauthorized = process.env.NODE_ENV === 'production' && process.env.EMAIL_ALLOW_INSECURE !== 'true';
+
       const transporter = nodemailer.createTransport({
         host: settingsToTest.smtpHost,
         port: settingsToTest.smtpPort,
-        secure: settingsToTest.smtpEncryption === 'ssl',
+        secure: isSsl, // true for port 465 (SSL)
+        requireTLS: !!isStartTls, // enforce STARTTLS when using TLS/port 587
         auth: {
           user: settingsToTest.smtpUser,
           pass: settingsToTest.smtpPass,
         },
         tls: {
-          rejectUnauthorized: false
-        }
+          rejectUnauthorized: !!tlsRejectUnauthorized,
+        },
       });
       await transporter.verify();
       results.smtp = { success: true, error: '' };
@@ -136,15 +141,18 @@ export async function testEmailConnection(settings: EmailSettingsType) {
   } else {
     let client: ImapFlow | null = null;
     try {
+      const imapSecure = settingsToTest.imapEncryption === 'ssl' || Number(settingsToTest.imapPort) === 993;
+      const imapTlsRejectUnauthorized = process.env.NODE_ENV === 'production' && process.env.EMAIL_ALLOW_INSECURE !== 'true';
+
       client = new ImapFlow({
         host: settingsToTest.imapHost,
         port: Number(settingsToTest.imapPort),
-        secure: settingsToTest.imapEncryption === 'ssl',
+        secure: imapSecure,
         auth: {
           user: settingsToTest.imapUser,
           pass: settingsToTest.imapPass,
         },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: !!imapTlsRejectUnauthorized }
       });
 
       // Simple test: connect and immediately logout to verify credentials and connectivity
@@ -156,10 +164,8 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     } finally {
       if (client) {
         try {
-          // ensure client is closed if still connected
-          if (!client.closed) {
-            await client.logout().catch(() => null);
-          }
+          // ensure client is closed
+          await client.logout().catch(() => null);
         } catch (e) {
           console.error('Failed to close IMAP client:', e);
         }
@@ -204,21 +210,26 @@ export async function getEmailTransporter(hospitalId?: number) {
         throw new Error(`Email is not configured ${context}.`);
     }
 
+    const isSsl = configToUse.smtpPort === 465 || configToUse.smtpEncryption === 'ssl';
+    const isStartTls = !isSsl && (configToUse.smtpEncryption === 'tls' || configToUse.smtpPort === 587);
+    const tlsRejectUnauthorized = process.env.NODE_ENV === 'production' && process.env.EMAIL_ALLOW_INSECURE !== 'true';
+
     return {
-        transporter: nodemailer.createTransport({
-            host: configToUse.smtpHost,
-            port: configToUse.smtpPort,
-            secure: configToUse.smtpPort === 465 || configToUse.smtpEncryption === 'ssl',
-            auth: {
-                user: configToUse.smtpUser,
-                pass: configToUse.smtpPass,
-            },
-            tls: {
-                rejectUnauthorized: false
-            }
-        }),
-        fromUser: configToUse.smtpUser,
-        fromName: configToUse.name,
+      transporter: nodemailer.createTransport({
+        host: configToUse.smtpHost,
+        port: configToUse.smtpPort,
+        secure: isSsl,
+        requireTLS: !!isStartTls,
+        auth: {
+          user: configToUse.smtpUser,
+          pass: configToUse.smtpPass,
+        },
+        tls: {
+          rejectUnauthorized: !!tlsRejectUnauthorized
+        }
+      }),
+      fromUser: configToUse.smtpUser,
+      fromName: configToUse.name,
     };
 }
 

@@ -131,7 +131,7 @@ const authOptions = {
           const lockedEmail = await isLocked(identKey);
           const lockedIp = await isLocked(ipKey);
           if (lockedEmail.locked || lockedIp.locked) {
-            throw new Error("Invalid credentials. Account is temporarily locked.");
+            throw new Error("Invalid credentials");
           }
           
           let user: any = null;

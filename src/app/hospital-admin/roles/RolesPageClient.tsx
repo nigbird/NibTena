@@ -66,7 +66,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-type Permission = { id: number; name: string; description: string; category: string };
+type Permission = { id: number; name: string; description: string; category: string, key: string };
 type Role = { id: number; name: string; permissions: { permission: Permission }[] };
 type User = { id: number; name: string; email: string; roleId: number | null; role: Role | null };
 
@@ -273,9 +273,10 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
                                     <button
                                         key={role.id}
                                         onClick={() => setSelectedRoleId(role.id)}
-                                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                                            selectedRoleId === role.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
-                                        }`}
+                                        className={cn(
+                                          'w-full text-left p-3 rounded-lg border transition-colors',
+                                          selectedRoleId === role.id ? 'bg-accent text-accent-foreground ring-2 ring-accent' : 'hover:bg-muted/50'
+                                        )}
                                     >
                                         <div className="flex justify-between items-center">
                                             <span className="font-semibold">{role.name}</span>
@@ -308,25 +309,18 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
                         </CardHeader>
                         <CardContent>
                            {selectedRole ? (
-                               <ScrollArea className="h-[22rem]">
-                                <div className="space-y-4">
-                                {Object.entries(groupedPermissions).map(([category, perms]) => (
-                                    <div key={category}>
-                                        <h4 className="font-semibold mb-2">{category}</h4>
-                                        <div className="space-y-2 pl-2 border-l-2">
-                                            {(perms as Permission[]).map(p => {
-                                                const hasPermission = selectedRole.permissions.some((rp: any) => rp.permission.id === p.id);
-                                                return (
-                                                    <div key={p.id} className="flex items-center gap-2">
-                                                        {hasPermission ? <ShieldCheck className="h-4 w-4 text-green-500"/> : <ShieldAlert className="h-4 w-4 text-muted-foreground"/>}
-                                                        <span className={cn(hasPermission ? "text-foreground" : "text-muted-foreground")}>{p.name}</span>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
+                                <ScrollArea className="h-[22rem]">
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedRole.permissions.length > 0 ? (
+                                            selectedRole.permissions.map(({permission}: {permission: Permission}) => (
+                                                <Badge key={permission.id} variant="outline" className="font-mono text-xs">
+                                                    {permission.key}
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">This role has no permissions assigned.</p>
+                                        )}
                                     </div>
-                                ))}
-                                </div>
                                </ScrollArea>
                            ) : (
                             <div className="flex items-center justify-center h-full text-muted-foreground">

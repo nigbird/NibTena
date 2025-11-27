@@ -65,9 +65,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
 
 type Permission = { id: number; name: string; description: string; category: string, key: string };
-type Role = { id: number; name: string; permissions: { permission: Permission }[] };
+type Role = { id: number; name: string; isAdmin: boolean; permissions: { permission: Permission }[] };
 type User = { id: number; name: string; email: string; roleId: number | null; role: Role | null };
 
 export default function RolesPageClient({ hospitalId }: { hospitalId: number }) {
@@ -383,6 +385,7 @@ function UserManagementTab({ users, roles, onCreateUser, onEditUser, onDeleteUse
 function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospitalId }: any) {
   const isEditing = !!role;
   const [name, setName] = useState(role?.name || '');
+  const [isAdmin, setIsAdmin] = useState(role?.isAdmin || false);
   const [selectedPerms, setSelectedPerms] = useState<number[]>(role?.permissions.map((p: any) => p.permission.id) || []);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -394,6 +397,13 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
     }, {});
   }, [permissions]);
 
+  const handleMasterCheckboxChange = (category: string, isChecked: boolean) => {
+    const categoryPermIds = groupedPermissions[category].map((p: Permission) => p.id);
+    setSelectedPerms(prev =>
+      isChecked ? [...new Set([...prev, ...categoryPermIds])] : prev.filter(id => !categoryPermIds.includes(id))
+    );
+  };
+  
   const handlePermissionToggle = (permId: number) => {
     setSelectedPerms(prev =>
       prev.includes(permId) ? prev.filter(id => id !== permId) : [...prev, permId]
@@ -404,6 +414,7 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
     event.preventDefault();
     const formData = new FormData();
     formData.append('name', name);
+    formData.append('isAdmin', String(isAdmin));
     formData.append('permissions', JSON.stringify(selectedPerms));
     if (isEditing) {
         formData.append('id', role.id);
@@ -438,32 +449,61 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
                     <Label htmlFor="name">Role Name</Label>
                     <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Receptionist" required/>
                 </div>
+                 <div className="flex items-center space-x-2">
+                    <Switch id="isAdmin" checked={isAdmin} onCheckedChange={setIsAdmin} />
+                    <Label htmlFor="isAdmin" className="flex items-center gap-2 cursor-pointer">
+                        <ShieldAlert className="h-5 w-5 text-amber-500" />
+                        <span>Administrator Role</span>
+                    </Label>
+                </div>
                 <Separator/>
                 <div className="space-y-4">
                      <Label>Permissions</Label>
-                     <div className="space-y-4">
-                        {Object.entries(groupedPermissions).map(([category, perms]) => (
-                            <div key={category}>
-                                <h4 className="font-semibold mb-2 text-md">{category}</h4>
-                                <div className="space-y-3 pl-2">
-                                    {(perms as Permission[]).map(p => (
-                                        <div key={p.id} className="flex items-start gap-3">
+                     {isAdmin ? (
+                         <div className="p-6 bg-amber-50 border-l-4 border-amber-500 text-amber-900 text-sm rounded-md">
+                            Administrators have unrestricted access to all features. No specific permissions are needed.
+                         </div>
+                     ) : (
+                        <Accordion type="multiple" className="w-full space-y-2">
+                        {Object.entries(groupedPermissions).map(([category, perms]) => {
+                             const categoryPerms = perms as Permission[];
+                             const categoryPermIds = categoryPerms.map(p => p.id);
+                             const selectedCategoryPerms = categoryPermIds.filter(id => selectedPerms.includes(id));
+                             const isAllSelected = selectedCategoryPerms.length === categoryPermIds.length;
+                             const isIndeterminate = selectedCategoryPerms.length > 0 && !isAllSelected;
+
+                            return (
+                                <AccordionItem key={category} value={category} className="border rounded-md px-4">
+                                    <AccordionTrigger className="py-3 hover:no-underline">
+                                        <div className="flex items-center gap-3">
                                             <Checkbox
-                                                id={`perm-${p.id}`}
-                                                checked={selectedPerms.includes(p.id)}
-                                                onCheckedChange={() => handlePermissionToggle(p.id)}
-                                                className="mt-1"
+                                                checked={isAllSelected}
+                                                aria-label={`Select all ${category} permissions`}
+                                                onCheckedChange={(checked) => handleMasterCheckboxChange(category, !!checked)}
+                                                onClick={(e) => e.stopPropagation()}
                                             />
-                                            <div className="grid gap-1.5 leading-none">
-                                                <label htmlFor={`perm-${p.id}`} className="font-medium cursor-pointer">{p.name}</label>
-                                                <p className="text-xs text-muted-foreground">{p.description}</p>
-                                            </div>
+                                            <span className="font-semibold text-md">{category}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                     </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pb-4 pl-8">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                            {categoryPerms.map(p => (
+                                                <div key={p.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`perm-${p.id}`}
+                                                        checked={selectedPerms.includes(p.id)}
+                                                        onCheckedChange={() => handlePermissionToggle(p.id)}
+                                                    />
+                                                    <Label htmlFor={`perm-${p.id}`} className="font-normal text-sm cursor-pointer">{p.name.split(':').pop()?.trim()}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )
+                        })}
+                        </Accordion>
+                     )}
                 </div>
             </div>
             </ScrollArea>

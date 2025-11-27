@@ -1,7 +1,6 @@
 
 export const runtime = "nodejs";
-import NextAuth from 'next-auth';
-import { getServerSession } from 'next-auth/next';
+import NextAuth, { getServerSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -411,5 +410,3 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
-
-    

@@ -16,7 +16,7 @@ const CreateRoleSchema = z.object({
 });
 
 const UpdateRoleSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number(),
   name: z.string().min(2, 'Role name must be at least 2 characters'),
   permissions: z.array(z.number()).optional(),
   isAdmin: z.boolean().optional(),

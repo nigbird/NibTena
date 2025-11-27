@@ -198,48 +198,35 @@ async function main() {
   });
   // --- Seed Permissions ---
   const corePermissions = [
-    {
-      key: 'DOCTOR_MANAGE',
-      name: 'Doctor Management',
-      category: 'Doctors',
-      description: 'Create, update, delete, and view doctors',
-    },
-    {
-      key: 'APPOINTMENT_MANAGE',
-      name: 'Appointment Management',
-      category: 'Appointments',
-      description: 'Create, update and view appointments',
-    },
-    {
-      key: 'QUEUE_MANAGE',
-      name: 'Queue Management',
-      category: 'Queue',
-      description: 'Manage patient flow and queue',
-    },
-    {
-      key: 'SCHEDULE_MANAGE',
-      name: 'Schedule Management',
-      category: 'Schedules',
-      description: 'Manage doctors schedules',
-    },
-    {
-      key: 'REPORTS_VIEW',
-      name: 'Reports & Dashboard',
-      category: 'Reports',
-      description: 'View and generate analytics and reports',
-    },
-    {
-      key: 'USER_MANAGE',
-      name: 'User Management',
-      category: 'Users',
-      description: 'Create and manage staff users and roles',
-    },
+    // Doctors
+    { key: 'Doctors:View', name: 'View Doctors', category: 'Doctors', description: 'Can view doctor profiles and lists' },
+    { key: 'Doctors:Create', name: 'Create Doctors', category: 'Doctors', description: 'Can add new doctors to the hospital' },
+    { key: 'Doctors:Update', name: 'Update Doctors', category: 'Doctors', description: 'Can edit existing doctor details' },
+    { key: 'Doctors:Delete', name: 'Delete Doctors', category: 'Doctors', description: 'Can remove doctors from the hospital' },
+    // Appointments
+    { key: 'Appointments:View', name: 'View Appointments', category: 'Appointments', description: 'Can view all appointments' },
+    { key: 'Appointments:Create', name: 'Create Appointments', category: 'Appointments', description: 'Can book new appointments for patients' },
+    { key: 'Appointments:Update', name: 'Update Appointments', category: 'Appointments', description: 'Can reschedule or change appointment details' },
+    { key: 'Appointments:Cancel', name: 'Cancel Appointments', category: 'Appointments', description: 'Can cancel existing appointments' },
+    // Queue
+    { key: 'Queue:View', name: 'View Queue', category: 'Queue', description: 'Can view the live patient queue' },
+    { key: 'Queue:Manage', name: 'Manage Queue', category: 'Queue', description: 'Can update patient status in the queue (e.g., check-in)' },
+    // Schedules
+    { key: 'Schedules:View', name: 'View Schedules', category: 'Schedules', description: 'Can view doctor schedules' },
+    { key: 'Schedules:Manage', name: 'Manage Schedules', category: 'Schedules', description: 'Can create, update, and delete doctor schedules' },
+    // Reports
+    { key: 'Reports:View', name: 'View Reports', category: 'Reports', description: 'Can access and view all reports and analytics' },
+    // Users & Roles
+    { key: 'Users:View', name: 'View Users', category: 'Users', description: 'Can view staff users and their assigned roles' },
+    { key: 'Users:Manage', name: 'Manage Users', category: 'Users', description: 'Can create, update, and delete staff users' },
+    { key: 'Roles:View', name: 'View Roles', category: 'Roles', description: 'Can view roles and their permissions' },
+    { key: 'Roles:Manage', name: 'Manage Roles', category: 'Roles', description: 'Can create, update, and delete roles and their permissions' },
+    // Settings
+    { key: 'Settings:View', name: 'View Settings', category: 'Settings', description: 'Can view hospital settings' },
+    { key: 'Settings:Manage', name: 'Manage Settings', category: 'Settings', description: 'Can update hospital-wide settings' },
   ];
 
   for (const p of corePermissions) {
-    // upsert so seed is idempotent
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // @ts-ignore
     await prisma.permission.upsert({
       where: { key: p.key },
       update: {
@@ -267,5 +254,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-
-    

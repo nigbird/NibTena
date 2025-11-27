@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
 import { auth } from '@/../../auth';
+import { requirePermission } from '@/lib/permissions';
 
 const AddSpecialtySchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -25,6 +26,9 @@ export async function getHospitalSpecialties(hospitalId: number) {
 }
 
 export async function addSpecialty(hospitalId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
+  const allowed = await requirePermission('Settings:Manage');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   const raw = Object.fromEntries(formData.entries()) as any;
   const parsed = AddSpecialtySchema.safeParse(raw);
   if (!parsed.success) {
@@ -46,6 +50,9 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
 }
 
 export async function updateSpecialty(hospitalId: number, specialtyId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
+  const allowed = await requirePermission('Settings:Manage');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   const raw = Object.fromEntries(formData.entries()) as any;
   const parsed = AddSpecialtySchema.safeParse(raw);
   if (!parsed.success) {
@@ -53,7 +60,6 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
   }
 
   try {
-    // Ensure specialty belongs to hospital
     const spec = await prisma.specialty.findUnique({ where: { id: specialtyId } });
     if (!spec || spec.hospitalId !== hospitalId) return { message: 'Not found.', success: false };
 
@@ -89,6 +95,7 @@ export type GeneralSettingsState = {
   updatedHospital?: {
     name: string;
     imageUrl?: string | null;
+    city: string;
   }
 };
 
@@ -97,13 +104,12 @@ export async function updateHospitalGeneralSettings(
   prevState: GeneralSettingsState,
   formData: FormData
 ): Promise<GeneralSettingsState> {
-  const session = await auth();
-  if (session?.user?.role !== 'hospital' || session.user.hospitalId !== hospitalId) {
-    return { success: false, message: "Unauthorized." };
-  }
+  const allowed = await requirePermission('Settings:Manage');
+  if (!allowed) return { success: false, message: "Unauthorized." };
 
   const rawData = {
     name: formData.get('name'),
+    city: formData.get('city'),
     description: formData.get('description'),
     image: formData.get('image'),
   };
@@ -126,9 +132,10 @@ export async function updateHospitalGeneralSettings(
   const { name, description, image } = validatedFields.data;
 
   try {
-    const dataToUpdate: { name: string; description: string; imageUrl?: string } = {
+    const dataToUpdate: any = {
       name,
       description,
+      city: String(rawData.city),
     };
 
     if (image) {
@@ -149,6 +156,7 @@ export async function updateHospitalGeneralSettings(
       updatedHospital: {
         name: updatedHospital.name,
         imageUrl: updatedHospital.imageUrl,
+        city: updatedHospital.city,
       }
     };
   } catch (error) {
@@ -158,6 +166,9 @@ export async function updateHospitalGeneralSettings(
 }
 
 export async function toggleSpecialtyActive(specialtyId: number) {
+  const allowed = await requirePermission('Settings:Manage');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   try {
     const spec = await prisma.specialty.findUnique({ where: { id: specialtyId } });
     if (!spec) return { success: false, message: 'Not found.' };
@@ -171,6 +182,9 @@ export async function toggleSpecialtyActive(specialtyId: number) {
 }
 
 export async function deleteSpecialty(specialtyId: number) {
+  const allowed = await requirePermission('Settings:Manage');
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   try {
     await prisma.specialty.delete({ where: { id: specialtyId } });
     revalidatePath('/hospital-admin/settings');

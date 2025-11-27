@@ -10,12 +10,9 @@ import bcrypt from 'bcryptjs';
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
 const WINDOW_MS = 15 * 60 * 1000; // rolling window for attempts (15 minutes)
-const LOCKOUT_MS = 15 * 60 * 1000; // lockout duration after exceeding attempts (15 minutes)
+const LOCKOUT_MS = 30 * 60 * 1000; // lockout duration after exceeding attempts (30 minutes)
 
 // Database-backed rate limiting (Prisma RateLimit model)
-// We enforce two separate limits:
-// - Email-based: max 5 failed attempts in WINDOW_MS -> lock for LOCKOUT_MS
-// - IP-based: max 20 failed attempts in WINDOW_MS -> lock for LOCKOUT_MS
 const EMAIL_MAX_ATTEMPTS = 5;
 const IP_MAX_ATTEMPTS = 20;
 
@@ -36,18 +33,6 @@ async function isLocked(key: string): Promise<{ locked: boolean; until?: number 
   } catch (e) {
     console.error('[auth] isLocked check failed', e);
     return { locked: false };
-  }
-}
-
-function formatUnlockMessage(base: string, until?: number) {
-  try {
-    if (!until) return base;
-    const remainingMs = until - Date.now();
-    if (!remainingMs || remainingMs <= 0) return base;
-    const minutes = Math.ceil(remainingMs / 60000);
-    return `${base} Try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`;
-  } catch (e) {
-    return base;
   }
 }
 
@@ -145,13 +130,7 @@ const authOptions = {
           const lockedEmail = await isLocked(identKey);
           const lockedIp = await isLocked(ipKey);
           if (lockedEmail.locked || lockedIp.locked) {
-            // Determine which lock to message (prefer device/IP lock message when applicable)
-            const locked = lockedIp.locked ? lockedIp : lockedEmail;
-            let friendlyMsg = lockedIp.locked
-              ? 'Too many failed login attempts were detected from this device. Please try again later.'
-              : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
-            friendlyMsg = formatUnlockMessage(friendlyMsg, locked.until);
-            throw new Error(friendlyMsg);
+            throw new Error("Invalid credentials");
           }
           
           let user: any = null;
@@ -175,21 +154,8 @@ const authOptions = {
           }
 
           if (!user || !user.password) {
-            // record attempt for unknown user as well to avoid username enumeration abuse
             await recordFailedAttempt(identKey, 'email');
             await recordFailedAttempt(ipKey, 'ip');
-
-            // If this failed attempt caused a lock, surface the friendly lock message immediately
-            const nowLockedEmail = await isLocked(identKey);
-            const nowLockedIp = await isLocked(ipKey);
-            if (nowLockedIp.locked || nowLockedEmail.locked) {
-              const locked = nowLockedIp.locked ? nowLockedIp : nowLockedEmail;
-              const message = nowLockedIp.locked
-                ? 'Too many failed login attempts were detected from this device. Please try again later.'
-                : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
-              throw new Error(formatUnlockMessage(message, locked.until));
-            }
-
             return null; // User not found
           }
           
@@ -251,23 +217,11 @@ const authOptions = {
                 mustChangePassword,
               };
           }
-          // If we reach here and passwords didn't match, record the failed attempt for both email and IP
           await recordFailedAttempt(identKey, 'email');
           await recordFailedAttempt(ipKey, 'ip');
-
-          // If this failed attempt caused a lock, throw the friendly lock message immediately
-          const nowLockedEmail2 = await isLocked(identKey);
-          const nowLockedIp2 = await isLocked(ipKey);
-          if (nowLockedIp2.locked || nowLockedEmail2.locked) {
-            const locked = nowLockedIp2.locked ? nowLockedIp2 : nowLockedEmail2;
-            const message = nowLockedIp2.locked
-              ? 'Too many failed login attempts were detected from this device. Please try again later.'
-              : 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later.';
-            throw new Error(formatUnlockMessage(message, locked.until));
-          }
         }
         
-        return null; // Invalid credentials
+        throw new Error("Invalid credentials");
       },
     }),
   ],
@@ -367,13 +321,13 @@ const authOptions = {
           // If not admin, redirect to first allowed page based on permissions
           const permKeys: string[] = user?.permissionKeys || [];
           const PERM_PATH_MAP: Record<string, string> = {
-            'QUEUE_MANAGE': '/hospital-admin/queue',
-            'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
-            'DOCTOR_MANAGE': '/hospital-admin/doctors',
-            'SCHEDULE_MANAGE': '/hospital-admin/schedule',
-            'USER_MANAGE': '/hospital-admin/roles',
-            'REPORTS_VIEW': '/hospital-admin/reports',
-            'SETTINGS_MANAGE': '/hospital-admin/settings',
+            'Queue:View': '/hospital-admin/queue',
+            'Appointments:View': '/hospital-admin/appointments',
+            'Doctors:View': '/hospital-admin/doctors',
+            'Schedules:View': '/hospital-admin/schedule',
+            'Users:View': '/hospital-admin/roles',
+            'Reports:View': '/hospital-admin/reports',
+            'Settings:View': '/hospital-admin/settings',
           };
           const allowedPaths = permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[];
           const landing = allowedPaths[0] || '/hospital-admin/profile'; // Default to profile if no other page is allowed
@@ -404,13 +358,13 @@ const authOptions = {
 
         const permKeys: string[] = user?.permissionKeys || [];
         const PERM_PATH_MAP: Record<string, string> = {
-          'QUEUE_MANAGE': '/hospital-admin/queue',
-          'APPOINTMENT_MANAGE': '/hospital-admin/appointments',
-          'DOCTOR_MANAGE': '/hospital-admin/doctors',
-          'SCHEDULE_MANAGE': '/hospital-admin/schedule',
-          'USER_MANAGE': '/hospital-admin/roles',
-          'REPORTS_VIEW': '/hospital-admin/reports',
-          'SETTINGS_MANAGE': '/hospital-admin/settings',
+            'Queue:View': '/hospital-admin/queue',
+            'Appointments:View': '/hospital-admin/appointments',
+            'Doctors:View': '/hospital-admin/doctors',
+            'Schedules:View': '/hospital-admin/schedule',
+            'Users:View': '/hospital-admin/roles',
+            'Reports:View': '/hospital-admin/reports',
+            'Settings:View': '/hospital-admin/settings',
         };
 
         const allowedPrefixes = new Set<string>(permKeys.map(k => PERM_PATH_MAP[k]).filter(Boolean) as string[]);
@@ -455,3 +409,5 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
+
+    

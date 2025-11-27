@@ -1,3 +1,4 @@
+
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -62,7 +63,6 @@ export type ScheduleSaveState = {
   success?: boolean;
 };
 
-// ✅ FIXED — timezone-safe parsing so Monday never becomes Tuesday on server
 function parseTime(timeStr: string) {
     return parse(timeStr, 'HH:mm', new Date(Date.UTC(2000, 0, 1)));
 }
@@ -81,17 +81,8 @@ export async function saveDoctorSchedule(
     prevState: ScheduleSaveState,
     formData: FormData
 ): Promise<ScheduleSaveState> {
-    const { requireAnyPermission, isHospitalOwnerFor } = await import('@/lib/permissions');
-
-    let allowed = await requireAnyPermission(['SCHEDULE_MANAGE', 'SCHEDULE_CREATE', 'SCHEDULE_EDIT', 'SCHEDULE_DELETE']);
-    if (!allowed) {
-        try {
-            const ownerOk = await isHospitalOwnerFor(hospitalId);
-            if (ownerOk) allowed = true;
-        } catch (e) {
-            console.error('[saveDoctorSchedule] owner fallback error', e);
-        }
-    }
+    
+    const allowed = await requirePermission('Schedules:Manage');
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     const rawData = formData.get('scheduleData');

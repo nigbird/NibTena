@@ -34,16 +34,16 @@ import { Skeleton } from './ui/skeleton';
 
 const navLinks: { href: string; label: string; icon: any; permissionKey?: string }[] = [
   { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
-  { href: '/hospital-admin/doctors', label: 'Doctors', icon: Users, permissionKey: 'DOCTOR_MANAGE' },
-  { href: '/hospital-admin/appointments', label: 'Appointments', icon: ClipboardPlus, permissionKey: 'APPOINTMENT_MANAGE' },
-  { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays, permissionKey: 'SCHEDULE_MANAGE' },
-  { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered, permissionKey: 'QUEUE_MANAGE' },
-  { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart, permissionKey: 'REPORTS_VIEW' },
-  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield, permissionKey: 'USER_MANAGE' },
+  { href: '/hospital-admin/doctors', label: 'Doctors', icon: Users, permissionKey: 'Doctors:View' },
+  { href: '/hospital-admin/appointments', label: 'Appointments', icon: ClipboardPlus, permissionKey: 'Appointments:View' },
+  { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays, permissionKey: 'Schedules:View' },
+  { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered, permissionKey: 'Queue:View' },
+  { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart, permissionKey: 'Reports:View' },
+  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield, permissionKey: 'Users:View' }, // Or Roles:View
 ];
 
-// The main settings link, only for admins
-const settingsLink = { href: '/hospital-admin/settings', label: 'Settings', icon: Settings, permissionKey: 'SETTINGS_MANAGE' };
+// The main settings link, only for admins or those with specific settings perms
+const settingsLink = { href: '/hospital-admin/settings', label: 'Settings', icon: Settings };
 
 export default function HospitalAdminSidebar() {
   const pathname = usePathname();
@@ -97,12 +97,11 @@ export default function HospitalAdminSidebar() {
    // Filter navigation links based on permissions
   const visibleNavLinks = navLinks.filter(link => {
     if (isAdmin) return true; // Admins see everything
-    if (!link.permissionKey) return true; // Links without a key are public
+    if (!link.permissionKey) return true; // Links without a key are public to staff
     return permissionKeys.includes(link.permissionKey);
   });
   
-  // The main settings link is only visible to admins
-  const canSeeSettings = isAdmin || permissionKeys.includes('SETTINGS_MANAGE');
+  const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Manage');
 
   if (!session) {
     return (
@@ -188,5 +187,3 @@ export default function HospitalAdminSidebar() {
     </aside>
   );
 }
-
-    

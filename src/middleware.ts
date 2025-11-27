@@ -1,6 +1,7 @@
 
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import { routePermissions } from './route-permissions';
 
 export default withAuth(
   function middleware(req) {
@@ -68,6 +69,30 @@ export default withAuth(
         if (isSuperAdminRoute && token?.role !== 'superadmin') return false;
         if (isHospitalAdminRoute && token?.role !== 'hospital') return false;
         if (isDoctorPortalRoute && token?.role !== 'doctor') return false;
+
+        // Permission-based route protection for hospital staff (server-side)
+        // Tokens already include `permissionKeys` and `isAdmin` via our NextAuth JWT callback.
+        if (isHospitalAdminRoute && token?.role === 'hospital' && token?.isAdmin !== true) {
+          // Always allow the dashboard and profile change pages
+          if (pathname === '/hospital-admin' || pathname === '/hospital-admin/' || pathname.startsWith('/hospital-admin/profile')) return true;
+
+          const permKeys: string[] = (token as any)?.permissionKeys || [];
+
+          // Build allowed prefixes from the mapping file
+          const allowedPrefixes = new Set<string>();
+          for (const rp of routePermissions) {
+            if (permKeys.includes(rp.permission)) allowedPrefixes.add(rp.prefix);
+          }
+
+          // If user has no allowed prefixes, deny access to other hospital-admin pages
+          if (allowedPrefixes.size === 0) {
+            // Deny: return false -> NextAuth will route to sign-in redirect
+            return false;
+          }
+
+          const isPathAllowed = Array.from(allowedPrefixes).some(p => pathname.startsWith(p));
+          if (!isPathAllowed) return false;
+        }
 
         return true;
       },

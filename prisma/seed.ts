@@ -210,20 +210,26 @@ async function main() {
     { key: 'Appointments:Cancel', name: 'Cancel Appointments', category: 'Appointments', description: 'Can cancel existing appointments' },
     // Queue
     { key: 'Queue:View', name: 'View Queue', category: 'Queue', description: 'Can view the live patient queue' },
-    { key: 'Queue:Manage', name: 'Manage Queue', category: 'Queue', description: 'Can update patient status in the queue (e.g., check-in)' },
+    { key: 'Queue:Update', name: 'Update Queue', category: 'Queue', description: 'Can update patient status in the queue (e.g., check-in)' },
     // Schedules
     { key: 'Schedules:View', name: 'View Schedules', category: 'Schedules', description: 'Can view doctor schedules' },
-    { key: 'Schedules:Manage', name: 'Manage Schedules', category: 'Schedules', description: 'Can create, update, and delete doctor schedules' },
+    { key: 'Schedules:Create', name: 'Create Schedules', category: 'Schedules', description: 'Can create doctor schedules' },
+    { key: 'Schedules:Update', name: 'Update Schedules', category: 'Schedules', description: 'Can update existing doctor schedules' },
+    { key: 'Schedules:Delete', name: 'Delete Schedules', category: 'Schedules', description: 'Can delete doctor schedules' },
     // Reports
     { key: 'Reports:View', name: 'View Reports', category: 'Reports', description: 'Can access and view all reports and analytics' },
     // Users & Roles
     { key: 'Users:View', name: 'View Users', category: 'Users', description: 'Can view staff users and their assigned roles' },
-    { key: 'Users:Manage', name: 'Manage Users', category: 'Users', description: 'Can create, update, and delete staff users' },
+    { key: 'Users:Create', name: 'Create Users', category: 'Users', description: 'Can create staff users' },
+    { key: 'Users:Update', name: 'Update Users', category: 'Users', description: 'Can update staff users' },
+    { key: 'Users:Delete', name: 'Delete Users', category: 'Users', description: 'Can delete staff users' },
     { key: 'Roles:View', name: 'View Roles', category: 'Roles', description: 'Can view roles and their permissions' },
-    { key: 'Roles:Manage', name: 'Manage Roles', category: 'Roles', description: 'Can create, update, and delete roles and their permissions' },
+    { key: 'Roles:Create', name: 'Create Roles', category: 'Roles', description: 'Can create roles and assign permissions' },
+    { key: 'Roles:Update', name: 'Update Roles', category: 'Roles', description: 'Can update roles and their permissions' },
+    { key: 'Roles:Delete', name: 'Delete Roles', category: 'Roles', description: 'Can delete roles' },
     // Settings
     { key: 'Settings:View', name: 'View Settings', category: 'Settings', description: 'Can view hospital settings' },
-    { key: 'Settings:Manage', name: 'Manage Settings', category: 'Settings', description: 'Can update hospital-wide settings' },
+    { key: 'Settings:Update', name: 'Update Settings', category: 'Settings', description: 'Can update hospital-wide settings and data' },
   ];
 
   for (const p of corePermissions) {

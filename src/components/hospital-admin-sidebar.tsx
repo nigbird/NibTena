@@ -101,7 +101,7 @@ export default function HospitalAdminSidebar() {
     return permissionKeys.includes(link.permissionKey);
   });
   
-  const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Manage');
+  const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Update');
 
   if (!session) {
     return (

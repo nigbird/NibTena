@@ -33,7 +33,7 @@ export async function getHospitalSpecialties(hospitalId: number) {
 export async function addSpecialty(hospitalId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
   const session = await auth();
   if (!session?.user) return { success: false, message: 'Unauthorized' };
-  const allowed = await requireHospitalPermission('Settings:Manage', hospitalId);
+  const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const raw = Object.fromEntries(formData.entries()) as any;
@@ -59,7 +59,7 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
 export async function updateSpecialty(hospitalId: number, specialtyId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
   const session = await auth();
   if (!session?.user) return { success: false, message: 'Unauthorized' };
-  const allowed = await requireHospitalPermission('Settings:Manage', hospitalId);
+  const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const raw = Object.fromEntries(formData.entries()) as any;
@@ -120,7 +120,7 @@ export async function updateHospitalGeneralSettings(
 ): Promise<GeneralSettingsState> {
   const session = await auth();
   if (!session?.user) return { success: false, message: "Unauthorized." };
-  const allowed = await requireHospitalPermission('Settings:Manage', hospitalId);
+  const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: "Unauthorized." };
 
   const rawData = {
@@ -187,7 +187,7 @@ export async function toggleSpecialtyActive(specialtyId: number) {
   if (!spec) return { success: false, message: 'Not found.' };
   const session = await auth();
   if (!session?.user) return { success: false, message: 'Unauthorized' };
-  const allowed = await requireHospitalPermission('Settings:Manage', spec.hospitalId);
+  const allowed = await requireHospitalPermission('Settings:Update', spec.hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   try {
@@ -207,7 +207,7 @@ export async function deleteSpecialty(specialtyId: number) {
   if (!spec) return { success: false, message: 'Not found.' };
   const session = await auth();
   if (!session?.user) return { success: false, message: 'Unauthorized' };
-  const allowed = await requireHospitalPermission('Settings:Manage', spec.hospitalId);
+  const allowed = await requireHospitalPermission('Settings:Update', spec.hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   try {

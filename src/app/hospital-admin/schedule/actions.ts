@@ -85,7 +85,7 @@ export async function saveDoctorSchedule(
     const session = await auth();
     if (!session?.user) return { success: false, message: 'Unauthorized' };
 
-    const allowed = await requireHospitalPermission('Schedules:Manage', hospitalId);
+    const allowed = await requireHospitalPermission('Schedules:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     const rawData = formData.get('scheduleData');

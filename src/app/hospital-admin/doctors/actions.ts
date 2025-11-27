@@ -46,7 +46,10 @@ export async function saveDoctor(
   const session = await auth();
   if (!session?.user) return { message: 'Unauthorized', success: false };
 
-  const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+  // require different permissions depending on whether we're creating or updating
+  const isUpdate = !!doctorId;
+  const requiredPerm = isUpdate ? 'Doctors:Update' : 'Doctors:Create';
+  const allowed = await requireHospitalPermission(requiredPerm, hospitalId);
   if (!allowed) return { message: 'Unauthorized', success: false };
 
   const rawData = Object.fromEntries(formData.entries());
@@ -126,7 +129,7 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
     if (!hospitalId) return { success: false, message: 'Not found.' };
     const session = await auth();
     if (!session?.user) return { success: false, message: 'Unauthorized' };
-    const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+    const allowed = await requireHospitalPermission('Doctors:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
@@ -144,7 +147,7 @@ export async function deleteDoctor(doctorId: number) {
     if (!hospitalId) return { success: false, message: 'Not found.' };
     const session = await auth();
     if (!session?.user) return { success: false, message: 'Unauthorized' };
-    const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+    const allowed = await requireHospitalPermission('Doctors:Delete', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });

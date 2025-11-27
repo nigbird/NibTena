@@ -248,10 +248,12 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
     const selectedRole = useMemo(() => roles.find((r: Role) => r.id === selectedRoleId), [roles, selectedRoleId]);
     
     const groupedPermissions = useMemo(() => {
-        return permissions.reduce((acc: any, p: Permission) => {
-            (acc[p.category] = acc[p.category] || []).push(p);
-            return acc;
-        }, {});
+      return permissions.reduce((acc: any, p: Permission) => {
+        // Omit redundant "* Management" permissions (e.g. "Appointment Management")
+        if (/\bmanagement\b/i.test(p.name)) return acc;
+        (acc[p.category] = acc[p.category] || []).push(p);
+        return acc;
+      }, {});
     }, [permissions]);
 
     return (
@@ -314,14 +316,16 @@ function RoleManagementTab({ roles, permissions, onCreateRole, onEditRole, onDel
                            {selectedRole ? (
                                 <ScrollArea className="h-[22rem]">
                                     <div className="flex flex-wrap gap-2">
-                                        {selectedRole.permissions.length > 0 ? (
-                                            selectedRole.permissions.map(({permission}: {permission: Permission}) => (
-                                                <Badge key={permission.id} variant="outline" className="font-mono text-xs">
-                                                    {permission.key}
-                                                </Badge>
+                                        {selectedRole.permissions.filter(({permission}: {permission: Permission}) => !/\bmanagement\b/i.test(permission.name)).length > 0 ? (
+                                          selectedRole.permissions
+                                            .filter(({permission}: {permission: Permission}) => !/\bmanagement\b/i.test(permission.name))
+                                            .map(({permission}: {permission: Permission}) => (
+                                              <Badge key={permission.id} variant="outline" className="font-mono text-xs">
+                                                {permission.key}
+                                              </Badge>
                                             ))
                                         ) : (
-                                            <p className="text-sm text-muted-foreground">This role has no permissions assigned.</p>
+                                          <p className="text-sm text-muted-foreground">This role has no permissions assigned.</p>
                                         )}
                                     </div>
                                </ScrollArea>
@@ -393,6 +397,8 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
 
   const groupedPermissions = useMemo(() => {
     return permissions.reduce((acc: any, p: Permission) => {
+      // Omit redundant "* Management" permissions (e.g. "Appointment Management")
+      if (/\bmanagement\b/i.test(p.name)) return acc;
       (acc[p.category] = acc[p.category] || []).push(p);
       return acc;
     }, {});

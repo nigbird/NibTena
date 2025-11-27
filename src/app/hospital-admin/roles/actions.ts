@@ -3,7 +3,8 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requirePermission } from '@/lib/permissions';
+import { requirePermission, requireHospitalPermission } from '@/lib/permissions';
+import { auth } from '@/../../auth';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -57,7 +58,10 @@ export async function getRoleById(roleId: number) {
 }
 
 export async function createRole(hospitalId: number, formData: FormData) {
-  const allowed = await requirePermission('Roles:Manage');
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  const allowed = await requireHospitalPermission('Roles:Manage', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
@@ -95,12 +99,18 @@ export async function createRole(hospitalId: number, formData: FormData) {
 }
 
 export async function updateRole(formData: FormData) {
-  const allowed = await requirePermission('Roles:Manage');
-  if (!allowed) return { success: false, message: 'Unauthorized' };
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
 
   const raw = Object.fromEntries(formData.entries());
+  const roleId = Number(raw.id);
+  // require permission in the hospital the role belongs to (lookup role)
+  const roleRec = await prisma.role.findUnique({ where: { id: roleId }, select: { hospitalId: true } });
+  const allowed = roleRec ? await requireHospitalPermission('Roles:Manage', roleRec.hospitalId) : false;
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
   const parsed = UpdateRoleSchema.safeParse({
-    id: Number(raw.id),
+    id: roleId,
     name: String(raw.name || ''),
     permissions: raw.permissions ? JSON.parse(String(raw.permissions)) : undefined,
     isAdmin: raw.isAdmin === 'true' || raw.isAdmin === true,
@@ -134,7 +144,11 @@ export async function updateRole(formData: FormData) {
 }
 
 export async function deleteRole(roleId: number) {
-  const allowed = await requirePermission('Roles:Manage');
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  const roleRec = await prisma.role.findUnique({ where: { id: roleId }, select: { hospitalId: true } });
+  const allowed = roleRec ? await requireHospitalPermission('Roles:Manage', roleRec.hospitalId) : false;
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   try {
@@ -150,6 +164,11 @@ export async function deleteRole(roleId: number) {
 }
 
 export async function getUsersByHospitalId(hospitalId: number) {
+  const session = await auth();
+  if (!session?.user) return [];
+  const allowed = await requireHospitalPermission('Users:View', hospitalId);
+  if (!allowed) return [];
+
   const hospital = await prisma.hospital.findUnique({
     where: { id: hospitalId },
     select: { contactEmail: true },
@@ -171,7 +190,10 @@ export async function getUsersByHospitalId(hospitalId: number) {
 }
 
 export async function createUser(hospitalId: number, formData: FormData) {
-  const allowed = await requirePermission('Users:Manage');
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  const allowed = await requireHospitalPermission('Users:Manage', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const raw = Object.fromEntries(formData.entries());
@@ -210,7 +232,12 @@ export async function createUser(hospitalId: number, formData: FormData) {
 }
 
 export async function updateUser(userId: number, formData: FormData) {
-  const allowed = await requirePermission('Users:Manage');
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  // Ensure user belongs to same hospital
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
+  const allowed = target ? await requireHospitalPermission('Users:Manage', target.hospitalId) : false;
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const raw = Object.fromEntries(formData.entries()) as any;
@@ -251,7 +278,11 @@ export async function updateUser(userId: number, formData: FormData) {
 }
 
 export async function deleteUser(userId: number) {
-  const allowed = await requirePermission('Users:Manage');
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
+  const allowed = target ? await requireHospitalPermission('Users:Manage', target.hospitalId) : false;
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   try {

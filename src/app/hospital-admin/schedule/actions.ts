@@ -2,7 +2,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { requirePermission } from '@/lib/permissions';
+import { requireHospitalPermission } from '@/lib/permissions';
+import { auth } from '@/../../auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { TimeSlot } from '@/lib/definitions';
@@ -81,8 +82,10 @@ export async function saveDoctorSchedule(
     prevState: ScheduleSaveState,
     formData: FormData
 ): Promise<ScheduleSaveState> {
-    
-    const allowed = await requirePermission('Schedules:Manage');
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+    const allowed = await requireHospitalPermission('Schedules:Manage', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     const rawData = formData.get('scheduleData');

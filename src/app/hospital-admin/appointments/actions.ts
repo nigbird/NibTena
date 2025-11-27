@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
 import { format, parseISO, getDay, parse as parseTime } from 'date-fns';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/../../auth';
+import { requireHospitalPermission } from '@/lib/permissions';
 import { isTimeInRanges, isBefore, isEqual, isAfter } from '@/lib/time-utils';
 
 const AppointmentFormSchema = z.object({
@@ -48,6 +50,11 @@ export async function saveAppointment(
   prevState: AppointmentFormState, 
   formData: FormData
 ): Promise<AppointmentFormState> {
+  const session = await auth();
+  if (!session?.user) return { success: false, message: 'Unauthorized' };
+
+  const allowed = await requireHospitalPermission('Appointments:Manage', hospitalId);
+  if (!allowed) return { success: false, message: 'Unauthorized' };
   const validatedFields = AppointmentFormSchema.safeParse(Object.fromEntries(formData));
 
   if (!validatedFields.success) {
@@ -131,6 +138,13 @@ export async function saveAppointment(
 
 export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') {
   try {
+    const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: { hospitalId: true } });
+    if (!appt) return { success: false, message: 'Not found.' };
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const allowed = await requireHospitalPermission('Appointments:Manage', appt.hospitalId);
+    if (!allowed) return { success: false, message: 'Unauthorized' };
+
     const updatedAppointment = await prisma.appointment.update({ where: { id: appointmentId }, data: { status } });
     revalidatePath('/hospital-admin/appointments');
     revalidatePath(`/doctor-portal/appointments`);
@@ -141,16 +155,28 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'co
 }
 
 export async function deleteAppointment(appointmentId: string) {
-    try {
-        await prisma.appointment.delete({ where: { id: appointmentId } });
-        revalidatePath('/hospital-admin/appointments');
-        return { success: true, message: 'Appointment deleted successfully.' };
-    } catch (error) {
-        return { success: false, message: 'Database Error: Failed to delete appointment.' };
-    }
+  try {
+    const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: { hospitalId: true } });
+    if (!appt) return { success: false, message: 'Not found.' };
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const allowed = await requireHospitalPermission('Appointments:Manage', appt.hospitalId);
+    if (!allowed) return { success: false, message: 'Unauthorized' };
+
+    await prisma.appointment.delete({ where: { id: appointmentId } });
+    revalidatePath('/hospital-admin/appointments');
+    return { success: true, message: 'Appointment deleted successfully.' };
+  } catch (error) {
+    return { success: false, message: 'Database Error: Failed to delete appointment.' };
+  }
 }
 
 export async function getAppointments(hospitalId: number, page: number, limit: number, query: string) {
+    const session = await auth();
+    if (!session?.user) return [];
+    const allowed = await requireHospitalPermission('Appointments:View', hospitalId);
+    if (!allowed) return [];
+
     const where = {
         hospitalId,
         ...(query && {
@@ -172,6 +198,11 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
 }
 
 export async function getAppointmentsCount(hospitalId: number, query: string) {
+    const session = await auth();
+    if (!session?.user) return 0;
+    const allowed = await requireHospitalPermission('Appointments:View', hospitalId);
+    if (!allowed) return 0;
+
     const where = {
         hospitalId,
         ...(query && {

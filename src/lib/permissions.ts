@@ -78,3 +78,25 @@ export async function isHospitalOwnerFor(hospitalId: number): Promise<boolean> {
         return false;
     }
 }
+
+export async function requireHospitalPermission(key: string, hospitalId: number): Promise<boolean> {
+  try {
+    const session = await auth();
+    if (!session?.user) return false;
+    const user: any = session.user;
+
+    // Superadmins and global admins have access
+    if (user.isAdmin) return true;
+
+    // Hospital-scoped users must belong to the hospital
+    if (user.role === 'hospital' && user.hospitalId === hospitalId) {
+      const permissionKeys = user.permissionKeys || [];
+      return permissionKeys.includes(key);
+    }
+
+    return false;
+  } catch (error) {
+    console.error(`[requireHospitalPermission] Error checking permission for key "${key}" and hospital ${hospitalId}:`, error);
+    return false;
+  }
+}

@@ -2,8 +2,16 @@
 
 import { prisma } from '@/lib/prisma';
 import type { Appointment, Doctor } from '@/lib/definitions';
+import { auth } from '@/../../auth';
+import { requireHospitalPermission } from '@/lib/permissions';
 
 export async function getReportData(hospitalId: number) {
+  const session = await auth();
+  if (!session?.user) return { appointments: [], doctors: [], stats: { totalAppointments: 0, cancelledAppointments: 0, rescheduledAppointments: 0, totalRevenue: 0 }, doctorRevenueBreakdown: [] };
+
+  const allowed = await requireHospitalPermission('Reports:View', hospitalId);
+  if (!allowed) return { appointments: [], doctors: [], stats: { totalAppointments: 0, cancelledAppointments: 0, rescheduledAppointments: 0, totalRevenue: 0 }, doctorRevenueBreakdown: [] };
+
   const [appointments, doctors] = await Promise.all([
     prisma.appointment.findMany({
       where: { hospitalId },

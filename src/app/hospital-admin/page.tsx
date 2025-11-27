@@ -23,6 +23,20 @@ export default async function HospitalAdminDashboard() {
   
   const hospitalId = session.user.hospitalId;
 
+  // Enforce that the user has at least one hospital-level view permission or is an admin
+  const { requireHospitalPermission } = await import('@/lib/permissions');
+  const canView = (session.user as any).isAdmin === true
+    || await requireHospitalPermission('Appointments:View', hospitalId)
+    || await requireHospitalPermission('Doctors:View', hospitalId)
+    || await requireHospitalPermission('Users:View', hospitalId)
+    || await requireHospitalPermission('Queue:View', hospitalId)
+    || await requireHospitalPermission('Reports:View', hospitalId)
+    || await requireHospitalPermission('Settings:View', hospitalId);
+
+  if (!canView) {
+    redirect('/hospital-admin/profile');
+  }
+
   const hospital = await prisma.hospital.findUnique({
     where: { id: hospitalId },
   });

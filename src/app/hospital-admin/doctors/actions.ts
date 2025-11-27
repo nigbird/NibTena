@@ -3,6 +3,8 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/../../auth';
+import { requireHospitalPermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
@@ -41,6 +43,12 @@ export async function saveDoctor(
   prevState: DoctorFormState, 
   formData: FormData
 ): Promise<DoctorFormState> {
+  const session = await auth();
+  if (!session?.user) return { message: 'Unauthorized', success: false };
+
+  const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+  if (!allowed) return { message: 'Unauthorized', success: false };
+
   const rawData = Object.fromEntries(formData.entries());
   
   if (doctorId && !rawData.password) {
@@ -112,6 +120,15 @@ export async function saveDoctor(
 
 export async function updateDoctorStatus(doctorId: number, status: 'active' | 'inactive') {
   try {
+    // ensure permission for the hospital(s) the doctor is associated with
+    const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { hospitals: { select: { hospitalId: true } } } });
+    const hospitalId = doc?.hospitals?.[0]?.hospitalId;
+    if (!hospitalId) return { success: false, message: 'Not found.' };
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+    if (!allowed) return { success: false, message: 'Unauthorized' };
+
     await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
     revalidatePath('/hospital-admin/doctors');
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
@@ -122,9 +139,17 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
 
 export async function deleteDoctor(doctorId: number) {
     try {
-        await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });
-        await prisma.appointment.deleteMany({ where: { doctorId } });
-        await prisma.doctor.delete({ where: { id: doctorId } });
+    const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { hospitals: { select: { hospitalId: true } } } });
+    const hospitalId = doc?.hospitals?.[0]?.hospitalId;
+    if (!hospitalId) return { success: false, message: 'Not found.' };
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const allowed = await requireHospitalPermission('Doctors:Manage', hospitalId);
+    if (!allowed) return { success: false, message: 'Unauthorized' };
+
+    await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });
+    await prisma.appointment.deleteMany({ where: { doctorId } });
+    await prisma.doctor.delete({ where: { id: doctorId } });
         revalidatePath('/hospital-admin/doctors');
         return { success: true, message: 'Doctor deleted successfully.' };
     } catch (error) {
@@ -133,6 +158,11 @@ export async function deleteDoctor(doctorId: number) {
 }
 
 export async function getDoctors(hospitalId: number, page: number, limit: number, query: string) {
+    const session = await auth();
+    if (!session?.user) return [];
+    const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
+    if (!allowed) return [];
+
     const where = {
         hospitals: { some: { hospitalId } },
         ...(query && {
@@ -158,6 +188,11 @@ export async function getDoctors(hospitalId: number, page: number, limit: number
 }
 
 export async function getDoctorsCount(hospitalId: number, query: string) {
+  const session = await auth();
+  if (!session?.user) return 0;
+  const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
+  if (!allowed) return 0;
+
   const where = {
         hospitals: { some: { hospitalId } },
         ...(query && {

@@ -35,7 +35,7 @@ const UpdateUserSchema = CreateUserSchema.extend({
 });
 
 export async function getAllPermissions() {
-  return await prisma.permission.findMany({ orderBy: { category: 'asc', name: 'asc' } });
+  return await prisma.permission.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
 }
 
 export async function getRolesByHospitalId(hospitalId: number) {

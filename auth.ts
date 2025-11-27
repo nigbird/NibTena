@@ -6,6 +6,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import Redis from 'ioredis';
 
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
@@ -130,7 +131,7 @@ const authOptions = {
           const lockedEmail = await isLocked(identKey);
           const lockedIp = await isLocked(ipKey);
           if (lockedEmail.locked || lockedIp.locked) {
-            throw new Error("Invalid credentials");
+            throw new Error("Invalid credentials. Account is temporarily locked.");
           }
           
           let user: any = null;
@@ -156,7 +157,7 @@ const authOptions = {
           if (!user || !user.password) {
             await recordFailedAttempt(identKey, 'email');
             await recordFailedAttempt(ipKey, 'ip');
-            return null; // User not found
+            throw new Error("Invalid credentials");
           }
           
           const passwordsMatch = await bcrypt.compare(password, user.password);
@@ -197,7 +198,8 @@ const authOptions = {
                       }
                     }
                   } else { 
-                    isAdmin = true; // Treat main hospital account as admin by default
+                    // This is the main hospital account, not a staff member. Grant admin access.
+                    isAdmin = true;
                     const all = await prisma.permission.findMany({ select: { key: true } });
                     permissionKeys = all.map(p => p.key);
                   }

@@ -197,7 +197,7 @@ const authOptions = {
                       }
                     }
                   } else { 
-                    // This is the main hospital account, not a staff member. Grant admin access.
+                    // This is the main hospital account, not a staff member. Grant admin access by default.
                     isAdmin = true;
                     const all = await prisma.permission.findMany({ select: { key: true } });
                     permissionKeys = all.map(p => p.key);

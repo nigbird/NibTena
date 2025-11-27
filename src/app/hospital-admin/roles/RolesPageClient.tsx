@@ -66,6 +66,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
 
 
 type Permission = { id: number; name: string; description: string; category: string, key: string };
@@ -605,3 +606,5 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
   );
 }
 // #endregion
+
+    

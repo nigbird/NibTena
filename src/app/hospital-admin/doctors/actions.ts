@@ -140,24 +140,31 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
   }
 }
 
-export async function deleteDoctor(doctorId: number) {
-    try {
+export async function deleteDoctor(doctorId: number): Promise<{ success: boolean; message: string }> {
+  try {
     const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { hospitals: { select: { hospitalId: true } } } });
     const hospitalId = doc?.hospitals?.[0]?.hospitalId;
-    if (!hospitalId) return { success: false, message: 'Not found.' };
+    if (!hospitalId) return { success: false, message: 'Doctor not found or not associated with a hospital.' };
+    
     const session = await auth();
     if (!session?.user) return { success: false, message: 'Unauthorized' };
+    
     const allowed = await requireHospitalPermission('Doctors:Delete', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
-    await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId } });
-    await prisma.appointment.deleteMany({ where: { doctorId } });
-    await prisma.doctor.delete({ where: { id: doctorId } });
-        revalidatePath('/hospital-admin/doctors');
-        return { success: true, message: 'Doctor deleted successfully.' };
-    } catch (error) {
-        return { success: false, message: 'Database Error: Failed to delete doctor.' };
-    }
+    await prisma.$transaction(async (tx) => {
+        await tx.appointment.deleteMany({ where: { doctorId } });
+        await tx.doctorSchedule.deleteMany({ where: { doctorId } });
+        await tx.doctorsOnHospitals.deleteMany({ where: { doctorId } });
+        await tx.doctor.delete({ where: { id: doctorId } });
+    });
+
+    revalidatePath('/hospital-admin/doctors');
+    return { success: true, message: 'Doctor deleted successfully.' };
+  } catch (error) {
+    console.error("Failed to delete doctor:", error);
+    return { success: false, message: 'Database Error: Failed to delete doctor.' };
+  }
 }
 
 export async function getDoctors(hospitalId: number, page: number, limit: number, query: string) {
@@ -193,7 +200,7 @@ export async function getDoctors(hospitalId: number, page: number, limit: number
 export async function getDoctorsCount(hospitalId: number, query: string) {
   const session = await auth();
   if (!session?.user) return 0;
-  const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
+  const allowed = await requireHospitalPermission('Users:View', hospitalId);
   if (!allowed) return 0;
 
   const where = {

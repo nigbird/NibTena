@@ -141,11 +141,11 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
     await prisma.$transaction(async (tx) => {
       const doctorsInHospital = await tx.doctor.findMany({
         where: { hospitals: { some: { hospitalId } } },
-        include: { hospitals: true },
+        select: { id: true, _count: { select: { hospitals: true } } },
       });
 
       const doctorsToDelete = doctorsInHospital
-        .filter(d => d.hospitals.length === 1 && d.hospitals[0].hospitalId === hospitalId)
+        .filter(d => d._count.hospitals === 1)
         .map(d => d.id);
 
       await tx.appointment.deleteMany({ where: { hospitalId } });

@@ -176,11 +176,11 @@ export default function DoctorProfilePage() {
                                 <Input id="experience" name="experience" type="number" defaultValue={doctor.experience || ''} required />
                                 {profileState.errors?.experience && <p className="text-sm font-medium text-destructive">{profileState.errors.experience[0]}</p>}
                             </div>
-                            {/* <div className="space-y-2">
+                            <div className="space-y-2">
                                 <Label htmlFor="consultationFee">Consultation Fee (ETB)</Label>
-                                <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctor.consultationFee} required />
+                                <Input id="consultationFee" name="consultationFee" type="number" defaultValue={doctor.consultationFee} required readOnly />
                                 {profileState.errors?.consultationFee && <p className="text-sm font-medium text-destructive">{profileState.errors.consultationFee[0]}</p>}
-                            </div> */}
+                            </div>
                         </div>
 
                         <div className="space-y-2">

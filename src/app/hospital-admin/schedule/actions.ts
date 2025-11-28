@@ -38,6 +38,7 @@ export async function getHospitalSettings(hospitalId: number) {
         select: {
             startTime: true,
             endTime: true,
+            bookingWindow: true
         }
     });
 }
@@ -211,5 +212,65 @@ export async function saveDoctorSchedule(
     } catch (error) {
         console.error("Failed to save schedule:", error);
         return { success: false, message: 'A database error occurred.' };
+    }
+}
+
+
+const HospitalSettingsSchema = z.object({
+    bookingWindow: z.coerce.number().min(1, "Booking window must be at least 1 day."),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid start time format."),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid end time format."),
+}).refine(data => isBefore(parseTime(data.startTime, 'HH:mm', new Date()), parseTime(data.endTime, 'HH:mm', new Date())), {
+    message: "End time must be after start time.",
+    path: ["endTime"],
+});
+
+type HospitalSettingsState = {
+  errors?: z.infer<typeof HospitalSettingsSchema>['formErrors']['fieldErrors'];
+  message?: string | null;
+  success?: boolean;
+  updatedSettings?: {
+      bookingWindow: number,
+      startTime: string,
+      endTime: string
+  }
+};
+
+export async function updateHospitalSettings(hospitalId: number, prevState: HospitalSettingsState, formData: FormData): Promise<HospitalSettingsState> {
+    const session = await auth();
+    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
+    if (!allowed) return { success: false, message: 'Unauthorized' };
+
+    const validatedFields = HospitalSettingsSchema.safeParse({
+        bookingWindow: formData.get('bookingWindow'),
+        startTime: formData.get('startTime'),
+        endTime: formData.get('endTime'),
+    });
+
+    if (!validatedFields.success) {
+        return { success: false, errors: validatedFields.error.flatten().fieldErrors };
+    }
+
+    try {
+        const updated = await prisma.hospital.update({
+            where: { id: hospitalId },
+            data: validatedFields.data,
+        });
+
+        revalidatePath('/hospital-admin/schedule');
+        return { 
+            success: true, 
+            message: 'Hospital settings updated.',
+            updatedSettings: {
+                bookingWindow: updated.bookingWindow,
+                startTime: updated.startTime,
+                endTime: updated.endTime,
+            }
+        };
+
+    } catch (error) {
+        console.error("Failed to update hospital settings:", error);
+        return { success: false, message: "A database error occurred." };
     }
 }

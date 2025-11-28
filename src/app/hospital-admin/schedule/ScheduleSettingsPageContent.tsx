@@ -8,26 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Clock, Settings, PlusCircle } from "lucide-react";
 import type { Doctor } from '@/lib/definitions';
-import { getDoctorsByHospitalId, getHospitalSettings } from './actions';
+import { getDoctorsByHospitalId, getHospitalSettings, updateHospitalSettings } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import DoctorScheduleDisplay from '@/components/hospital-admin/doctor-schedule-display';
+import { useActionState } from 'react';
 
 
 export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId: number }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [bookingWindow, setBookingWindow] = useState('30');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('18:00');
+  
+  const [initialSettings, setInitialSettings] = useState({ bookingWindow: '30', startTime: '09:00', endTime: '18:00' });
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  const [updateState, updateAction] = useActionState(updateHospitalSettings.bind(null, hospitalId), { success: false, message: null, errors: {} });
+
 
   const fetchDoctorsAndSettings = useCallback(async () => {
     setIsLoading(true);
@@ -38,8 +39,11 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
       ]);
       setDoctors(doctorsData);
       if (settingsData) {
-        setStartTime(settingsData.startTime);
-        setEndTime(settingsData.endTime);
+        setInitialSettings({
+            startTime: settingsData.startTime,
+            endTime: settingsData.endTime,
+            bookingWindow: String(settingsData.bookingWindow)
+        });
       }
     } catch (error) {
        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch data.'});
@@ -52,26 +56,36 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
     fetchDoctorsAndSettings();
   }, [fetchDoctorsAndSettings]);
 
-  const handleEditScheduleClick = (doctor: Doctor) => {
+  const handleEditScheduleClick = (doctor: Doctor | null) => {
     setSelectedDoctor(doctor);
-    setIsEditDrawerOpen(true);
+    setIsDrawerOpen(true);
   };
-  
-  const handleDrawerClose = useCallback(() => {
-    setIsEditDrawerOpen(false);
-    setIsAddDrawerOpen(false);
-    setSelectedDoctor(null);
-    fetchDoctorsAndSettings();
-  }, [fetchDoctorsAndSettings]);
 
-  const handleHospitalSettingsSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    // This should be a server action
-    toast({
-      title: 'Settings Saved',
-      description: 'Hospital-wide booking rules have been updated.',
-    });
-  };
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    setSelectedDoctor(null);
+    // No need to refetch here, the drawer's success handler will manage it.
+  }, []);
+  
+  const handleScheduleSaved = () => {
+      fetchDoctorsAndSettings(); // Refetch all data when a schedule is saved
+  }
+
+  useEffect(() => {
+    if (updateState.success) {
+      toast({ title: 'Settings Saved', description: updateState.message });
+      if (updateState.updatedSettings) {
+        setInitialSettings({
+            startTime: updateState.updatedSettings.startTime,
+            endTime: updateState.updatedSettings.endTime,
+            bookingWindow: String(updateState.updatedSettings.bookingWindow)
+        })
+      }
+    } else if (updateState.message) {
+      toast({ variant: 'destructive', title: 'Error', description: updateState.message });
+    }
+  }, [updateState, toast])
+
 
   return (
     <div className="space-y-8">
@@ -80,27 +94,19 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
           <h1 className="text-3xl font-bold tracking-tight font-headline">Schedule Settings</h1>
           <p className="text-lg text-muted-foreground">Configure doctor availability and hospital-wide booking rules.</p>
         </div>
-         <Button onClick={() => setIsAddDrawerOpen(true)}>
+         <Button onClick={() => handleEditScheduleClick(null)}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Schedule
+          Add/Edit Schedule
         </Button>
       </div>
 
-      {selectedDoctor && (
-        <DoctorScheduleDrawer
-          isOpen={isEditDrawerOpen}
-          setIsOpen={handleDrawerClose}
+      <DoctorScheduleDrawer
+          isOpen={isDrawerOpen}
+          setIsOpen={setIsDrawerOpen}
           doctor={selectedDoctor}
+          doctors={doctors}
           hospitalId={hospitalId}
-        />
-      )}
-      
-      <AddScheduleDrawer
-        isOpen={isAddDrawerOpen}
-        setIsOpen={setIsAddDrawerOpen}
-        doctors={doctors}
-        hospitalId={hospitalId}
-        onScheduleSaved={handleDrawerClose}
+          onScheduleSaved={handleScheduleSaved}
        />
 
       <Card>
@@ -150,7 +156,7 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
     </CardContent>
       </Card>
 
-      <form onSubmit={handleHospitalSettingsSave}>
+      <form action={updateAction}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -161,16 +167,17 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="booking-window">Booking Window Limit (Days)</Label>
+              <Label htmlFor="bookingWindow">Booking Window Limit (Days)</Label>
               <Input 
-                id="booking-window" 
+                id="bookingWindow" 
+                name="bookingWindow"
                 type="number" 
                 placeholder="e.g., 30" 
-                value={bookingWindow}
-                onChange={(e) => setBookingWindow(e.target.value)}
+                defaultValue={initialSettings.bookingWindow}
                 className="max-w-xs" 
               />
               <p className="text-sm text-muted-foreground">How many days in advance patients can book.</p>
+              {updateState.errors?.bookingWindow && <p className="text-destructive text-sm">{updateState.errors.bookingWindow[0]}</p>}
             </div>
             <div className="space-y-2">
               <Label>Hospital Working Hours</Label>
@@ -179,8 +186,8 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <Input 
                     type="time" 
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    name="startTime"
+                    defaultValue={initialSettings.startTime}
                     className="max-w-xs" 
                   />
                 </div>
@@ -189,13 +196,15 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <Input 
                     type="time" 
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    name="endTime"
+                    defaultValue={initialSettings.endTime}
                     className="max-w-xs" 
                   />
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">The general opening and closing times for the hospital.</p>
+              {updateState.errors?.startTime && <p className="text-destructive text-sm">{updateState.errors.startTime[0]}</p>}
+               {updateState.errors?.endTime && <p className="text-destructive text-sm">{updateState.errors.endTime[0]}</p>}
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">

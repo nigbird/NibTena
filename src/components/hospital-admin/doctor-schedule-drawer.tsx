@@ -40,12 +40,15 @@ const shiftTemplates = {
 };
 
 
-export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospitalId }: {
+export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospitalId, doctors, onScheduleSaved }: {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  doctor: Doctor;
+  doctor?: Doctor | null; // Optional: for editing
   hospitalId: number;
+  doctors?: Doctor[]; // Optional: for adding
+  onScheduleSaved?: () => void; // Make this optional too
 }) {
+  const isEditing = !!doctor;
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [schedules, setSchedules] = useState<DaySchedule[]>(
@@ -57,6 +60,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const [copySourceDay, setCopySourceDay] = useState<string | null>(null);
   const [copyTargetDays, setCopyTargetDays] = useState<string[]>([]);
 
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
+
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
@@ -64,8 +69,10 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
+      const doctorIdToFetch = isEditing ? doctor?.id : Number(selectedDoctorId);
+
       Promise.all([
-        getDoctorSchedules(doctor.id, hospitalId),
+        (isEditing || selectedDoctorId) ? getDoctorSchedules(doctorIdToFetch!, hospitalId) : Promise.resolve([]),
         getHospitalSettings(hospitalId)
       ]).then(([data, settings]) => {
         setHospitalHours(settings);
@@ -73,8 +80,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
           const existing = data.find(d => d.dayOfWeek === day);
           if (existing) {
              const workingHours = existing.workingHours as TimeSlot[];
-             // A simple heuristic to guess the shift based on times.
-             // This can be improved if the shift type was stored in the DB.
              let shift = 'custom';
              if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '18:00') {
                 shift = 'full_day';
@@ -91,23 +96,32 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         setSchedules(newSchedules);
         setIsLoading(false);
       });
+    } else {
+        setSelectedDoctorId(undefined);
     }
-  }, [isOpen, doctor, hospitalId]);
+  }, [isOpen, doctor, hospitalId, selectedDoctorId, isEditing]);
 
   useEffect(() => {
     if (state.success) {
       toast({ title: "Success", description: state.message });
+      onScheduleSaved?.();
       setIsOpen(false);
     } else if (state.message) {
       toast({ variant: "destructive", title: "Error", description: state.message || 'Please correct the errors below.' });
     }
-  }, [state, toast, setIsOpen]);
+  }, [state, toast, setIsOpen, onScheduleSaved]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const currentDoctorId = isEditing ? doctor.id : Number(selectedDoctorId);
+    if (!currentDoctorId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a doctor.' });
+        return;
+    }
+
     const formData = new FormData();
     const scheduleData = {
-        doctorId: doctor.id,
+        doctorId: currentDoctorId,
         schedules: schedules
     };
     formData.append('scheduleData', JSON.stringify(scheduleData));
@@ -151,6 +165,14 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         : s
     ));
   };
+
+  const handlePatientsPerHourChange = (day: string, value: string) => {
+    setSchedules(prev => prev.map(s => 
+        s.dayOfWeek === day 
+        ? { ...s, patientsPerHour: Number(value) }
+        : s
+    ));
+  };
   
   const addSlot = (day: string, type: 'workingHours' | 'breakHours') => {
      setSchedules(prev => prev.map(s => 
@@ -191,13 +213,31 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-3xl w-full flex flex-col">
         <SheetHeader>
-          <SheetTitle>Edit Schedule for {doctor.name}</SheetTitle>
+          <SheetTitle>{isEditing ? `Edit Schedule for ${doctor.name}` : 'Add New Doctor Schedule'}</SheetTitle>
           <SheetDescription>
-            Define the weekly available days and working hours for this doctor.
+            Define the weekly available days and working hours for the doctor.
           </SheetDescription>
         </SheetHeader>
         <form id="schedule-form" onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-          {isLoading ? <p className="py-10 text-center">Loading schedule...</p> : (
+            {!isEditing && (
+                <div className="space-y-2 py-4">
+                    <Label htmlFor="doctorId">Doctor</Label>
+                    <Select name="doctorId" required value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                        <SelectTrigger id="doctorId">
+                            <SelectValue placeholder="Select a doctor to create a schedule for" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {doctors?.map(doc => (
+                                <SelectItem key={doc.id} value={doc.id.toString()}>
+                                    {doc.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+            
+          {(isLoading) ? <p className="py-10 text-center">Loading schedule...</p> : (
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-4 py-4">
                  <Popover>
@@ -289,7 +329,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                            )}
                            <div className="space-y-2">
                                 <Label className="text-xs font-semibold">Patients Per Hour</Label>
-                                <Input type="number" value={daySchedule.patientsPerHour} min="1" max="12" onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'patientsPerHour', 0, 'patientsPerHour', e.target.value)} className="w-24 h-9"/>
+                                <Input type="number" value={daySchedule.patientsPerHour} min="1" max="12" onChange={(e) => handlePatientsPerHourChange(daySchedule.dayOfWeek, e.target.value)} className="w-24 h-9"/>
                                 <p className="text-xs text-muted-foreground">Determines appointment slot duration.</p>
                            </div>
                         </CardContent>

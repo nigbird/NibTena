@@ -7,7 +7,8 @@ import { auth } from '@/../../auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { TimeSlot } from '@/lib/definitions';
-import { parse, isBefore, isEqual, isAfter } from 'date-fns';
+import { parse as parseTime, isBefore, isEqual, isAfter } from 'date-fns';
+import { doSlotsOverlap } from '@/lib/time-utils';
 
 export async function getDoctorsByHospitalId(hospitalId: number) {
     return await prisma.doctor.findMany({
@@ -44,13 +45,20 @@ export async function getHospitalSettings(hospitalId: number) {
 const TimeSlotSchema = z.object({
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format"),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format"),
+}).refine(data => {
+    if(!data.startTime || !data.endTime) return true; // Let required validation handle this
+    return isBefore(parseTime(data.startTime, 'HH:mm', new Date()), parseTime(data.endTime, 'HH:mm', new Date()))
+}, {
+    message: "End time must be after start time",
+    path: ["endTime"],
 });
 
 const ScheduleDaySchema = z.object({
   dayOfWeek: z.string(),
+  shift: z.string(),
   workingHours: z.array(TimeSlotSchema),
   breakHours: z.array(TimeSlotSchema),
-  patientsPerHour: z.number().min(1),
+  patientsPerHour: z.coerce.number().min(1, "Must be at least 1").optional(),
 });
 
 const ScheduleFormSchema = z.object({
@@ -59,23 +67,13 @@ const ScheduleFormSchema = z.object({
 });
 
 export type ScheduleSaveState = {
-  errors?: Zod.ZodError<z.infer<typeof ScheduleFormSchema>>['formErrors']['fieldErrors'];
+  errors?: {
+    schedules?: { [key: number]: { [key: string]: string } },
+    general?: string,
+  },
   message?: string | null;
   success?: boolean;
 };
-
-function parseTime(timeStr: string) {
-    return parse(timeStr, 'HH:mm', new Date(Date.UTC(2000, 0, 1)));
-}
-
-function doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot) {
-    const start1 = parseTime(slot1.startTime);
-    const end1 = parseTime(slot1.endTime);
-    const start2 = parseTime(slot2.startTime);
-    const end2 = parseTime(slot2.endTime);
-
-    return isBefore(start1, end2) && isAfter(end1, start2);
-}
 
 export async function saveDoctorSchedule(
     hospitalId: number,
@@ -104,9 +102,9 @@ export async function saveDoctorSchedule(
     const validatedFields = ScheduleFormSchema.safeParse(parsedData);
 
     if (!validatedFields.success) {
+        // This validation is a fallback; primary validation is done below.
         return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: 'Invalid data. Please check the fields.',
+            message: 'Invalid data format. Please check the fields.',
             success: false,
         };
     }
@@ -121,82 +119,90 @@ export async function saveDoctorSchedule(
 
         if (!hospitalSettings) return { success: false, message: 'Hospital not found.' };
 
-        const hospitalOpen = parseTime(hospitalSettings.startTime);
-        const hospitalClose = parseTime(hospitalSettings.endTime);
+        const hospitalOpen = parseTime(hospitalSettings.startTime, 'HH:mm', new Date());
+        const hospitalClose = parseTime(hospitalSettings.endTime, 'HH:mm', new Date());
+        const fieldErrors: { [key: number]: { [key: string]: string } } = {};
 
-        for (const daySchedule of schedules) {
+        for (const [index, daySchedule] of schedules.entries()) {
+             if (daySchedule.shift === 'unavailable') continue;
+
             const { dayOfWeek, workingHours, breakHours } = daySchedule;
-
-            // Validate against hospital operating hours
-            for (const slot of [...workingHours, ...breakHours]) {
-                const slotStart = parseTime(slot.startTime);
-                const slotEnd = parseTime(slot.endTime);
+            
+            if (workingHours.length === 0) {
+                 fieldErrors[index] = { ...fieldErrors[index], workingHours: 'At least one working slot is required for an available day.' };
+            }
+            
+            // 1. Validate against hospital operating hours
+            for (const [slotIndex, slot] of workingHours.entries()) {
+                const slotStart = parseTime(slot.startTime, 'HH:mm', new Date());
+                const slotEnd = parseTime(slot.endTime, 'HH:mm', new Date());
 
                 if (isBefore(slotStart, hospitalOpen) || isAfter(slotEnd, hospitalClose)) {
-                    return { 
-                        success: false, 
-                        message: `On ${dayOfWeek}, time slot ${slot.startTime}-${slot.endTime} is outside hospital operating hours (${hospitalSettings.startTime}-${hospitalSettings.endTime}).` 
-                    };
+                    fieldErrors[index] = { ...fieldErrors[index], [`workingHours.${slotIndex}`]: `Outside hospital hours (${hospitalSettings.startTime}-${hospitalSettings.endTime})` };
                 }
             }
 
-            // Overlaps within same day
-            const allSlots = [...workingHours, ...breakHours];
-            for (let i = 0; i < allSlots.length; i++) {
-                for (let j = i + 1; j < allSlots.length; j++) {
-                    if (doSlotsOverlap(allSlots[i], allSlots[j])) {
-                        return { 
-                            success: false, 
-                            message: `On ${dayOfWeek}, time slots ${allSlots[i].startTime}-${allSlots[i].endTime} and ${allSlots[j].startTime}-${allSlots[j].endTime} overlap.` 
-                        };
-                    }
+            // 2. Validate break hours are within working hours
+            for (const [slotIndex, breakSlot] of breakHours.entries()) {
+                 const isWithinWorkingHours = workingHours.some(workSlot => 
+                    !isBefore(parseTime(breakSlot.startTime, 'HH:mm', new Date()), parseTime(workSlot.startTime, 'HH:mm', new Date())) &&
+                    !isAfter(parseTime(breakSlot.endTime, 'HH:mm', new Date()), parseTime(workSlot.endTime, 'HH:mm', new Date()))
+                );
+                if (!isWithinWorkingHours) {
+                    fieldErrors[index] = { ...fieldErrors[index], [`breakHours.${slotIndex}`]: 'Break must be within a working slot.' };
                 }
             }
 
-            // Overlaps with other hospitals' schedules
-            const otherDaySchedules = otherSchedules.filter(s => s.dayOfWeek === dayOfWeek);
-
-            for (const other of otherDaySchedules) {
-                const otherSlots = [...(other.workingHours as TimeSlot[]), ...(other.breakHours as TimeSlot[])];
-
-                for (const currentSlot of allSlots) {
-                    for (const otherSlot of otherSlots) {
-                        if (doSlotsOverlap(currentSlot, otherSlot)) {
-                            const otherHospital = await prisma.hospital.findUnique({ where: { id: other.hospitalId } });
-                            return { 
-                                success: false, 
-                                message: `On ${dayOfWeek}, slot ${currentSlot.startTime}-${currentSlot.endTime} overlaps with a schedule at ${otherHospital?.name}.` 
-                            };
-                        }
+            // 3. Overlaps within the same day
+            const allWorkingSlots = [...workingHours];
+            for (let i = 0; i < allWorkingSlots.length; i++) {
+                for (let j = i + 1; j < allWorkingSlots.length; j++) {
+                    if (doSlotsOverlap(allWorkingSlots[i], allWorkingSlots[j])) {
+                        fieldErrors[index] = { ...fieldErrors[index], workingHours: 'Working slots cannot overlap.' };
                     }
                 }
             }
         }
+        
+        if (Object.keys(fieldErrors).length > 0) {
+            return {
+                success: false,
+                message: "Please correct the highlighted errors.",
+                errors: { schedules: fieldErrors }
+            };
+        }
 
-        // Save schedules
+
+        // Save schedules if validation passes
         for (const daySchedule of schedules) {
-            await prisma.doctorSchedule.upsert({
-                where: {
-                    doctorId_hospitalId_dayOfWeek: {
+            if (daySchedule.shift === 'unavailable') {
+                await prisma.doctorSchedule.deleteMany({
+                    where: { doctorId, hospitalId, dayOfWeek: daySchedule.dayOfWeek },
+                });
+            } else {
+                 await prisma.doctorSchedule.upsert({
+                    where: {
+                        doctorId_hospitalId_dayOfWeek: {
+                            doctorId,
+                            hospitalId,
+                            dayOfWeek: daySchedule.dayOfWeek,
+                        },
+                    },
+                    update: {
+                        workingHours: daySchedule.workingHours,
+                        breakHours: daySchedule.breakHours,
+                        patientsPerHour: daySchedule.patientsPerHour || 2,
+                    },
+                    create: {
                         doctorId,
                         hospitalId,
                         dayOfWeek: daySchedule.dayOfWeek,
+                        workingHours: daySchedule.workingHours,
+                        breakHours: daySchedule.breakHours,
+                        patientsPerHour: daySchedule.patientsPerHour || 2,
                     },
-                },
-                update: {
-                    workingHours: daySchedule.workingHours,
-                    breakHours: daySchedule.breakHours,
-                    patientsPerHour: daySchedule.patientsPerHour,
-                },
-                create: {
-                    doctorId,
-                    hospitalId,
-                    dayOfWeek: daySchedule.dayOfWeek,
-                    workingHours: daySchedule.workingHours,
-                    breakHours: daySchedule.breakHours,
-                    patientsPerHour: daySchedule.patientsPerHour,
-                },
-            });
+                });
+            }
         }
 
         revalidatePath('/hospital-admin/schedule');

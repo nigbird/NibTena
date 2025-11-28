@@ -11,7 +11,6 @@ import type { Doctor } from '@/lib/definitions';
 import { getDoctorsByHospitalId, getHospitalSettings } from './actions';
 import DoctorScheduleDrawer from '@/components/hospital-admin/doctor-schedule-drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// removed placeholder images; use uploaded imageUrl with fallback
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddScheduleDrawer from '@/components/hospital-admin/add-schedule-drawer';
@@ -120,27 +119,25 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
         </div>
       ) : doctors.length > 0 ? (
         <div className="w-full">
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full space-y-2">
             {doctors.map(doctor => (
-              <AccordionItem value={`doctor-${doctor.id}`} key={doctor.id} className="border rounded-lg mb-4 overflow-hidden">
-                <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                  <AccordionTrigger className="flex-1 text-left hover:no-underline">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
-                        <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold">{doctor.name}</p>
-                        <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
-                      </div>
+              <AccordionItem value={`doctor-${doctor.id}`} key={doctor.id} className="border rounded-lg overflow-hidden bg-background">
+                <AccordionTrigger className="p-4 hover:no-underline hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4">
+                        <Avatar className="h-12 w-12">
+                            {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} />}
+                            <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{doctor.name}</p>
+                            <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                        </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditScheduleClick(doctor); }}>Edit Schedule</Button>
                     </div>
-                  </AccordionTrigger>
-                  <div className="ml-4">
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditScheduleClick(doctor); }}>Edit Schedule</Button>
-                  </div>
-                </div>
-                <AccordionContent className="bg-muted/30 p-4">
+                </AccordionTrigger>
+                <AccordionContent className="bg-muted/30 border-t">
                   <DoctorScheduleDisplay doctorId={doctor.id} hospitalId={hospitalId} />
                 </AccordionContent>
               </AccordionItem>

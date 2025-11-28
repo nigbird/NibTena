@@ -48,8 +48,9 @@ export default withAuth(
         const isSuperAdminLogin = pathname === '/super-admin/login';
         const isHospitalAdminLogin = pathname === '/hospital-admin/login';
         const isDoctorPortalLogin = pathname === '/doctor-portal/login';
+        const isAuthRedirectPage = pathname === '/auth/redirect';
 
-        const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin;
+        const isAnyLogin = isSuperAdminLogin || isHospitalAdminLogin || isDoctorPortalLogin || isAuthRedirectPage;
 
         if (!isLoggedIn) {
           // allow access to public pages and to the login pages themselves
@@ -62,6 +63,11 @@ export default withAuth(
         }
 
         if (isAnyLogin) return true;
+
+        // Always allow the hospital-admin change-password page so users
+        // forced to change their temporary password don't get redirected
+        // in a loop by the authorized() checks.
+        if (pathname.startsWith('/hospital-admin/change-password')) return true;
 
         // if logged in but role doesn't match required, return false so
         // the user is sent to the sign-in redirect where we can route them

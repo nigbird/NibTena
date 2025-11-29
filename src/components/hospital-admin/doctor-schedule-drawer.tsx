@@ -34,9 +34,9 @@ type DaySchedule = {
 }
 
 const shiftTemplates = {
-    morning: { working: [{ startTime: '09:00', endTime: '13:00' }], breaks: [] },
-    afternoon: { working: [{ startTime: '14:00', endTime: '18:00' }], breaks: [] },
-    full_day: { working: [{ startTime: '09:00', endTime: '18:00' }], breaks: [{ startTime: '13:00', endTime: '14:00' }] },
+    morning: { working: [{ startTime: '08:00', endTime: '12:00' }], breaks: [] },
+    afternoon: { working: [{ startTime: '13:00', endTime: '17:00' }], breaks: [] },
+    full_day: { working: [{ startTime: '08:00', endTime: '17:00' }], breaks: [{ startTime: '12:00', endTime: '13:00' }] },
 };
 
 

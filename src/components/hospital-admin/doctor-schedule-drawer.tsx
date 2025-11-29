@@ -22,8 +22,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { useFormStatus } from 'react-dom';
-
+// note: useFormStatus wasn't providing the submission state here; we'll use useTransition instead
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 type DaySchedule = {
@@ -41,10 +40,9 @@ const shiftTemplates = {
 };
 
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
-    <Button type="submit" disabled={pending} variant="accent">
+    <Button form="schedule-form" type="submit" disabled={pending} variant="accent">
       {pending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
     </Button>
   );
@@ -78,6 +76,9 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
+  // track if this component initiated a submission so we don't show stale toasts
+  const submissionAttemptRef = useRef(false);
   
   // Ref to track if a toast has been shown for the current form state
   const toastShownRef = useRef(false);
@@ -91,7 +92,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
       setSchedules(weekDays.map(day => ({ dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 })));
       setSelectedDoctorId(isEditing ? doctor?.id.toString() : undefined);
       setLocalErrors(undefined);
-      toastShownRef.current = false; // Reset toast tracker
       
       Promise.all([
         (isEditing || selectedDoctorId) ? getDoctorSchedules(doctorIdToFetch!, hospitalId) : Promise.resolve([]),
@@ -121,7 +121,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         setIsLoading(false);
       });
     } else {
-        setSelectedDoctorId(undefined);
+      setSelectedDoctorId(undefined);
     }
   }, [isOpen, doctor, hospitalId, isEditing]);
 
@@ -129,8 +129,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     useEffect(() => {
       setLocalErrors(state.errors); // Update local errors when server state changes
 
-      // Check if we should show a toast, and if one hasn't been shown for this state yet
-      if (state.message && !toastShownRef.current) {
+      // Only show toasts for submissions initiated from this component
+      if (submissionAttemptRef.current && state.message && !toastShownRef.current) {
         if (state.success) {
             toast({ title: "Success", description: state.message });
             onScheduleSaved?.();
@@ -143,6 +143,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
             });
         }
         toastShownRef.current = true; // Mark that a toast has been shown
+        submissionAttemptRef.current = false; // reset submission tracker
       }
     }, [state, onScheduleSaved, setIsOpen, toast]);
 
@@ -150,7 +151,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     toastShownRef.current = false; // Reset toast tracker on new submission
-    const currentDoctorId = isEditing ? doctor.id : Number(selectedDoctorId);
+    const currentDoctorId = isEditing ? doctor!.id : Number(selectedDoctorId);
     if (!currentDoctorId) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select a doctor.' });
         return;
@@ -162,8 +163,23 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         schedules: schedules
     };
     formData.append('scheduleData', JSON.stringify(scheduleData));
-    
-    formAction(formData);
+
+    // mark that we're attempting a submission from this component
+    submissionAttemptRef.current = true;
+
+    // Use startTransition to indicate pending state while calling the action
+    startTransition(() => {
+      try {
+        // clear local errors before new submit
+        setLocalErrors(undefined);
+        formAction(formData as unknown as FormData);
+      } catch (err) {
+        // Defensive: show a toast on unexpected failures
+        console.error('Error submitting schedule:', err);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save schedule. Please try again.' });
+        submissionAttemptRef.current = false;
+      }
+    });
   };
 
   const handleShiftChange = (day: string, shift: string) => {
@@ -400,7 +416,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         </form>
          <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <SubmitButton />
+            <SubmitButton pending={isPending} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

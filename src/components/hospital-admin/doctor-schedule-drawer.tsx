@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { useFormStatus } from 'react-dom';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -40,6 +41,15 @@ const shiftTemplates = {
 };
 
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} variant="accent">
+      {pending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
+    </Button>
+  );
+}
+
 export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospitalId, doctors, onScheduleSaved }: {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -50,7 +60,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 }) {
   const isEditing = !!doctor;
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  
   const [schedules, setSchedules] = useState<DaySchedule[]>(
      weekDays.map(day => ({ dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 }))
   );
@@ -67,7 +77,11 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
   
+  // Ref to track if a toast has been shown for the current form state
+  const toastShownRef = useRef(false);
+
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
@@ -77,6 +91,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
       setSchedules(weekDays.map(day => ({ dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 })));
       setSelectedDoctorId(isEditing ? doctor?.id.toString() : undefined);
       setLocalErrors(undefined);
+      toastShownRef.current = false; // Reset toast tracker
       
       Promise.all([
         (isEditing || selectedDoctorId) ? getDoctorSchedules(doctorIdToFetch!, hospitalId) : Promise.resolve([]),
@@ -110,30 +125,31 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     }
   }, [isOpen, doctor, hospitalId, isEditing]);
 
-    const prevSuccess = useRef(false);
 
     useEffect(() => {
       setLocalErrors(state.errors); // Update local errors when server state changes
 
-      if (state.success && !prevSuccess.current) {
-        prevSuccess.current = true;
-        toast({ title: "Success", description: state.message });
-        onScheduleSaved?.();
-        setIsOpen(false);
-      }
-
-      if (!state.success && state.message) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: state.message || "Please correct the errors below.",
-        });
+      // Check if we should show a toast, and if one hasn't been shown for this state yet
+      if (state.message && !toastShownRef.current) {
+        if (state.success) {
+            toast({ title: "Success", description: state.message });
+            onScheduleSaved?.();
+            setIsOpen(false);
+        } else {
+            toast({
+            variant: "destructive",
+            title: "Error",
+            description: state.message || "Please correct the errors below.",
+            });
+        }
+        toastShownRef.current = true; // Mark that a toast has been shown
       }
     }, [state, onScheduleSaved, setIsOpen, toast]);
 
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    toastShownRef.current = false; // Reset toast tracker on new submission
     const currentDoctorId = isEditing ? doctor.id : Number(selectedDoctorId);
     if (!currentDoctorId) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select a doctor.' });
@@ -147,9 +163,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     };
     formData.append('scheduleData', JSON.stringify(scheduleData));
     
-    startTransition(() => {
-      formAction(formData);
-    });
+    formAction(formData);
   };
 
   const handleShiftChange = (day: string, shift: string) => {
@@ -262,7 +276,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
             Define the weekly available days and working hours for the doctor.
           </SheetDescription>
         </SheetHeader>
-        <form id="schedule-form" onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+        <form ref={formRef} onSubmit={handleSubmit} id="schedule-form" className="flex-1 flex flex-col overflow-hidden">
             {!isEditing && (
                 <div className="space-y-2 py-4">
                     <Label htmlFor="doctorId">Doctor</Label>
@@ -386,9 +400,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         </form>
          <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit" form="schedule-form" disabled={isPending || isLoading} variant="accent">
-                {isPending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
-            </Button>
+            <SubmitButton />
         </SheetFooter>
       </SheetContent>
     </Sheet>

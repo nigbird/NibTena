@@ -184,7 +184,11 @@ const authOptions = {
               } else if (role === 'hospital') {
                   if (isStaff) {
                     if ((user as any).roleId) {
-                      const staffRole = await prisma.role.findUnique({ where: { id: (user as any).roleId }, include: { permissions: { include: { permission: true } } } });
+                      const staffRole = await prisma.role.findUnique({
+                        where: { id: (user as any).roleId },
+                        include: { permissions: { include: { permission: true } } }
+                      });
+                      
                       if (staffRole) {
                         roleName = staffRole.name;
                         isAdmin = !!staffRole.isAdmin;
@@ -410,5 +414,7 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
+
+    
 
     

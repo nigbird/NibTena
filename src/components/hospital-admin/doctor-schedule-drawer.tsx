@@ -18,7 +18,7 @@ import { Loader2, Trash2, PlusCircle, Copy } from 'lucide-react';
 import type { Doctor, TimeSlot } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import { getDoctorSchedules, saveDoctorSchedule, type ScheduleSaveState, getHospitalSettings } from '@/app/hospital-admin/schedule/actions';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -46,7 +46,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   doctor?: Doctor | null; // Optional: for editing
   hospitalId: number;
   doctors?: Doctor[]; // Optional: for adding
-  onScheduleSaved?: () => void; // Make this optional too
+  onScheduleSaved?: () => void;
 }) {
   const isEditing = !!doctor;
   const { toast } = useToast();
@@ -62,6 +62,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const [isCopyPopoverOpen, setIsCopyPopoverOpen] = useState(false);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
+  const [localErrors, setLocalErrors] = useState<ScheduleSaveState['errors'] | undefined>(undefined);
 
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
@@ -72,43 +73,50 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
       setIsLoading(true);
       const doctorIdToFetch = isEditing ? doctor?.id : Number(selectedDoctorId);
 
+      // Reset state when opening
+      setSchedules(weekDays.map(day => ({ dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 })));
+      setSelectedDoctorId(isEditing ? doctor?.id.toString() : undefined);
+      setLocalErrors(undefined);
+      
       Promise.all([
         (isEditing || selectedDoctorId) ? getDoctorSchedules(doctorIdToFetch!, hospitalId) : Promise.resolve([]),
         getHospitalSettings(hospitalId)
       ]).then(([data, settings]) => {
         setHospitalHours(settings);
-        const newSchedules = weekDays.map(day => {
-          const existing = data.find(d => d.dayOfWeek === day);
-          if (existing) {
-             const workingHours = existing.workingHours as TimeSlot[];
-             let shift = 'custom';
-             if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '18:00') {
-                shift = 'full_day';
-             } else if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '13:00') {
-                shift = 'morning';
-             } else if(workingHours.length === 1 && workingHours[0].startTime === '14:00' && workingHours[0].endTime === '18:00') {
-                shift = 'afternoon';
-             }
+        if (data.length > 0) {
+            const newSchedules = weekDays.map(day => {
+            const existing = data.find(d => d.dayOfWeek === day);
+            if (existing) {
+                const workingHours = existing.workingHours as TimeSlot[];
+                let shift = 'custom';
+                if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '18:00') {
+                    shift = 'full_day';
+                } else if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '13:00') {
+                    shift = 'morning';
+                } else if(workingHours.length === 1 && workingHours[0].startTime === '14:00' && workingHours[0].endTime === '18:00') {
+                    shift = 'afternoon';
+                }
 
-            return { dayOfWeek: day, shift, workingHours, breakHours: existing.breakHours as TimeSlot[], patientsPerHour: (existing as any).patientsPerHour || 2 }
-          }
-          return { dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 };
-        });
-        setSchedules(newSchedules);
+                return { dayOfWeek: day, shift, workingHours, breakHours: existing.breakHours as TimeSlot[], patientsPerHour: (existing as any).patientsPerHour || 2 }
+            }
+            return { dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 };
+            });
+            setSchedules(newSchedules);
+        }
         setIsLoading(false);
       });
     } else {
         setSelectedDoctorId(undefined);
     }
-  }, [isOpen, doctor, hospitalId, selectedDoctorId, isEditing]);
+  }, [isOpen, doctor, hospitalId, isEditing]);
 
- // Prevent repeated success toasts + re-closing animation
     const prevSuccess = useRef(false);
 
     useEffect(() => {
+      setLocalErrors(state.errors); // Update local errors when server state changes
+
       if (state.success && !prevSuccess.current) {
         prevSuccess.current = true;
-
         toast({ title: "Success", description: state.message });
         onScheduleSaved?.();
         setIsOpen(false);
@@ -121,7 +129,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
           description: state.message || "Please correct the errors below.",
         });
       }
-    }, [state.success, state.message]);
+    }, [state, onScheduleSaved, setIsOpen, toast]);
 
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -167,11 +175,33 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
              newBreaks = s.breakHours;
         }
 
+        // Clear errors for this day when changing shift
+        setLocalErrors(prevErrors => {
+            const newErrors = { ...prevErrors };
+            if (newErrors.schedules) {
+                delete newErrors.schedules[schedules.findIndex(sc => sc.dayOfWeek === day)];
+            }
+            return newErrors;
+        });
+
         return { ...s, shift, workingHours: newWorking, breakHours: newBreaks };
     }));
   };
 
   const handleTimeChange = (day: string, type: 'workingHours' | 'breakHours', index: number, field: 'startTime' | 'endTime', value: string) => {
+    const dayIndex = schedules.findIndex(s => s.dayOfWeek === day);
+    // Clear the specific error for this field on change
+    setLocalErrors(prev => {
+        const newErrors = { ...prev };
+        if (newErrors.schedules?.[dayIndex]?.[`${type}.${index}`]) {
+            delete newErrors.schedules[dayIndex][`${type}.${index}`];
+        }
+         if (newErrors.schedules?.[dayIndex]?.workingHours) {
+            delete newErrors.schedules[dayIndex].workingHours;
+        }
+        return newErrors;
+    });
+
     setSchedules(prev => prev.map(s => 
         s.dayOfWeek === day 
         ? { ...s, [type]: s[type].map((slot, i) => i === index ? {...slot, [field]: value} : slot) }
@@ -217,11 +247,11 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
     setCopySourceDay(null);
     setCopyTargetDays([]);
-    setIsCopyPopoverOpen(false); // Close popover on apply
+    setIsCopyPopoverOpen(false);
     toast({ title: 'Schedules Copied', description: `Copied ${copySourceDay}'s schedule to selected days.`})
   }
 
-  const fieldErrors = state.errors?.schedules;
+  const fieldErrors = localErrors?.schedules;
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -320,11 +350,11 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                                         <span className="text-muted-foreground">-</span>
                                         <Input type="time" step="900" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'workingHours', i, 'endTime', e.target.value)} className="h-9"/>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'workingHours', i)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                         {fieldErrors?.[index]?.[`workingHours.${i}`] && <p className="text-xs text-destructive">{fieldErrors[index][`workingHours.${i}`]}</p>}
                                     </div>
                                 ))}
+                                 {fieldErrors?.[index]?.[`workingHours.0`] && <p className="text-xs text-destructive">{fieldErrors[index][`workingHours.0`]}</p>}
                                 <Button type="button" variant="outline" size="sm" onClick={() => addSlot(daySchedule.dayOfWeek, 'workingHours')}><PlusCircle className="mr-2 h-4 w-4"/> Add Slot</Button>
-                                {fieldErrors?.[index]?.workingHours && !fieldErrors?.[index]?.workingHours.includes('Outside') && <p className="text-xs text-destructive">{fieldErrors[index].workingHours}</p>}
+                                {fieldErrors?.[index]?.workingHours && <p className="text-xs text-destructive">{fieldErrors[index].workingHours}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-semibold">Break Hours (Optional)</Label>
@@ -334,9 +364,9 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                                         <span className="text-muted-foreground">-</span>
                                         <Input type="time" step="900" value={slot.endTime} onChange={(e) => handleTimeChange(daySchedule.dayOfWeek, 'breakHours', i, 'endTime', e.target.value)} className="h-9"/>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(daySchedule.dayOfWeek, 'breakHours', i)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                        {fieldErrors?.[index]?.[`breakHours.${i}`] && <p className="text-xs text-destructive">{fieldErrors[index][`breakHours.${i}`]}</p>}
                                     </div>
                                 ))}
+                                {fieldErrors?.[index]?.[`breakHours.0`] && <p className="text-xs text-destructive">{fieldErrors[index][`breakHours.0`]}</p>}
                                 <Button type="button" variant="outline" size="sm" onClick={() => addSlot(daySchedule.dayOfWeek, 'breakHours')}><PlusCircle className="mr-2 h-4 w-4"/> Add Break</Button>
                             </div>
                            </>

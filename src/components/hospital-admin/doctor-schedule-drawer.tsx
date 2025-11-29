@@ -223,11 +223,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     // Clear the specific error for this field on change
     setLocalErrors(prev => {
         const newErrors = { ...prev };
-        if (newErrors.schedules?.[dayIndex]?.[`${type}.${index}`]) {
-            delete newErrors.schedules[dayIndex][`${type}.${index}`];
-        }
-         if (newErrors.schedules?.[dayIndex]?.workingHours) {
-            delete newErrors.schedules[dayIndex].workingHours;
+        if (newErrors?.schedules?.[dayIndex]) {
+            delete newErrors.schedules[dayIndex];
         }
         return newErrors;
     });

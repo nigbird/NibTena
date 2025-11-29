@@ -183,21 +183,34 @@ const authOptions = {
                 permissionKeys = all.map(p => p.key);
               } else if (role === 'hospital') {
                   if (isStaff) {
-                    if ((user as any).roleId) {
-                      const staffRole = await prisma.role.findUnique({
-                        where: { id: (user as any).roleId },
-                        include: { permissions: { include: { permission: true } } }
+                    // For staff members, fetch their role and permissions
+                    if (user.roleId) {
+                       const staffUserWithRole = await prisma.user.findUnique({
+                          where: { id: user.id },
+                          include: {
+                              role: {
+                                  include: {
+                                      permissions: {
+                                          include: {
+                                              permission: true
+                                          }
+                                      }
+                                  }
+                              }
+                          }
                       });
                       
+                      const staffRole = staffUserWithRole?.role;
                       if (staffRole) {
-                        roleName = staffRole.name;
-                        isAdmin = !!staffRole.isAdmin;
-                        if (isAdmin) {
-                          const all = await prisma.permission.findMany({ select: { key: true } });
-                          permissionKeys = all.map(a => a.key);
-                        } else {
-                          permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
-                        }
+                          roleName = staffRole.name;
+                          isAdmin = !!staffRole.isAdmin;
+                          if (isAdmin) {
+                              // If staff member has an admin role, grant all permissions
+                              const all = await prisma.permission.findMany({ select: { key: true } });
+                              permissionKeys = all.map(a => a.key);
+                          } else {
+                              permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
+                          }
                       }
                     }
                   } else { 
@@ -414,6 +427,8 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
+
+    
 
     
 

@@ -59,6 +59,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
   const [copySourceDay, setCopySourceDay] = useState<string | null>(null);
   const [copyTargetDays, setCopyTargetDays] = useState<string[]>([]);
+  const [isCopyPopoverOpen, setIsCopyPopoverOpen] = useState(false);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
 
@@ -204,6 +205,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
     setCopySourceDay(null);
     setCopyTargetDays([]);
+    setIsCopyPopoverOpen(false); // Close popover on apply
     toast({ title: 'Schedules Copied', description: `Copied ${copySourceDay}'s schedule to selected days.`})
   }
 
@@ -240,7 +242,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
           {(isLoading) ? <p className="py-10 text-center">Loading schedule...</p> : (
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-4 py-4">
-                 <Popover>
+                 <Popover open={isCopyPopoverOpen} onOpenChange={setIsCopyPopoverOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="outline" size="sm"><Copy className="mr-2"/> Copy Schedule</Button>
                     </PopoverTrigger>

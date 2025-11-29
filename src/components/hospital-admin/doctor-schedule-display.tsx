@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Clock, Coffee, Sparkles } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
+import { format, parse } from 'date-fns';
 
 type DoctorScheduleDisplayProps = {
   doctorId: number;
@@ -15,6 +16,17 @@ type DoctorScheduleDisplayProps = {
 };
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const formatToAmPm = (timeStr: string): string => {
+    if (!timeStr) return '';
+    try {
+        const date = parse(timeStr, 'HH:mm', new Date());
+        return format(date, 'hh:mm a');
+    } catch (e) {
+        return timeStr; // fallback in case of invalid format
+    }
+};
+
 
 export default function DoctorScheduleDisplay({ doctorId, hospitalId }: DoctorScheduleDisplayProps) {
   const [schedule, setSchedule] = useState<DoctorSchedule[]>([]);
@@ -37,7 +49,7 @@ export default function DoctorScheduleDisplay({ doctorId, hospitalId }: DoctorSc
     }
     return slots.map((slot, index) => (
       <Badge key={index} variant="secondary">
-        {slot.startTime} - {slot.endTime}
+        {formatToAmPm(slot.startTime)} - {formatToAmPm(slot.endTime)}
       </Badge>
     ));
   };

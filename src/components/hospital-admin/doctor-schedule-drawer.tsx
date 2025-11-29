@@ -14,7 +14,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, PlusCircle, Copy } from 'lucide-react';
+import { Loader2, Trash2, PlusCircle, Copy, Clock, Coffee } from 'lucide-react';
 import type { Doctor, TimeSlot } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import { getDoctorSchedules, saveDoctorSchedule, type ScheduleSaveState, getHospitalSettings } from '@/app/hospital-admin/schedule/actions';
@@ -22,7 +22,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-// note: useFormStatus wasn't providing the submission state here; we'll use useTransition instead
+import { format, parse } from 'date-fns';
+import { Badge } from '../ui/badge';
+
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 type DaySchedule = {
@@ -33,14 +35,25 @@ type DaySchedule = {
   patientsPerHour: number;
 }
 
-const shiftTemplates = {
+const formatToAmPm = (timeStr: string): string => {
+    if (!timeStr) return '';
+    try {
+        const date = parse(timeStr, 'HH:mm', new Date());
+        return format(date, 'hh:mm a');
+    } catch (e) {
+        return timeStr; // fallback
+    }
+};
+
+const shiftTemplates: Record<string, { working: TimeSlot[], breaks: TimeSlot[] }> = {
     morning: { working: [{ startTime: '08:00', endTime: '12:00' }], breaks: [] },
     afternoon: { working: [{ startTime: '13:00', endTime: '17:00' }], breaks: [] },
     full_day: { working: [{ startTime: '08:00', endTime: '17:00' }], breaks: [{ startTime: '12:00', endTime: '13:00' }] },
 };
 
 
-function SubmitButton({ pending }: { pending: boolean }) {
+function SubmitButton() {
+  const { pending } = useActionState(saveDoctorSchedule.bind(null, 0), { success: false, message: '' });
   return (
     <Button form="schedule-form" type="submit" disabled={pending} variant="accent">
       {pending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
@@ -69,6 +82,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const [copyTargetDays, setCopyTargetDays] = useState<string[]>([]);
   const [isCopyPopoverOpen, setIsCopyPopoverOpen] = useState(false);
 
+
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
   const [localErrors, setLocalErrors] = useState<ScheduleSaveState['errors'] | undefined>(undefined);
 
@@ -76,7 +90,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const [isPending, startTransition] = useTransition();
+  
   // track if this component initiated a submission so we don't show stale toasts
   const submissionAttemptRef = useRef(false);
   
@@ -104,12 +118,14 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
             if (existing) {
                 const workingHours = existing.workingHours as TimeSlot[];
                 let shift = 'custom';
-                if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '18:00') {
-                    shift = 'full_day';
-                } else if(workingHours.length === 1 && workingHours[0].startTime === '09:00' && workingHours[0].endTime === '13:00') {
+                if (workingHours.length === 0) {
+                    shift = 'unavailable';
+                } else if(workingHours.length === 1 && workingHours[0].startTime === '08:00' && workingHours[0].endTime === '12:00') {
                     shift = 'morning';
-                } else if(workingHours.length === 1 && workingHours[0].startTime === '14:00' && workingHours[0].endTime === '18:00') {
+                } else if(workingHours.length === 1 && workingHours[0].startTime === '13:00' && workingHours[0].endTime === '17:00') {
                     shift = 'afternoon';
+                } else if(workingHours.length === 1 && workingHours[0].startTime === '08:00' && workingHours[0].endTime === '17:00') {
+                    shift = 'full_day';
                 }
 
                 return { dayOfWeek: day, shift, workingHours, breakHours: existing.breakHours as TimeSlot[], patientsPerHour: (existing as any).patientsPerHour || 2 }
@@ -129,7 +145,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     useEffect(() => {
       setLocalErrors(state.errors); // Update local errors when server state changes
 
-      // Only show toasts for submissions initiated from this component
       if (submissionAttemptRef.current && state.message && !toastShownRef.current) {
         if (state.success) {
             toast({ title: "Success", description: state.message });
@@ -142,8 +157,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
             description: state.message || "Please correct the errors below.",
             });
         }
-        toastShownRef.current = true; // Mark that a toast has been shown
-        submissionAttemptRef.current = false; // reset submission tracker
+        toastShownRef.current = true;
+        submissionAttemptRef.current = false;
       }
     }, [state, onScheduleSaved, setIsOpen, toast]);
 
@@ -164,17 +179,13 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     };
     formData.append('scheduleData', JSON.stringify(scheduleData));
 
-    // mark that we're attempting a submission from this component
     submissionAttemptRef.current = true;
 
-    // Use startTransition to indicate pending state while calling the action
     startTransition(() => {
       try {
-        // clear local errors before new submit
         setLocalErrors(undefined);
         formAction(formData as unknown as FormData);
       } catch (err) {
-        // Defensive: show a toast on unexpected failures
         console.error('Error submitting schedule:', err);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save schedule. Please try again.' });
         submissionAttemptRef.current = false;
@@ -189,15 +200,9 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         let newWorking: TimeSlot[] = [];
         let newBreaks: TimeSlot[] = [];
         
-        if(shift === 'morning') {
-            newWorking = shiftTemplates.morning.working;
-            newBreaks = shiftTemplates.morning.breaks;
-        } else if (shift === 'afternoon') {
-            newWorking = shiftTemplates.afternoon.working;
-            newBreaks = shiftTemplates.afternoon.breaks;
-        } else if (shift === 'full_day') {
-            newWorking = shiftTemplates.full_day.working;
-            newBreaks = shiftTemplates.full_day.breaks;
+        if (shift in shiftTemplates) {
+            newWorking = shiftTemplates[shift as keyof typeof shiftTemplates].working;
+            newBreaks = shiftTemplates[shift as keyof typeof shiftTemplates].breaks;
         } else if (shift === 'custom' && s.workingHours.length === 0) {
              newWorking = [{startTime: hospitalHours?.startTime || '09:00', endTime: hospitalHours?.endTime || '17:00'}];
         } else {
@@ -205,7 +210,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
              newBreaks = s.breakHours;
         }
 
-        // Clear errors for this day when changing shift
         setLocalErrors(prevErrors => {
             const newErrors = { ...prevErrors };
             if (newErrors.schedules) {
@@ -220,7 +224,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
   const handleTimeChange = (day: string, type: 'workingHours' | 'breakHours', index: number, field: 'startTime' | 'endTime', value: string) => {
     const dayIndex = schedules.findIndex(s => s.dayOfWeek === day);
-    // Clear the specific error for this field on change
     setLocalErrors(prev => {
         const newErrors = { ...prev };
         if (newErrors?.schedules?.[dayIndex]) {
@@ -278,6 +281,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     toast({ title: 'Schedules Copied', description: `Copied ${copySourceDay}'s schedule to selected days.`})
   }
 
+  const { pending } = useActionState(saveDoctorSchedule.bind(null, 0), { success: false, message: '' });
   const fieldErrors = localErrors?.schedules;
 
   return (
@@ -367,6 +371,14 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                     </CardHeader>
                     {daySchedule.shift !== 'unavailable' && (
                         <CardContent className="p-4 pt-0 space-y-4">
+                           {daySchedule.shift !== 'custom' && (
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-green-600"/> <strong>Work:</strong> {formatToAmPm(shiftTemplates[daySchedule.shift].working[0].startTime)} - {formatToAmPm(shiftTemplates[daySchedule.shift].working[0].endTime)}</p>
+                                    {shiftTemplates[daySchedule.shift].breaks.length > 0 && (
+                                        <p className="flex items-center gap-2"><Coffee className="h-4 w-4 text-orange-600"/> <strong>Break:</strong> {formatToAmPm(shiftTemplates[daySchedule.shift].breaks[0].startTime)} - {formatToAmPm(shiftTemplates[daySchedule.shift].breaks[0].endTime)}</p>
+                                    )}
+                                </div>
+                           )}
                            {daySchedule.shift === 'custom' && (
                            <>
                             <div className="space-y-2">
@@ -413,7 +425,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         </form>
          <SheetFooter className="mt-auto pt-4 border-t -mx-6 px-6">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <SubmitButton pending={isPending} />
+            <SubmitButton />
         </SheetFooter>
       </SheetContent>
     </Sheet>

@@ -23,7 +23,7 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   
-  const [initialSettings, setInitialSettings] = useState({ bookingWindow: '30', startTime: '08:30', endTime: '18:30' });
+  const [initialSettings, setInitialSettings] = useState({ bookingWindow: '30', startTime: '08:00', endTime: '18:30' });
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 

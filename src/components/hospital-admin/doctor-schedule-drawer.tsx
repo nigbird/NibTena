@@ -24,6 +24,8 @@ import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { format, parse } from 'date-fns';
 import { Badge } from '../ui/badge';
+import { useFormStatus } from 'react-dom';
+
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -53,10 +55,10 @@ const shiftTemplates: Record<string, { working: TimeSlot[], breaks: TimeSlot[] }
 
 
 function SubmitButton() {
-  const { pending } = useActionState(saveDoctorSchedule.bind(null, 0), { success: false, message: '' });
+  const { pending } = useFormStatus();
   return (
     <Button form="schedule-form" type="submit" disabled={pending} variant="accent">
-      {pending ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : 'Save Schedule'}
+      {pending ? <><Loader2 className="animate-spin mr-2"/> Saving...</> : 'Save Schedule'}
     </Button>
   );
 }
@@ -84,8 +86,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
-  const [localErrors, setLocalErrors] = useState<ScheduleSaveState['errors'] | undefined>(undefined);
-
+  const [doctorSelectionError, setDoctorSelectionError] = useState<string | null>(null);
+  
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
@@ -105,7 +107,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
       // Reset state when opening
       setSchedules(weekDays.map(day => ({ dayOfWeek: day, shift: 'unavailable', workingHours: [], breakHours: [], patientsPerHour: 2 })));
       setSelectedDoctorId(isEditing ? doctor?.id.toString() : undefined);
-      setLocalErrors(undefined);
+      setDoctorSelectionError(null);
       
       Promise.all([
         (isEditing || selectedDoctorId) ? getDoctorSchedules(doctorIdToFetch!, hospitalId) : Promise.resolve([]),
@@ -143,8 +145,6 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
 
     useEffect(() => {
-      setLocalErrors(state.errors); // Update local errors when server state changes
-
       if (submissionAttemptRef.current && state.message && !toastShownRef.current) {
         if (state.success) {
             toast({ title: "Success", description: state.message });
@@ -168,9 +168,10 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     toastShownRef.current = false; // Reset toast tracker on new submission
     const currentDoctorId = isEditing ? doctor!.id : Number(selectedDoctorId);
     if (!currentDoctorId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please select a doctor.' });
+        setDoctorSelectionError('Please select a doctor.');
         return;
     }
+    setDoctorSelectionError(null);
 
     const formData = new FormData();
     const scheduleData = {
@@ -180,17 +181,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     formData.append('scheduleData', JSON.stringify(scheduleData));
 
     submissionAttemptRef.current = true;
-
-    startTransition(() => {
-      try {
-        setLocalErrors(undefined);
-        formAction(formData as unknown as FormData);
-      } catch (err) {
-        console.error('Error submitting schedule:', err);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save schedule. Please try again.' });
-        submissionAttemptRef.current = false;
-      }
-    });
+    formAction(formData as unknown as FormData);
   };
 
   const handleShiftChange = (day: string, shift: string) => {
@@ -210,28 +201,11 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
              newBreaks = s.breakHours;
         }
 
-        setLocalErrors(prevErrors => {
-            const newErrors = { ...prevErrors };
-            if (newErrors.schedules) {
-                delete newErrors.schedules[schedules.findIndex(sc => sc.dayOfWeek === day)];
-            }
-            return newErrors;
-        });
-
         return { ...s, shift, workingHours: newWorking, breakHours: newBreaks };
     }));
   };
 
   const handleTimeChange = (day: string, type: 'workingHours' | 'breakHours', index: number, field: 'startTime' | 'endTime', value: string) => {
-    const dayIndex = schedules.findIndex(s => s.dayOfWeek === day);
-    setLocalErrors(prev => {
-        const newErrors = { ...prev };
-        if (newErrors?.schedules?.[dayIndex]) {
-            delete newErrors.schedules[dayIndex];
-        }
-        return newErrors;
-    });
-
     setSchedules(prev => prev.map(s => 
         s.dayOfWeek === day 
         ? { ...s, [type]: s[type].map((slot, i) => i === index ? {...slot, [field]: value} : slot) }
@@ -281,8 +255,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     toast({ title: 'Schedules Copied', description: `Copied ${copySourceDay}'s schedule to selected days.`})
   }
 
-  const { pending } = useActionState(saveDoctorSchedule.bind(null, 0), { success: false, message: '' });
-  const fieldErrors = localErrors?.schedules;
+  const fieldErrors = state?.errors?.schedules;
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -309,6 +282,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                             ))}
                         </SelectContent>
                     </Select>
+                     {doctorSelectionError && <p className="text-sm font-medium text-destructive">{doctorSelectionError}</p>}
                 </div>
             )}
             

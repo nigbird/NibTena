@@ -182,43 +182,37 @@ const authOptions = {
                 const all = await prisma.permission.findMany({ select: { key: true } });
                 permissionKeys = all.map(p => p.key);
               } else if (role === 'hospital') {
-                  if (isStaff) {
-                    // For staff members, fetch their role and permissions
-                    if (user.roleId) {
-                       const staffUserWithRole = await prisma.user.findUnique({
-                          where: { id: user.id },
-                          include: {
-                              role: {
-                                  include: {
-                                      permissions: {
-                                          include: {
-                                              permission: true
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      });
-                      
-                      const staffRole = staffUserWithRole?.role;
-                      if (staffRole) {
-                          roleName = staffRole.name;
-                          isAdmin = !!staffRole.isAdmin;
-                          if (isAdmin) {
-                              // If staff member has an admin role, grant all permissions
-                              const all = await prisma.permission.findMany({ select: { key: true } });
-                              permissionKeys = all.map(a => a.key);
-                          } else {
-                              permissionKeys = staffRole.permissions?.map(rp => rp.permission.key) || [];
-                          }
-                      }
-                    }
-                  } else { 
-                    // This is the main hospital account, not a staff member. Grant admin access by default.
-                    isAdmin = true;
-                    const all = await prisma.permission.findMany({ select: { key: true } });
-                    permissionKeys = all.map(p => p.key);
+                if (isStaff) {
+                  // It's a staff member. Find their role and permissions.
+                  const staffUserWithRole = await prisma.user.findUnique({
+                    where: { id: user.id },
+                    include: {
+                      role: {
+                        include: {
+                          permissions: {
+                            include: {
+                              permission: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  });
+
+                  if (staffUserWithRole?.role) {
+                    const staffRole = staffUserWithRole.role;
+                    roleName = staffRole.name;
+                    isAdmin = staffRole.isAdmin;
+                    permissionKeys = isAdmin
+                      ? (await prisma.permission.findMany({ select: { key: true } })).map(p => p.key)
+                      : staffRole.permissions.map(rp => rp.permission.key);
                   }
+                } else {
+                  // This is the main hospital account, not a staff member. Grant admin access by default.
+                  isAdmin = true;
+                  const all = await prisma.permission.findMany({ select: { key: true } });
+                  permissionKeys = all.map(p => p.key);
+                }
               }
 
               return {

@@ -101,15 +101,27 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     }
   }, [isOpen, doctor, hospitalId, selectedDoctorId, isEditing]);
 
-  useEffect(() => {
-    if (state.success) {
-      toast({ title: "Success", description: state.message });
-      onScheduleSaved?.();
-      setIsOpen(false);
-    } else if (state.message) {
-      toast({ variant: "destructive", title: "Error", description: state.message || 'Please correct the errors below.' });
-    }
-  }, [state, toast, setIsOpen, onScheduleSaved]);
+ // Prevent repeated success toasts + re-closing animation
+    const prevSuccess = useRef(false);
+
+    useEffect(() => {
+      if (state.success && !prevSuccess.current) {
+        prevSuccess.current = true;
+
+        toast({ title: "Success", description: state.message });
+        onScheduleSaved?.();
+        setIsOpen(false);
+      }
+
+      if (!state.success && state.message) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: state.message || "Please correct the errors below.",
+        });
+      }
+    }, [state.success, state.message]);
+
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

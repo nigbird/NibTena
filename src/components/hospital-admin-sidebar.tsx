@@ -39,7 +39,9 @@ const navLinks: { href: string; label: string; icon: any; permissionKey?: string
   { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays, permissionKey: 'Schedules:View' },
   { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered, permissionKey: 'Queue:View' },
   { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart, permissionKey: 'Reports:View' },
-  { href: '/hospital-admin/roles', label: 'Roles', icon: Shield, permissionKey: 'Users:View' }, // Or Roles:View
+  { href: '/hospital-admin/roles', label: 'Roles & Users', icon: Shield, permissionKey: 'Users:View' }, // Or Roles:View
+  { href: '/hospital-admin/roles', label: 'Roles & Users', icon: Shield, permissionKey: 'Roles:View' },
+
 ];
 
 // The main settings link, only for admins or those with specific settings perms

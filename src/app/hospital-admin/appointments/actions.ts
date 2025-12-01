@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { z } from 'zod';
@@ -87,6 +88,8 @@ export async function saveAppointment(
       },
     });
 
+    let formattedSlot = appointmentSlot;
+
     if (doctorSchedule) {
       const workingHours = doctorSchedule.workingHours as { startTime: string, endTime: string }[];
       const breakHours = doctorSchedule.breakHours as { startTime: string, endTime: string }[];
@@ -102,6 +105,15 @@ export async function saveAppointment(
           message: `The selected time ${appointmentSlot} is outside the doctor's available hours for that day.`
         }
       }
+      
+      const patientsPerHour = (doctorSchedule as any).patientsPerHour || 2;
+      const slotDuration = 60 / patientsPerHour;
+      
+      const slotStart = parseTime(appointmentSlot, 'HH:mm', new Date());
+      const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+      
+      formattedSlot = `${format(slotStart, 'hh:mm a')} - ${format(slotEnd, 'hh:mm a')}`;
+
     } else {
         // If no specific schedule, you might fall back to hospital hours or deny
         return { success: false, message: "This doctor does not have a schedule for the selected day." };
@@ -112,7 +124,7 @@ export async function saveAppointment(
     const dataToSave = {
       ...rest,
       doctorId,
-      appointmentSlot,
+      appointmentSlot: formattedSlot,
       hospitalId,
       patientId: patient.id,
       // store appointmentDate as a parsed local date (start of day)

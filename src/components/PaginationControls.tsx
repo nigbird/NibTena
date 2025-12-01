@@ -116,6 +116,7 @@ const PaginationControls = ({ totalCount, resourceName = "items" }: PaginationCo
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>

@@ -3,7 +3,7 @@
     {
       "id": "NibAppointment-hero",
       "description": "A calming image of a modern hospital waiting room.",
-      "imageUrl": "/uploads/app-hero.png",
+      "imageUrl": "/api/uploads/app-hero.png",
       "imageHint": "hospital interior"
     },
     {

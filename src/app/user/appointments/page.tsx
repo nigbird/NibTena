@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useContext } from 'react';
 import Link from 'next/link';
 import { getMyAppointments, getMyAppointmentsForMiniApp } from './actions';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import PatientAuth from './PatientAuth';
-import { useContext } from 'react';
 import { PatientContext } from '@/context/PatientContext';
 import { getMiniAppCookie } from './server-utils';
 
@@ -19,26 +19,54 @@ const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
 
 function AppointmentsContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { patient } = useContext(PatientContext);
+
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
-  const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-  const { patient } = useContext(PatientContext);
   const [isMiniApp, setIsMiniApp] = useState(false);
-
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  const urlPatientId = searchParams.get('patientId');
+  
   useEffect(() => {
-    // Check for the mini-app cookie on the client side
     getMiniAppCookie().then(hasCookie => {
       setIsMiniApp(hasCookie);
     });
   }, []);
 
-  const urlPatientId = searchParams.get('patientId');
-  const patientId = urlPatientId || patient?.id?.toString();
+  useEffect(() => {
+    setIsAuthenticated(!!patient || !!urlPatientId);
+  }, [patient, urlPatientId]);
+  
+  const fetchData = async (id: string, isMini: boolean) => {
+    setIsLoading(true);
+    try {
+      const appointmentData = isMini 
+        ? await getMyAppointmentsForMiniApp()
+        : await getMyAppointments(Number(id));
+      setAppointments(appointmentData);
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load appointments.'});
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const patientId = urlPatientId || patient?.id?.toString();
+    if (patientId) {
+      fetchData(patientId, isMiniApp);
+    } else {
+      setIsLoading(false);
+    }
+  }, [patient, urlPatientId, isMiniApp]);
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
@@ -47,64 +75,18 @@ function AppointmentsContent() {
         title: '🎉 Booking Confirmed!',
         description: 'Your appointment has been successfully booked.',
       });
-      const newParams = new URLSearchParams(searchParams);
+      const newParams = new URLSearchParams(searchParams.toString());
       newParams.delete('success');
       router.replace(`${pathname}?${newParams.toString()}`);
     }
   }, [searchParams, toast, router, pathname]);
 
-  const fetchData = async () => {
-    if (!patientId) return;
-    setIsLoading(true);
-    
-    // For mini app sessions, fetch appointments by phone number from cookie
-    if (isMiniApp) {
-      const appointmentData = await getMyAppointmentsForMiniApp();
-      setAppointments(appointmentData);
-    } else {
-      const appointmentData = await getMyAppointments(Number(patientId));
-      setAppointments(appointmentData);
-    }
-    
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    if (patientId) {
-      fetchData();
-    } else {
-      setIsLoading(false);
-    }
-  }, [patientId, isMiniApp]);
-  
-  // This effect ensures that if a mini-app user lands here without a patientId in the URL,
-  // we add it for them automatically, making the state consistent.
   useEffect(() => {
     if (isMiniApp && patient && !urlPatientId) {
       router.replace(`/user/appointments?patientId=${patient.id}`);
     }
   }, [isMiniApp, patient, urlPatientId, router]);
 
-
-  // If there's no patientId from either the URL or the context, it's a standalone user who needs to log in.
-  // The isMiniApp check provides an extra layer of safety to prevent the login form from flashing for a mini-app user.
-  if (!patientId && !isMiniApp) {
-    return <PatientAuth />;
-  }
-  
-  // If we have a mini-app session but are still waiting for the patient object or redirect, show loading.
-  if (!patientId && isMiniApp) {
-    return (
-       <div className="p-4 space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <div className="space-y-4 pt-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-       </div>
-    );
-  }
 
   const filteredAppointments = useMemo(() => {
     let filtered = appointments;
@@ -123,18 +105,25 @@ function AppointmentsContent() {
     }
     return filtered.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
   }, [appointments, activeFilter, searchTerm]);
+  
+  if (!isAuthenticated && !isMiniApp) {
+    return <PatientAuth />;
+  }
+  
+  if (isLoading) {
+    return (
+       <div className="p-4 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+       </div>
+    );
+  }
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      );
-    }
-
     if (filteredAppointments.length > 0) {
       return (
         <div className="space-y-4">
@@ -144,7 +133,8 @@ function AppointmentsContent() {
               appointment={appointment}
               onActionSuccess={() => {
                 toast({ title: 'Success', description: 'Your appointment has been updated.'});
-                fetchData();
+                const patientId = urlPatientId || patient?.id?.toString();
+                if(patientId) fetchData(patientId, isMiniApp);
               }}
             />
           ))}

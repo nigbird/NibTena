@@ -2,9 +2,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay, Users, Stethoscope } from "lucide-react";
-import { getAppointmentsByHospitalId, getDoctorsByHospitalId } from './actions';
+import { getAppointmentsByHospitalId, getDoctorsByHospitalId, getTodaysAppointmentsCount } from './actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +14,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import PaginationControls from '@/components/PaginationControls';
 
 type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 
@@ -29,7 +31,14 @@ const statusConfig: Record<QueueStatus, { icon: React.ElementType, color: string
 
 
 export default function QueueManagementPageContent({ hospitalId }: { hospitalId: number }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const page = searchParams.get('page') ?? '1';
+  const perPage = searchParams.get('per_page') ?? '10';
+
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [totalAppointments, setTotalAppointments] = useState(0);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [doctorFilter, setDoctorFilter] = useState('all');
@@ -38,30 +47,26 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
 
   const fetchTodaysAppointments = useCallback(async () => {
     setIsLoading(true);
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const pageAsNumber = Number(page);
+    const perPageAsNumber = Number(perPage);
     try {
-      const [allAppointments, doctorsData] = await Promise.all([
-        getAppointmentsByHospitalId(hospitalId),
+      const [allAppointments, count, doctorsData] = await Promise.all([
+        getAppointmentsByHospitalId(hospitalId, pageAsNumber, perPageAsNumber),
+        getTodaysAppointmentsCount(hospitalId),
         getDoctorsByHospitalId(hospitalId),
       ]);
 
        const todaysAppointments = allAppointments
-        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && app.status === 'confirmed')
         .map((app, index) => {
            const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueStatus | null;
            return {
             ...app,
             queueStatus: storedStatus || 'Waiting',
            }
-        })
-        .sort((a, b) => {
-            if (a.appointmentSlot < b.appointmentSlot) return -1;
-            if (a.appointmentSlot > b.appointmentSlot) return 1;
-            // If slots are same, sort by booking time
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
 
-  setQueue(todaysAppointments as unknown as QueueItem[]);
+      setQueue(todaysAppointments as unknown as QueueItem[]);
+      setTotalAppointments(count);
       setDoctors(doctorsData as Doctor[]);
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -73,7 +78,7 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
     } finally {
       setIsLoading(false);
     }
-  }, [toast, hospitalId]);
+  }, [toast, hospitalId, page, perPage]);
   
   useEffect(() => {
     fetchTodaysAppointments();
@@ -274,6 +279,9 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
         <CardContent>
           {renderQueueContent()}
         </CardContent>
+        <CardFooter className="border-t p-4">
+            <PaginationControls totalCount={totalAppointments} resourceName="appointments" />
+        </CardFooter>
       </Card>
     </div>
   );

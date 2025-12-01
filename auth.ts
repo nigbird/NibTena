@@ -206,6 +206,11 @@ const authOptions = {
                     permissionKeys = isAdmin
                       ? (await prisma.permission.findMany({ select: { key: true } })).map(p => p.key)
                       : staffRole.permissions.map(rp => rp.permission.key);
+                  } else {
+                    // Staff exists but has no role. Assign empty permissions.
+                    roleName = null;
+                    isAdmin = false;
+                    permissionKeys = [];
                   }
                 } else {
                   // This is the main hospital account, not a staff member. Grant admin access by default.
@@ -421,6 +426,8 @@ async function auth(req?: any, res?: any) {
 Object.assign(auth, authOptions as any);
 
 export { auth };
+
+    
 
     
 

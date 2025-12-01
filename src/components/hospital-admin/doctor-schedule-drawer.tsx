@@ -271,7 +271,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                 <div className="space-y-2 py-4">
                     <Label htmlFor="doctorId">Doctor</Label>
                     <Select name="doctorId" required value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
-                        <SelectTrigger id="doctorId">
+                        <SelectTrigger id="doctorId" className="border-primary">
                             <SelectValue placeholder="Select a doctor to create a schedule for" />
                         </SelectTrigger>
                         <SelectContent>
@@ -291,7 +291,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
               <div className="space-y-4 py-4">
                  <Popover open={isCopyPopoverOpen} onOpenChange={setIsCopyPopoverOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm"><Copy className="mr-2"/> Copy Schedule</Button>
+                        <Button variant="secondary" size="sm" className="hover:bg-secondary/80"><Copy className="mr-2"/> Copy Schedule</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 space-y-4">
                         <div className="space-y-2">
@@ -330,7 +330,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
                        <CardTitle className="text-base font-semibold">{daySchedule.dayOfWeek}</CardTitle>
                        <div className="w-48">
                           <Select value={daySchedule.shift} onValueChange={(val) => handleShiftChange(daySchedule.dayOfWeek, val)}>
-                            <SelectTrigger>
+                            <SelectTrigger className="border-primary">
                               <SelectValue placeholder="Select shift" />
                             </SelectTrigger>
                             <SelectContent>

@@ -92,6 +92,8 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     completed: 'accent',
     cancelled: 'destructive',
     rescheduled: 'secondary',
+    'checked-in': 'secondary',
+    'in-progress': 'accent',
   } as const;
 
   return (

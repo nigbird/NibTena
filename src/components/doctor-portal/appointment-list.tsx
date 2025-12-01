@@ -21,6 +21,9 @@ export default function DoctorAppointmentList({ appointments, onActionSuccess, o
     cancelled: 'destructive',
     rescheduled: 'secondary'
   } as const;
+  // include queue-specific statuses so UI doesn't pass undefined variants
+  (statusBadgeVariant as any)['checked-in'] = 'secondary';
+  (statusBadgeVariant as any)['in-progress'] = 'accent';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -48,6 +48,9 @@ export default function AppointmentDetailsDrawer({ isOpen, setIsOpen, appointmen
     cancelled: 'destructive',
     rescheduled: 'secondary'
   } as const;
+  // include queue-specific statuses so UI doesn't pass undefined variants
+  (statusBadgeVariant as any)['checked-in'] = 'secondary';
+  (statusBadgeVariant as any)['in-progress'] = 'accent';
   
   const handleConfirmCancel = async () => {
     await updateAppointment(appointment.id, { status: 'cancelled' });

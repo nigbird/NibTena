@@ -26,16 +26,22 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
         getDoctorsByHospitalId(hospitalId),
       ]);
 
+      const mapDbStatusToQueue = (status: string) => {
+        if (status === 'checked-in') return 'Checked-in';
+        if (status === 'in-progress') return 'In Progress';
+        if (status === 'completed') return 'Completed';
+        return 'Waiting';
+      };
+
       const todaysAppointments = allAppointments
-        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr && (app.status === 'confirmed' || app.status === 'rescheduled'))
+        .filter(app => format(new Date(app.appointmentDate), 'yyyy-MM-dd') === todayStr)
         .map(app => {
-          const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueItem['queueStatus'] | null;
           // normalize patient and doctor names onto the appointment object so the UI can read them consistently
           const patientName = (app as any).patient?.name ?? (app as any).patientName ?? 'Unknown Patient';
           const doctorName = (app as any).doctor?.name ?? (doctorsData.find((d: any) => d.id === app.doctorId)?.name) ?? 'Unknown Doctor';
           return {
             ...app,
-            queueStatus: storedStatus || 'Waiting',
+            queueStatus: mapDbStatusToQueue((app as any).status),
             patientName,
             doctorName,
           };
@@ -65,18 +71,9 @@ export default function QueueProjectionPageContent({ hospitalId }: { hospitalId:
     const interval = setInterval(fetchAndFilterQueue, 5000);
     const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
 
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key?.startsWith('queue-status-')) {
-        fetchAndFilterQueue();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
       clearInterval(interval);
       clearInterval(timeInterval);
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, [fetchAndFilterQueue]);
   

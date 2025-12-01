@@ -136,7 +136,7 @@ model Appointment {
   hospitalId      Int
   appointmentSlot String
   appointmentDate DateTime
-  status          String   @default("confirmed") // confirmed, cancelled, completed, rescheduled, pending-payment, paid
+  status          String   @default("confirmed") // confirmed, cancelled, completed, rescheduled, pending-payment, paid, checked-in, in-progress
   transactionId   String?  @unique // ✅ Added: links to payment gateway transaction
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

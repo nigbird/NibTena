@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ListOrdered, User, Clock, Check, Play, CheckCircle2, MonitorPlay, Users, Stethoscope } from "lucide-react";
 import { getAppointmentsByHospitalId, getDoctorsByHospitalId, getTodaysAppointmentsCount } from './actions';
+import { updateAppointmentStatus } from '@/app/hospital-admin/appointments/actions';
 import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,6 +46,13 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
   const [statusFilter, setStatusFilter] = useState<QueueStatus | 'all'>('all');
   const { toast } = useToast();
 
+  const mapDbStatusToQueueStatus = (status: string): QueueStatus => {
+    if (status === 'checked-in') return 'Checked-in';
+    if (status === 'in-progress') return 'In Progress';
+    if (status === 'completed') return 'Completed';
+    return 'Waiting';
+  };
+
   const fetchTodaysAppointments = useCallback(async () => {
     setIsLoading(true);
     const pageAsNumber = Number(page);
@@ -58,10 +66,9 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
 
        const todaysAppointments = allAppointments
         .map((app, index) => {
-           const storedStatus = localStorage.getItem(`queue-status-${app.id}`) as QueueStatus | null;
            return {
             ...app,
-            queueStatus: storedStatus || 'Waiting',
+            queueStatus: mapDbStatusToQueueStatus((app as any).status),
            }
         });
 
@@ -82,31 +89,43 @@ export default function QueueManagementPageContent({ hospitalId }: { hospitalId:
   
   useEffect(() => {
     fetchTodaysAppointments();
-    
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key?.startsWith('queue-status-')) {
-        fetchTodaysAppointments();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    // No localStorage sync anymore — DB is single source of truth
+    // rely on revalidation and re-fetch after server action calls
+    return () => {};
 
   }, [fetchTodaysAppointments]);
 
 
-  const handleStatusUpdate = (appointmentId: string, newStatus: QueueStatus) => {
-    localStorage.setItem(`queue-status-${appointmentId}`, newStatus);
+  const handleStatusUpdate = async (appointmentId: string, newStatus: QueueStatus) => {
+    // map UI queue statuses to DB status strings
+    const mapQueueToDb = (qs: QueueStatus) => {
+      switch (qs) {
+        case 'Checked-in':
+          return 'checked-in';
+        case 'In Progress':
+          return 'in-progress';
+        case 'Completed':
+          return 'completed';
+        case 'Waiting':
+        default:
+          return 'confirmed';
+      }
+    };
 
-    setQueue(currentQueue => currentQueue.map(item =>
-      item.id === appointmentId ? { ...item, queueStatus: newStatus } : item
-    ));
-    toast({
-      title: 'Queue Updated',
-      description: `Patient status set to "${newStatus}".`,
-    });
+    const dbStatus = mapQueueToDb(newStatus);
+    try {
+      const result = await updateAppointmentStatus(appointmentId, dbStatus as any);
+      if (result?.success) {
+        // refresh the list from server
+        fetchTodaysAppointments();
+        toast({ title: 'Queue Updated', description: `Patient status set to "${newStatus}".` });
+      } else {
+        toast({ variant: 'destructive', title: 'Update Failed', description: result?.message || 'Could not update status.' });
+      }
+    } catch (err) {
+      console.error('Status update error', err);
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update status.' });
+    }
   };
 
   const filteredQueue = useMemo(() => {

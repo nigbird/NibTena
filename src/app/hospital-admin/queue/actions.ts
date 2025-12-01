@@ -6,7 +6,7 @@ import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
 import { startOfDay, endOfDay } from 'date-fns';
 
-export async function getAppointmentsByHospitalId(hospitalId: number, page: number, limit: number) {
+export async function getAppointmentsByHospitalId(hospitalId: number, page: number = 1, limit: number = 100) {
     const session = await auth();
     if (!session?.user) return [];
     const allowed = await requireHospitalPermission('Queue:View', hospitalId);
@@ -22,7 +22,7 @@ export async function getAppointmentsByHospitalId(hospitalId: number, page: numb
                 gte: todayStart,
                 lte: todayEnd,
             },
-            status: 'confirmed',
+            status: { in: ['confirmed', 'checked-in', 'in-progress'] },
         },
         include: {
             patient: true,
@@ -52,7 +52,7 @@ export async function getTodaysAppointmentsCount(hospitalId: number) {
                 gte: todayStart,
                 lte: todayEnd,
             },
-            status: 'confirmed',
+            status: { in: ['confirmed', 'checked-in', 'in-progress'] },
         },
     });
 }

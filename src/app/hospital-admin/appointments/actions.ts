@@ -151,7 +151,7 @@ export async function saveAppointment(
   }
 }
 
-export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled') {
+export async function updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled' | 'checked-in' | 'in-progress') {
   try {
     const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: { hospitalId: true } });
     if (!appt) return { success: false, message: 'Not found.' };
@@ -163,6 +163,9 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'co
     const updatedAppointment = await prisma.appointment.update({ where: { id: appointmentId }, data: { status } });
     revalidatePath('/hospital-admin/appointments');
     revalidatePath(`/doctor-portal/appointments`);
+    // Ensure queue views refresh when appointment status changes
+    revalidatePath('/hospital-admin/queue');
+    revalidatePath('/hospital-admin/queue/projection');
     return { success: true, message: `Appointment status updated to ${status}.` };
   } catch (error) {
     return { success: false, message: 'Database Error: Failed to update appointment status.' };

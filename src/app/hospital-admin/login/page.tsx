@@ -61,29 +61,13 @@ export default function HospitalAdminLoginPage() {
             const message = isFriendlyLock ? result.error : 'Invalid email or password.';
             setError(message);
         } else if (result?.url) {
-            // Fetch session to check permissions
-            const res = await fetch('/api/auth/session');
-            const sessionData = await res.json();
-            const user = sessionData?.user || {};
-            const canViewDashboard = user.isAdmin === true
-                || (user.permissionKeys && (
-                    user.permissionKeys.includes('Appointments:View') ||
-                    user.permissionKeys.includes('Doctors:View') ||
-                    user.permissionKeys.includes('Users:View') ||
-                    user.permissionKeys.includes('Queue:View') ||
-                    user.permissionKeys.includes('Reports:View') ||
-                    user.permissionKeys.includes('Settings:View')
-                ));
-
             toast({
                 title: 'Login Successful',
-                description: canViewDashboard ? 'Redirecting to your dashboard...' : 'Redirecting to your profile...',
+                description: 'Redirecting to your portal...',
             });
-            if (canViewDashboard) {
-                router.push(result.url);
-            } else {
-                router.push('/hospital-admin/profile');
-            }
+            // Let the server-side middleware handle the final redirect based on permissions.
+            // The middleware will send the user to the dashboard, their first allowed page, or their profile.
+            router.push(result.url);
         }
     }
 

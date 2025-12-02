@@ -31,9 +31,6 @@ function AppointmentsContent() {
   const [activeFilter, setActiveFilter] = useState<AppointmentStatusFilter>('upcoming');
   const [isMiniApp, setIsMiniApp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  const urlPatientId = searchParams.get('patientId');
-  
   useEffect(() => {
     getMiniAppCookie().then(hasCookie => {
       setIsMiniApp(hasCookie);
@@ -41,15 +38,20 @@ function AppointmentsContent() {
   }, []);
 
   useEffect(() => {
-    setIsAuthenticated(!!patient || !!urlPatientId);
-  }, [patient, urlPatientId]);
+    setIsAuthenticated(!!patient || isMiniApp);
+  }, [patient, isMiniApp]);
   
-  const fetchData = async (id: string, isMini: boolean) => {
+  const fetchData = async (isMini: boolean = false) => {
     setIsLoading(true);
     try {
-      const appointmentData = isMini 
-        ? await getMyAppointmentsForMiniApp()
-        : await getMyAppointments(Number(id));
+      let appointmentData: any[] = [];
+      if (isMini) {
+        appointmentData = await getMyAppointmentsForMiniApp();
+      } else if (patient) {
+        appointmentData = await getMyAppointments(Number(patient.id));
+      } else {
+        appointmentData = [];
+      }
       setAppointments(appointmentData);
     } catch (e) {
       console.error(e);
@@ -60,13 +62,14 @@ function AppointmentsContent() {
   };
 
   useEffect(() => {
-    const patientId = urlPatientId || patient?.id?.toString();
-    if (patientId) {
-      fetchData(patientId, isMiniApp);
+    if (isMiniApp) {
+      fetchData(true);
+    } else if (patient) {
+      fetchData(false);
     } else {
       setIsLoading(false);
     }
-  }, [patient, urlPatientId, isMiniApp]);
+  }, [patient, isMiniApp]);
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
@@ -82,10 +85,9 @@ function AppointmentsContent() {
   }, [searchParams, toast, router, pathname]);
 
   useEffect(() => {
-    if (isMiniApp && patient && !urlPatientId) {
-      router.replace(`/user/appointments?patientId=${patient.id}`);
-    }
-  }, [isMiniApp, patient, urlPatientId, router]);
+    // No URL patientId should be added; the micro-app and web flows
+    // fetch appointments from cookie or server-side session respectively.
+  }, [isMiniApp, patient, router]);
 
 
   const filteredAppointments = useMemo(() => {
@@ -131,10 +133,9 @@ function AppointmentsContent() {
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
-              onActionSuccess={() => {
+                onActionSuccess={() => {
                 toast({ title: 'Success', description: 'Your appointment has been updated.'});
-                const patientId = urlPatientId || patient?.id?.toString();
-                if(patientId) fetchData(patientId, isMiniApp);
+                fetchData(isMiniApp);
               }}
             />
           ))}

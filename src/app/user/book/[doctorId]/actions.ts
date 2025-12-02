@@ -183,7 +183,7 @@ export async function completeBooking(bookingData: any) {
     revalidatePath('/hospital-admin/appointments');
     revalidatePath('/user/appointments');
     // Redirect must be called outside of try/catch
-    redirect(`/user/appointments?success=true&patientId=${patient.id}`);
+    redirect(`/user/appointments?success=true`);
   } else {
     return {
         success: false,

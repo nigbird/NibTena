@@ -146,8 +146,7 @@ export default function BookingPage() {
                       title: "Payment Successful",
                       description: "Your appointment has been confirmed!",
                     });
-                    
-                    const redirectUrl = patient?.id ? `/user/appointments?patientId=${patient.id}&success=true` : '/user/appointments?success=true';
+                    const redirectUrl = '/user/appointments?success=true';
                     router.push(redirectUrl);
 
                   } else if (attempts >= maxAttempts) {
@@ -157,8 +156,7 @@ export default function BookingPage() {
                       title: "Payment Verification Timed Out",
                       description: "Please check your appointments list later to see if your booking was confirmed.",
                     });
-                     const redirectUrl = patient?.id ? `/user/appointments?patientId=${patient.id}` : '/user/appointments';
-                     router.push(redirectUrl);
+                     router.push('/user/appointments');
                   }
                 } catch (error) {
                   console.error("Error polling appointment status:", error);

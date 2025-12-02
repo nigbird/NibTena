@@ -218,6 +218,8 @@ async function main() {
     { key: 'Schedules:Delete', name: 'Delete Schedules', category: 'Schedules', description: 'Can delete doctor schedules' },
     // Reports
     { key: 'Reports:View', name: 'View Reports', category: 'Reports', description: 'Can access and view all reports and analytics' },
+    // Dashboard
+    { key: 'Dashboard:View', name: 'View Dashboard', category: 'Dashboard', description: 'Can access the hospital dashboard' },
     // Users & Roles
     { key: 'Users:View', name: 'View Users', category: 'Users', description: 'Can view staff users and their assigned roles' },
     { key: 'Users:Create', name: 'Create Users', category: 'Users', description: 'Can create staff users' },

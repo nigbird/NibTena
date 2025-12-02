@@ -218,9 +218,17 @@ export async function createUser(hospitalId: number, formData: FormData) {
     
     const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
 
-    await sendWelcomeEmail('staff', { name, email, rawPassword: password, role: role?.name }, hospitalId);
-    
+    // Revalidate the roles page immediately so the UI can refresh quickly.
     revalidatePath('/hospital-admin/roles');
+
+    // Send welcome email asynchronously so the action returns without waiting
+    // for external SMTP delivery. Log errors but don't block the response.
+    sendWelcomeEmail('staff', { name, email, rawPassword: password, role: role?.name }, hospitalId)
+      .then((res) => {
+        if (!res?.success) console.error('[createUser] sendWelcomeEmail failed:', res?.error);
+      })
+      .catch((err) => console.error('[createUser] sendWelcomeEmail error:', err));
+
     return { success: true, user };
   } catch (error) {
     console.error('[createUser] error', error);

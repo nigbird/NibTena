@@ -26,6 +26,48 @@ export default withAuth(
         return NextResponse.redirect(url);
       }
     }
+
+    // If a hospital-scoped (non-admin) user visits the dashboard root but
+    // doesn't have the Dashboard permission, redirect them to the first
+    // sidebar page they do have access to. This avoids sending them back
+    // to the auth redirect page when they are properly signed-in but lack
+    // dashboard privileges.
+    if (token && token.role === 'hospital' && token.isAdmin !== true) {
+      if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') {
+        const permKeys: string[] = (token as any)?.permissionKeys || [];
+        const allowedPrefixes = new Set<string>();
+        for (const rp of routePermissions) {
+          if (permKeys.includes(rp.permission)) allowedPrefixes.add(rp.prefix);
+        }
+
+        // Preferred sidebar order — the first matching prefix will be used
+        // as the redirect target when the dashboard is not permitted.
+        const preferredOrder = [
+          '/hospital-admin',
+          '/hospital-admin/doctors',
+          '/hospital-admin/appointments',
+          '/hospital-admin/schedule',
+          '/hospital-admin/queue',
+          '/hospital-admin/reports',
+          '/hospital-admin/roles',
+          '/hospital-admin/settings',
+        ];
+
+        const target = preferredOrder.find(p => allowedPrefixes.has(p));
+        if (target) {
+          const url = req.nextUrl.clone();
+          url.pathname = target;
+          return NextResponse.redirect(url);
+        }
+
+        // No allowed prefixes found — fall back to profile page so the
+        // user remains inside the hospital-admin area and can see their
+        // account info (avoids redirecting to sign-in).
+        const fallback = req.nextUrl.clone();
+        fallback.pathname = '/hospital-admin/profile';
+        return NextResponse.redirect(fallback);
+      }
+    }
   },
   {
     // Use a single sign-in redirect page so we can route users to the
@@ -79,8 +121,8 @@ export default withAuth(
         // Permission-based route protection for hospital staff (server-side)
         // Tokens already include `permissionKeys` and `isAdmin` via our NextAuth JWT callback.
         if (isHospitalAdminRoute && token?.role === 'hospital' && token?.isAdmin !== true) {
-          // Always allow the dashboard and profile change pages
-          if (pathname === '/hospital-admin' || pathname === '/hospital-admin/' || pathname.startsWith('/hospital-admin/profile')) return true;
+          // Always allow the hospital-admin profile change pages (so users forced to update don't get stuck)
+          if (pathname.startsWith('/hospital-admin/profile')) return true;
 
           const permKeys: string[] = (token as any)?.permissionKeys || [];
 

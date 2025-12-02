@@ -32,15 +32,15 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { Skeleton } from './ui/skeleton';
 
-const navLinks: { href: string; label: string; icon: any; permissionKey?: string }[] = [
-  { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid },
+const navLinks: { href: string; label: string; icon: any; permissionKey?: string | string[] }[] = [
+  { href: '/hospital-admin', label: 'Dashboard', icon: LayoutGrid, permissionKey: 'Dashboard:View' },
   { href: '/hospital-admin/doctors', label: 'Doctors', icon: Users, permissionKey: 'Doctors:View' },
   { href: '/hospital-admin/appointments', label: 'Appointments', icon: ClipboardPlus, permissionKey: 'Appointments:View' },
   { href: '/hospital-admin/schedule', label: 'Schedule', icon: CalendarDays, permissionKey: 'Schedules:View' },
   { href: '/hospital-admin/queue', label: 'Queue', icon: ListOrdered, permissionKey: 'Queue:View' },
   { href: '/hospital-admin/reports', label: 'Reports', icon: LineChart, permissionKey: 'Reports:View' },
-  { href: '/hospital-admin/roles', label: 'Roles & Users', icon: Shield, permissionKey: 'Users:View' }, // Or Roles:View
-  { href: '/hospital-admin/roles', label: 'Roles & Users', icon: Shield, permissionKey: 'Roles:View' },
+  // Show the Roles page when the user has either Roles:View or Users:View
+  { href: '/hospital-admin/roles', label: 'Roles & Users', icon: Shield, permissionKey: ['Roles:View', 'Users:View'] },
 
 ];
 
@@ -100,7 +100,13 @@ export default function HospitalAdminSidebar() {
   const visibleNavLinks = navLinks.filter(link => {
     if (isAdmin) return true; // Admins see everything
     if (!link.permissionKey) return true; // Links without a key are public to staff
-    return permissionKeys.includes(link.permissionKey);
+
+    // Support either a single permission key or an array of keys.
+    if (Array.isArray(link.permissionKey)) {
+      return link.permissionKey.some(k => permissionKeys.includes(k));
+    }
+
+    return permissionKeys.includes(link.permissionKey as string);
   });
   
   const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Update');

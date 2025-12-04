@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { z } from 'zod';
@@ -214,32 +215,38 @@ export async function createUser(hospitalId: number, formData: FormData) {
       phone,
       roleId: roleId || null,
       hospitalId,
+      mustChangePassword: true,
     };
     
-    // If admin provided a password, hash it and force change on first login.
-    // If not, we will send a "set password" link.
+    // If admin provided a password, hash it.
     if (password) {
       dataToCreate.password = await bcrypt.hash(password, 10);
-      dataToCreate.mustChangePassword = true;
-    }
-
-    const user = await prisma.user.create({ data: dataToCreate });
-    
-    // If no password was provided, send a "set password" link.
-    if (!password) {
-      const secret = process.env.AUTH_SECRET;
-      if (!secret) throw new Error('AUTH_SECRET is not set.');
+      const user = await prisma.user.create({ data: dataToCreate });
       
-      const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
-      await sendSetPasswordEmail(user.email, token, hospitalId);
-    } else {
-      // If a password was provided, send a welcome email (without the password).
       const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
       await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
+      
+      revalidatePath('/hospital-admin/roles');
+      return { success: true, user };
+
+    } else {
+        // If no password, create user with a temporary password to satisfy DB constraints
+        const tempPassword = crypto.randomBytes(16).toString('hex');
+        dataToCreate.password = await bcrypt.hash(tempPassword, 10);
+
+        const user = await prisma.user.create({ data: dataToCreate });
+
+        // Now send the "set password" link.
+        const secret = process.env.AUTH_SECRET;
+        if (!secret) throw new Error('AUTH_SECRET is not set.');
+        
+        const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
+        await sendSetPasswordEmail(user.email, token, hospitalId);
+        
+        revalidatePath('/hospital-admin/roles');
+        return { success: true, user };
     }
 
-    revalidatePath('/hospital-admin/roles');
-    return { success: true, user };
   } catch (error) {
     console.error('[createUser] error', error);
     if ((error as any)?.code === 'P2002') {
@@ -313,3 +320,4 @@ export async function deleteUser(userId: number) {
     return { success: false, message: 'Failed to delete user.' };
   }
 }
+

@@ -14,16 +14,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { KeyRound, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { KeyRound, Loader2, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { resetPassword, type ResetPasswordState } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function SubmitButton() {
-  const [isPending] = useTransition();
+  const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" variant="accent" disabled={isPending}>
-      {isPending ? (
+    <Button type="submit" className="w-full" variant="accent" disabled={pending}>
+      {pending ? (
         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resetting...</>
       ) : (
         'Reset Password'
@@ -32,7 +32,7 @@ function SubmitButton() {
   );
 }
 
-function ResetPasswordForm() {
+function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPasswordState) => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -44,23 +44,31 @@ function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    onStateChange(state);
+  }, [state, onStateChange]);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   if (!isClient) {
-    return null;
+    return (
+       <div className="flex justify-center items-center h-24">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   }
   
   if (!token) {
     return (
-        <div className="w-full max-w-md">
+        <div className="text-center space-y-4">
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Invalid Link</AlertTitle>
                 <AlertDescription>
-                    The password reset link is missing or invalid. Please request a new one.
+                    The password reset link is missing or invalid.
                 </AlertDescription>
             </Alert>
             <Button asChild className="mt-4 w-full">
@@ -73,9 +81,14 @@ function ResetPasswordForm() {
   if (state.success) {
     return (
         <div className="text-center space-y-4">
-            <h3 className="text-xl font-semibold">Password Reset Successfully!</h3>
-            <p className="text-muted-foreground">{state.message}</p>
-            <Button asChild variant="secondary" onClick={() => router.push(state.redirectUrl || '/')}>
+             <Alert variant="default" className="border-green-500/50 bg-green-50 text-green-900">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Success!</AlertTitle>
+                <AlertDescription>
+                    {state.message}
+                </AlertDescription>
+            </Alert>
+            <Button asChild variant="accent" onClick={() => router.push(state.redirectUrl || '/')}>
                 <Link href={state.redirectUrl || '/'}>Proceed to Login</Link>
             </Button>
         </div>
@@ -106,7 +119,11 @@ function ResetPasswordForm() {
       </div>
 
        {state.message && !state.success && (
-          <p className="text-sm font-medium text-destructive">{state.message}</p>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
        )}
       <SubmitButton />
     </form>
@@ -115,6 +132,8 @@ function ResetPasswordForm() {
 
 
 export default function ResetPasswordPage() {
+  const [formState, setFormState] = useState<ResetPasswordState>({ success: false, message: null });
+
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
       <div className="w-full max-w-md">
@@ -126,14 +145,22 @@ export default function ResetPasswordPage() {
         <Card className="bg-white p-2 rounded-2xl shadow-md">
           <CardHeader className="text-center">
             <div className="inline-block mx-auto rounded-full bg-primary/20 p-3">
-              <KeyRound className="h-6 w-6 text-primary-foreground" />
+              {formState.success ? (
+                <CheckCircle className="h-6 w-6 text-primary-foreground" />
+              ) : (
+                <KeyRound className="h-6 w-6 text-primary-foreground" />
+              )}
             </div>
-            <CardTitle className="text-2xl font-headline pt-2 text-[#2E2E2E]">Reset Your Password</CardTitle>
-            <CardDescription>Enter and confirm your new password below.</CardDescription>
+            <CardTitle className="text-2xl font-headline pt-2 text-[#2E2E2E]">
+              {formState.success ? 'Password Reset' : 'Reset Your Password'}
+            </CardTitle>
+            {!formState.success && (
+                <CardDescription>Enter and confirm your new password below.</CardDescription>
+            )}
           </CardHeader>
           <CardContent>
-            <Suspense fallback={<Loader2 className="animate-spin"/>}>
-                <ResetPasswordForm />
+            <Suspense fallback={<Loader2 className="animate-spin mx-auto"/>}>
+                <ResetPasswordForm onStateChange={setFormState} />
             </Suspense>
           </CardContent>
         </Card>

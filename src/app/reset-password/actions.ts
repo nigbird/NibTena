@@ -39,6 +39,11 @@ export async function resetPassword(
   prevState: ResetPasswordState,
   formData: FormData
 ): Promise<ResetPasswordState> {
+  // ✅ Add server-side validation for the token
+  if (!token) {
+    return { success: false, message: 'Invalid or missing reset token.' };
+  }
+  
   const validatedFields = ResetPasswordSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -70,28 +75,28 @@ export async function resetPassword(
       case 'superadmin':
         await prisma.superAdmin.update({
           where: { id: userId },
-          data: { password: hashedPassword },
+          data: { password: hashedPassword, mustChangePassword: false },
         });
         redirectUrl = '/super-admin/login';
         break;
       case 'hospital':
          await prisma.hospital.update({
           where: { id: userId },
-          data: { password: hashedPassword },
+          data: { password: hashedPassword, mustChangePassword: false },
         });
         redirectUrl = '/hospital-admin/login';
         break;
       case 'user':
         await prisma.user.update({
           where: { id: userId },
-          data: { password: hashedPassword },
+          data: { password: hashedPassword, mustChangePassword: false },
         });
          redirectUrl = '/hospital-admin/login';
         break;
       case 'doctor':
         await prisma.doctor.update({
           where: { id: userId },
-          data: { password: hashedPassword },
+          data: { password: hashedPassword, mustChangePassword: false },
         });
         redirectUrl = '/doctor-portal/login';
         break;

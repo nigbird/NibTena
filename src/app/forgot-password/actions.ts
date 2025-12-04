@@ -19,6 +19,7 @@ type UserIdentity = {
   id: number;
   type: 'superadmin' | 'hospital' | 'user' | 'doctor';
   email: string;
+  hospitalId?: number | null;
 };
 
 export async function requestPasswordReset(
@@ -43,27 +44,29 @@ export async function requestPasswordReset(
 
     const superAdmin = await prisma.superAdmin.findUnique({ where: { email } });
     if (superAdmin) {
-      user = { id: superAdmin.id, type: 'superadmin', email: superAdmin.email };
+      user = { id: superAdmin.id, type: 'superadmin', email: superAdmin.email, hospitalId: null };
     }
 
     if (!user) {
       const hospital = await prisma.hospital.findUnique({ where: { contactEmail: email } });
       if (hospital) {
-        user = { id: hospital.id, type: 'hospital', email: hospital.contactEmail };
+        user = { id: hospital.id, type: 'hospital', email: hospital.contactEmail, hospitalId: hospital.id };
       }
     }
 
     if (!user) {
       const staffUser = await prisma.user.findUnique({ where: { email } });
       if (staffUser) {
-        user = { id: staffUser.id, type: 'user', email: staffUser.email };
+        user = { id: staffUser.id, type: 'user', email: staffUser.email, hospitalId: staffUser.hospitalId ?? null };
       }
     }
     
     if (!user) {
       const doctor = await prisma.doctor.findUnique({ where: { contact: email } });
       if (doctor) {
-        user = { id: doctor.id, type: 'doctor', email: doctor.contact };
+        // Try to pick a hospital associated with the doctor (if any)
+        const docHospital = await prisma.doctorsOnHospitals.findFirst({ where: { doctorId: doctor.id } });
+        user = { id: doctor.id, type: 'doctor', email: doctor.contact, hospitalId: docHospital?.hospitalId ?? null };
       }
     }
     
@@ -84,7 +87,7 @@ export async function requestPasswordReset(
     );
 
     // Send email with reset link
-    const emailResult = await sendPasswordResetEmail(user.email, token);
+    const emailResult = await sendPasswordResetEmail(user.email, token, user.hospitalId ?? undefined);
 
     if (emailResult.success) {
       return {

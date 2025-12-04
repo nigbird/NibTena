@@ -381,7 +381,7 @@ export async function setHospitalEmailPreference(hospitalId: number, type: 'cust
   revalidatePath('/hospital-admin/settings');
 }
 
-export async function sendPasswordResetEmail(email: string, token: string) {
+export async function sendPasswordResetEmail(email: string, token: string, hospitalId?: number) {
     const subject = `Reset Your NibAppointment Password`;
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}`;
 
@@ -401,8 +401,9 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     `;
 
     try {
-        // For password resets, we'll try to find a global email configuration first.
-        const { transporter, fromUser, fromName } = await getEmailTransporter();
+      // For password resets, prefer a hospital-specific configuration when provided,
+      // otherwise fall back to the global configuration.
+      const { transporter, fromUser, fromName } = await getEmailTransporter(hospitalId);
 
         const info = await transporter.sendMail({
             from: `"${fromName}" <${fromUser}>`,

@@ -8,7 +8,8 @@ import { auth } from '@/../../auth';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { sendWelcomeEmail } from '@/lib/email-actions';
+import jwt from 'jsonwebtoken';
+import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 
 const CreateRoleSchema = z.object({
   name: z.string().min(2, 'Role name must be at least 2 characters'),
@@ -28,7 +29,7 @@ const CreateUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).optional().or(z.literal('')),
   phone: z.string().optional(),
-  roleId: z.coerce.number().optional(),
+  roleId: z.coerce.number().optional().nullable(),
 });
 
 const UpdateUserSchema = CreateUserSchema.extend({
@@ -198,12 +199,7 @@ export async function createUser(hospitalId: number, formData: FormData) {
   
   const raw = Object.fromEntries(formData.entries());
   
-  let rawPassword = String(raw.password || '');
-  if (!rawPassword) {
-    rawPassword = crypto.randomBytes(8).toString('hex');
-  }
-
-  const parsed = CreateUserSchema.safeParse({ ...raw, password: rawPassword });
+  const parsed = CreateUserSchema.safeParse(raw);
 
   if (!parsed.success) {
     return { success: false, message: parsed.error.flatten().fieldErrors.toString() };
@@ -212,23 +208,37 @@ export async function createUser(hospitalId: number, formData: FormData) {
   const { name, email, password, phone, roleId } = parsed.data;
 
   try {
-    const hashed = await bcrypt.hash(password!, 10);
+    const dataToCreate: any = {
+      name,
+      email,
+      phone,
+      roleId: roleId || null,
+      hospitalId,
+    };
     
-    const user = await prisma.user.create({ data: { name, email, password: hashed, phone, roleId, hospitalId, mustChangePassword: true } });
-    
-    const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
+    // If admin provided a password, hash it and force change on first login.
+    // If not, we will send a "set password" link.
+    if (password) {
+      dataToCreate.password = await bcrypt.hash(password, 10);
+      dataToCreate.mustChangePassword = true;
+    }
 
-    // Revalidate the roles page immediately so the UI can refresh quickly.
+    const user = await prisma.user.create({ data: dataToCreate });
+    
+    // If no password was provided, send a "set password" link.
+    if (!password) {
+      const secret = process.env.AUTH_SECRET;
+      if (!secret) throw new Error('AUTH_SECRET is not set.');
+      
+      const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
+      await sendSetPasswordEmail(user.email, token, hospitalId);
+    } else {
+      // If a password was provided, send a welcome email (without the password).
+      const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
+      await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
+    }
+
     revalidatePath('/hospital-admin/roles');
-
-    // Send welcome email asynchronously so the action returns without waiting
-    // for external SMTP delivery. Log errors but don't block the response.
-    sendWelcomeEmail('staff', { name, email, rawPassword: password, role: role?.name }, hospitalId)
-      .then((res) => {
-        if (!res?.success) console.error('[createUser] sendWelcomeEmail failed:', res?.error);
-      })
-      .catch((err) => console.error('[createUser] sendWelcomeEmail error:', err));
-
     return { success: true, user };
   } catch (error) {
     console.error('[createUser] error', error);
@@ -253,7 +263,7 @@ export async function updateUser(userId: number, formData: FormData) {
     delete raw.password;
   }
   
-  const parsed = UpdateUserSchema.safeParse({ ...raw, id: userId });
+  const parsed = UpdateUserSchema.safeParse({ ...raw, id: userId, roleId: raw.roleId ? Number(raw.roleId) : null });
 
   if (!parsed.success) {
     return { success: false, message: 'Invalid data provided.' };
@@ -265,11 +275,12 @@ export async function updateUser(userId: number, formData: FormData) {
     const dataToUpdate: any = {
       name,
       email,
-      roleId,
+      roleId: roleId || null,
     };
     
     if (password) {
       dataToUpdate.password = await bcrypt.hash(password, 10);
+      dataToUpdate.mustChangePassword = true;
     }
     
     await prisma.user.update({ where: { id }, data: dataToUpdate });

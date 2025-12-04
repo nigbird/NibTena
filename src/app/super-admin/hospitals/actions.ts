@@ -7,7 +7,8 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
 import crypto from 'crypto';
-import { sendWelcomeEmail } from '@/lib/email-actions';
+import jwt from 'jsonwebtoken';
+import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -61,7 +62,6 @@ export async function saveHospital(
   }
 
   const { password, image, ...hospitalData } = validatedFields.data;
-  let rawPassword = password;
 
   const dataToSave: any = {
     ...hospitalData,
@@ -80,15 +80,24 @@ export async function saveHospital(
       }
       await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
     } else {
-      if (!password) {
-        rawPassword = crypto.randomBytes(8).toString('hex');
+       // If admin provided a password, hash it and force change on first login.
+      if (password) {
+        dataToSave.password = await bcrypt.hash(password, 10);
+        dataToSave.mustChangePassword = true;
       }
-      dataToSave.password = await bcrypt.hash(rawPassword!, 10);
-      dataToSave.mustChangePassword = true; // New accounts must change password
 
       const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
       
-      await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail, rawPassword });
+      // If no password was provided, send "set password" link.
+      if (!password) {
+        const secret = process.env.AUTH_SECRET;
+        if (!secret) throw new Error('AUTH_SECRET is not set.');
+        const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '24h' });
+        await sendSetPasswordEmail(created.contactEmail, token);
+      } else {
+        // If password was provided, send a standard welcome email (no password in it).
+        await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
+      }
 
       try {
         const ownerRole = await prisma.role.create({ data: { name: 'Owner', hospitalId: created.id, isAdmin: true } });
@@ -214,5 +223,3 @@ export async function getHospitalsCount(query: string) {
     : {};
   return await prisma.hospital.count({ where });
 }
-
-    

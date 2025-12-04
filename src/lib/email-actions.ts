@@ -1,3 +1,4 @@
+
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -236,14 +237,9 @@ export async function getEmailTransporter(hospitalId?: number) {
 
 export async function sendWelcomeEmail(
     entityType: 'hospital' | 'doctor' | 'staff',
-    details: { name: string; email: string; rawPassword?: string; role?: string },
+    details: { name: string; email: string; role?: string },
     hospitalId?: number
 ) {
-    if (!details.rawPassword) {
-        console.warn(`Attempted to send welcome email to ${details.email} without a password.`);
-        return { success: false, error: "Password was not provided for the welcome email." };
-    }
-
     const subject = `Welcome to Nib Appointment - Your Account is Ready`;
     const loginUrl = entityType === 'doctor'
         ? `${process.env.NEXT_PUBLIC_BASE_URL}/doctor-portal/login`
@@ -252,14 +248,13 @@ export async function sendWelcomeEmail(
     const html = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
             <h2>Welcome to NibAppointment, ${details.name}!</h2>
-            <p>Your ${entityType === 'hospital' ? '' : `${details.role} `}account has been successfully created.</p>
-            <p>You can now log in to the portal using the following credentials:</p>
-            <div style="background-color: #f2f2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
-                <p><strong>Email:</strong> ${details.email}</p>
-                <p><strong>Password:</strong> <code style="background: #e1e1e1; padding: 3px 6px; border-radius: 4px;">${details.rawPassword}</code></p>
-            </div>
-            <p>We recommend changing your password after your first login.</p>
+            <p>Your ${entityType === 'hospital' ? '' : `${details.role || ''} `}account has been created.</p>
+            <p>You have been assigned a temporary password by your administrator. You will be required to change it upon your first login.</p>
+             <p style="margin: 20px 0;">
+                <a href="${loginUrl}" style="background-color: #F7D488; color: #2E2E2E; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                    Login to Your Account
+                </a>
+            </p>
             <p>Thank you!</p>
         </div>
     `;
@@ -278,6 +273,43 @@ export async function sendWelcomeEmail(
         return { success: true, messageId: info.messageId };
     } catch (error: any) {
         console.error(`Failed to send welcome email to ${details.email}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function sendSetPasswordEmail(email: string, token: string, hospitalId?: number) {
+    const subject = `Set Your Password for NibAppointment`;
+    const setPasswordUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}`;
+
+    const html = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Activate Your NibAppointment Account</h2>
+            <p>An account has been created for you. To get started, you need to set your password by clicking the link below.</p>
+            <p>This link is valid for 24 hours.</p>
+            <p style="margin: 20px 0;">
+                <a href="${setPasswordUrl}" style="background-color: #F7D488; color: #2E2E2E; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                    Set Your Password
+                </a>
+            </p>
+            <p>If you did not expect this, you can safely ignore this email.</p>
+            <p>Thank you!</p>
+        </div>
+    `;
+
+     try {
+        const { transporter, fromUser, fromName } = await getEmailTransporter(hospitalId);
+
+        const info = await transporter.sendMail({
+            from: `"${fromName}" <${fromUser}>`,
+            to: email,
+            subject: subject,
+            html: html,
+        });
+
+        console.log("Set password email sent to %s: %s", email, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+        console.error(`Failed to send set password email to ${email}:`, error);
         return { success: false, error: error.message };
     }
 }

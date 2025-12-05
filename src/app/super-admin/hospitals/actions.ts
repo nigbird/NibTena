@@ -84,34 +84,37 @@ export async function saveHospital(
       if (password) {
         dataToSave.password = await bcrypt.hash(password, 10);
         dataToSave.mustChangePassword = true;
-      }
+        
+        const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+        await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
 
-      const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
-      
-      // If no password was provided, send "set password" link.
-      if (!password) {
+      } else {
+        // If no password was provided, create with a temp hash and send a "set password" link.
+        const tempPassword = crypto.randomBytes(16).toString('hex');
+        dataToSave.password = await bcrypt.hash(tempPassword, 10);
+        dataToSave.mustChangePassword = true;
+
+        const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
+        
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '24h' });
         await sendSetPasswordEmail(created.contactEmail, token);
-      } else {
-        // If password was provided, send a standard welcome email (no password in it).
-        await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
       }
-
-      try {
-        const ownerRole = await prisma.role.create({ data: { name: 'Owner', hospitalId: created.id, isAdmin: true } });
-        const allPerms = await prisma.permission.findMany({ select: { id: true } });
-        if (allPerms.length > 0) {
-          const rp = allPerms.map((p) => ({ roleId: ownerRole.id, permissionId: p.id, allowed: true }));
-          await prisma.rolePermission.createMany({ data: rp });
+      
+      // Create the Owner role for the new hospital regardless of password flow
+      const hospitalRecord = await prisma.hospital.findFirst({ where: { contactEmail: dataToSave.contactEmail }});
+      if (hospitalRecord) {
+        try {
+            const ownerRole = await prisma.role.create({ data: { name: 'Owner', hospitalId: hospitalRecord.id, isAdmin: true } });
+            const allPerms = await prisma.permission.findMany({ select: { id: true } });
+            if (allPerms.length > 0) {
+            const rp = allPerms.map((p) => ({ roleId: ownerRole.id, permissionId: p.id, allowed: true }));
+            await prisma.rolePermission.createMany({ data: rp });
+            }
+        } catch (err) {
+            console.error('[create hospital owner role] error', err);
         }
-        const existingUser = await prisma.user.findUnique({ where: { email: created.contactEmail } });
-        if (existingUser) {
-          await prisma.user.update({ where: { id: existingUser.id }, data: { roleId: ownerRole.id } });
-        }
-      } catch (err) {
-        console.error('[create hospital owner role] error', err);
       }
     }
 

@@ -9,7 +9,8 @@ import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { saveImage } from '@/lib/image-upload';
 import crypto from 'crypto';
-import { sendWelcomeEmail } from '@/lib/email-actions';
+import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
+import jwt from 'jsonwebtoken';
 
 const DoctorFormSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -74,7 +75,6 @@ export async function saveDoctor(
   }
 
   const { password, image, ...doctorData } = validatedFields.data;
-  let rawPassword = password;
 
   try {
     const dataToUpdate: any = { ...doctorData };
@@ -90,22 +90,29 @@ export async function saveDoctor(
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
     } else {
-      if (!rawPassword) {
-        rawPassword = crypto.randomBytes(8).toString('hex');
-      }
-      const hashedPassword = await bcrypt.hash(rawPassword, 10);
-      
-      const newDoctor = await prisma.doctor.create({
-        data: {
-          ...dataToUpdate,
-          password: hashedPassword,
-          mustChangePassword: true,
-          rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
-          hospitals: { create: { hospitalId } },
-        },
-      });
+      const dataToCreate: any = {
+        ...dataToUpdate,
+        mustChangePassword: true,
+        rating: Math.floor(Math.random() * (5 - 3 + 1)) + 3,
+        hospitals: { create: { hospitalId } },
+      };
 
-      await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact!, rawPassword }, hospitalId);
+      if (password) {
+        dataToCreate.password = await bcrypt.hash(password, 10);
+        const newDoctor = await prisma.doctor.create({ data: dataToCreate });
+        await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
+      } else {
+        const tempPassword = crypto.randomBytes(16).toString('hex');
+        dataToCreate.password = await bcrypt.hash(tempPassword, 10);
+
+        const newDoctor = await prisma.doctor.create({ data: dataToCreate });
+
+        const secret = process.env.AUTH_SECRET;
+        if (!secret) throw new Error('AUTH_SECRET is not set.');
+        
+        const token = jwt.sign({ userId: newDoctor.id, userType: 'doctor', email: newDoctor.contact }, secret, { expiresIn: '24h' });
+        await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
+      }
     }
     revalidatePath('/hospital-admin/doctors');
     return {

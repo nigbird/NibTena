@@ -94,9 +94,46 @@ export default function HospitalFormDrawer({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    startTransition(() => {
-      formAction(formData);
+    startTransition(async () => {
+      // Build a FormData with text fields only. If a file is provided, upload it
+      // first to the `/api/upload` endpoint and append the returned image URL.
+      const original = new FormData(event.currentTarget);
+
+      // Check for a selected file
+      const fileInput = (event.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="image"]');
+      let imageUrl: string | null = null;
+      if (fileInput?.files?.[0]) {
+        const file = fileInput.files[0];
+        // client-side validation already performed in handleImageChange
+        const uploadFd = new FormData();
+        uploadFd.append('file', file);
+        try {
+          const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd });
+          const json = await resp.json().catch(() => ({}));
+          // Support both `path` (pages route) and `url` (app route) responses
+          const returnedUrl = json?.path || json?.url || json?.publicPath || json?.location;
+          if (resp.ok && returnedUrl) {
+            imageUrl = returnedUrl;
+          } else {
+            const errMsg = json?.error || json?.message || 'Upload failed';
+            setImageValidationErrors([errMsg]);
+            return;
+          }
+        } catch (e) {
+          setImageValidationErrors(['Upload failed']);
+          return;
+        }
+      }
+
+      // Build a new FormData with all original fields except the file input
+      const fd = new FormData();
+      for (const [key, value] of original.entries()) {
+        if (key === 'image') continue;
+        fd.append(key, value as string);
+      }
+      if (imageUrl) fd.set('imageUrl', imageUrl);
+
+      formAction(fd);
     });
   };
 

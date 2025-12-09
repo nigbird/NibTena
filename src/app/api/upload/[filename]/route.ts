@@ -75,3 +75,11 @@ export async function GET(
     );
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};

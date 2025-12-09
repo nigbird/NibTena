@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { saveImage } from '@/lib/image-upload';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
@@ -18,7 +17,7 @@ const HospitalFormSchema = z.object({
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
   accountNumber: z.string().min(1, 'Account number is required.'),
-  image: z.instanceof(File).optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type HospitalFormState = {
@@ -46,10 +45,8 @@ export async function saveHospital(
   if (hospitalId && !rawData.password) {
     delete rawData.password;
   }
-  const imageFile = formData.get('image') as File | null;
-  if (!imageFile || imageFile.size === 0) {
-    delete rawData.image;
-  }
+  const imageUrl = (formData.get('imageUrl') as string) || undefined;
+  if (!imageUrl) delete rawData.imageUrl;
 
   const validatedFields = HospitalFormSchema.safeParse(rawData);
 
@@ -61,7 +58,7 @@ export async function saveHospital(
     };
   }
 
-  const { password, image, ...hospitalData } = validatedFields.data;
+  const { password, imageUrl: validatedImageUrl, ...hospitalData } = validatedFields.data;
 
   const dataToSave: any = {
     ...hospitalData,
@@ -69,8 +66,8 @@ export async function saveHospital(
   };
 
   try {
-    if (image) {
-      dataToSave.imageUrl = await saveImage(image);
+    if (validatedImageUrl) {
+      dataToSave.imageUrl = validatedImageUrl as string;
     }
 
     if (hospitalId) {

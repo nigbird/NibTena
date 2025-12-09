@@ -100,9 +100,42 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
-    startTransition(() => {
-      formAction(formData);
+    startTransition(async () => {
+      const original = new FormData(event.currentTarget);
+
+      // Check for a selected file and upload it to /api/upload
+      const fileInput = formRef.current?.querySelector<HTMLInputElement>('input[name="image"]');
+      let imageUrl: string | null = null;
+      if (fileInput?.files?.[0]) {
+        const file = fileInput.files[0];
+        const uploadFd = new FormData();
+        uploadFd.append('file', file);
+        try {
+          const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd });
+          const json = await resp.json().catch(() => ({}));
+          const returnedUrl = json?.path || json?.url || json?.publicPath || json?.location;
+          if (resp.ok && returnedUrl) {
+            imageUrl = returnedUrl;
+          } else {
+            const errMsg = json?.error || json?.message || 'Upload failed';
+            setImageValidationErrors([errMsg]);
+            return;
+          }
+        } catch (e) {
+          setImageValidationErrors(['Upload failed']);
+          return;
+        }
+      }
+
+      // Build a new FormData with all original fields except the file input
+      const fd = new FormData();
+      for (const [key, value] of original.entries()) {
+        if (key === 'image') continue;
+        fd.append(key, value as string);
+      }
+      if (imageUrl) fd.set('imageUrl', imageUrl);
+
+      formAction(fd);
     });
   }
 

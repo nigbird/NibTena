@@ -7,7 +7,6 @@ import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
-import { saveImage } from '@/lib/image-upload';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import jwt from 'jsonwebtoken';
@@ -20,7 +19,7 @@ const DoctorFormSchema = z.object({
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
-  image: z.instanceof(File).optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type DoctorFormState = {
@@ -59,10 +58,8 @@ export async function saveDoctor(
     delete rawData.password;
   }
   
-  const imageFile = formData.get('image') as File | null;
-  if (!imageFile || imageFile.size === 0) {
-    delete rawData.image;
-  }
+  const imageUrl = (formData.get('imageUrl') as string) || undefined;
+  if (!imageUrl) delete rawData.imageUrl;
 
   const validatedFields = DoctorFormSchema.safeParse(rawData);
 
@@ -74,13 +71,13 @@ export async function saveDoctor(
     };
   }
 
-  const { password, image, ...doctorData } = validatedFields.data;
+  const { password, imageUrl: validatedImageUrl, ...doctorData } = validatedFields.data;
 
   try {
     const dataToUpdate: any = { ...doctorData };
     
-    if (image) {
-      dataToUpdate.imageUrl = await saveImage(image);
+    if (validatedImageUrl) {
+      dataToUpdate.imageUrl = validatedImageUrl as string;
     }
     
     if (doctorId) {

@@ -65,8 +65,9 @@ export default function DoctorLoginPage() {
             role: 'doctor',
             callbackUrl,
         });
-
-        if (result?.error) {
+        if (!result) {
+            setError('Sign-in failed. Please try again.');
+        } else if (result?.error) {
             // Only surface a known friendly lockout message to users; otherwise show a generic inline error.
             const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
             const isFriendlyLock =

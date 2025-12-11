@@ -53,7 +53,9 @@ export default function SuperAdminLoginPage() {
             callbackUrl
         });
 
-          if (result?.error) {
+        if (!result) {
+            setError('Sign-in failed. Please try again.');
+        } else if (result?.error) {
               const errStr = typeof result.error === 'string' ? result.error.toLowerCase() : '';
               const isFriendlyLock =
                  errStr.includes('temporarily locked') ||

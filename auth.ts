@@ -10,7 +10,7 @@ import Redis from 'ioredis';
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
 const WINDOW_MS = 15 * 60 * 1000; // rolling window for attempts (15 minutes)
-const LOCKOUT_MS = 30 * 60 * 1000; // lockout duration after exceeding attempts (30 minutes)
+const LOCKOUT_MS = 15 * 60 * 1000; // lockout duration after exceeding attempts (30 minutes)
 
 // Database-backed rate limiting (Prisma RateLimit model)
 const EMAIL_MAX_ATTEMPTS = 5;
@@ -130,7 +130,22 @@ const authOptions = {
           const lockedEmail = await isLocked(identKey);
           const lockedIp = await isLocked(ipKey);
           if (lockedEmail.locked || lockedIp.locked) {
-            throw new Error("Invalid credentials");
+            // Prefer IP lock message when both are locked; compute remaining minutes instead
+            const lockedUntil = (lockedIp.locked ? lockedIp.until : lockedEmail.until) || Date.now();
+            const msLeft = lockedUntil - Date.now();
+            const minutesLeft = Math.ceil(msLeft / 60000);
+            const timeText = minutesLeft <= 0 ? 'less than a minute' : `${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}`;
+
+            let msg: string;
+            if (lockedIp.locked) {
+              msg = `Too many failed login attempts from your IP. Try again in ${timeText}.`;
+              console.warn(`[auth] ip lockout for ip ${ip}: ${timeText}`);
+            } else {
+              msg = `Too many failed login attempts for this account. Try again in ${timeText}.`;
+              console.warn(`[auth] account lockout for ${email}: ${timeText}`);
+            }
+
+            throw new Error(msg);
           }
           
           let user: any = null;

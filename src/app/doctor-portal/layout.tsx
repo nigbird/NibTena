@@ -80,13 +80,8 @@ export default function DoctorPortalLayout({
   }
 
   if (!session || !doctorData.doctor) {
-    // Client-side redirect to login when session ends or doctor data missing
-    useEffect(() => {
-      if (status !== 'loading' && pathname !== '/doctor-portal/login') {
-        router.push('/doctor-portal/login');
-      }
-    }, [status, pathname, router]);
-
+    // Session missing or doctor data not loaded yet — render nothing while
+    // the other effects (above) handle redirects. Do NOT call hooks here.
     return null;
   }
 

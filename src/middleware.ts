@@ -11,6 +11,9 @@ export default withAuth(
     const mustChangePassword = token.mustChangePassword === true;
     const role = token.role as string | undefined;
 
+    /* ===============================
+       FORCE PASSWORD CHANGE
+    =============================== */
     if (mustChangePassword && role) {
       const forcedRoutes: Record<string, string> = {
         hospital: '/hospital-admin/change-password',
@@ -26,8 +29,10 @@ export default withAuth(
       }
     }
 
-    // Redirect hospital users without dashboard permission to the first allowed page
-    if (token && token.role === 'hospital' && token.isAdmin !== true) {
+    /* ===============================
+       HOSPITAL STAFF LANDING
+    =============================== */
+    if (token.role === 'hospital' && token.isAdmin !== true) {
       if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') {
         const permKeys: string[] = (token as any)?.permissionKeys || [];
         const allowedPrefixes = new Set<string>();
@@ -38,6 +43,7 @@ export default withAuth(
           }
         }
 
+        // ❌ REMOVED '/hospital-admin' FROM HERE
         const preferredOrder = [
           '/hospital-admin',
           '/hospital-admin/doctors',
@@ -50,15 +56,15 @@ export default withAuth(
         ];
 
         const target = preferredOrder.find(p => allowedPrefixes.has(p));
-        if (target) {
+
+        const finalTarget = target ?? '/hospital-admin/profile';
+
+        // ✅ SAFETY: do not redirect to the same path
+        if (finalTarget !== pathname) {
           const url = req.nextUrl.clone();
-          url.pathname = target;
+          url.pathname = finalTarget;
           return NextResponse.redirect(url);
         }
-
-        const fallback = req.nextUrl.clone();
-        fallback.pathname = '/hospital-admin/profile';
-        return NextResponse.redirect(fallback);
       }
     }
   },
@@ -91,7 +97,6 @@ export default withAuth(
           if (isAnyLogin) return true;
           if (pathname === '/' || pathname.startsWith('/user')) return true;
           if (pathname === '/forgot-password' || pathname.startsWith('/reset-password')) return true;
-
           return false;
         }
 
@@ -103,7 +108,6 @@ export default withAuth(
         if (isHospitalAdminRoute && token?.role !== 'hospital') return false;
         if (isDoctorPortalRoute && token?.role !== 'doctor') return false;
 
-        // ✅ KEY FIX: allow /hospital-admin root so redirect logic can run
         if (
           (pathname === '/hospital-admin' || pathname === '/hospital-admin/') &&
           token?.role === 'hospital'
@@ -111,13 +115,12 @@ export default withAuth(
           return true;
         }
 
-        // Permission-based route control for hospital staff
         if (isHospitalAdminRoute && token?.role === 'hospital' && token?.isAdmin !== true) {
           if (pathname.startsWith('/hospital-admin/profile')) return true;
 
           const permKeys: string[] = (token as any)?.permissionKeys || [];
-
           const allowedPrefixes = new Set<string>();
+
           for (const rp of routePermissions) {
             if (permKeys.includes(rp.permission)) {
               allowedPrefixes.add(rp.prefix);
@@ -129,6 +132,7 @@ export default withAuth(
           const isPathAllowed = Array.from(allowedPrefixes).some(p =>
             pathname.startsWith(p)
           );
+
           if (!isPathAllowed) return false;
         }
 

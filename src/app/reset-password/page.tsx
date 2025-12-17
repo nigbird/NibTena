@@ -89,9 +89,9 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
                     {state.message}
                 </AlertDescription>
             </Alert>
-            <Button asChild variant="accent" onClick={() => router.push(state.redirectUrl || '/')}>
-                <Link href={state.redirectUrl || '/'}>Proceed to Login</Link>
-            </Button>
+        <Button asChild variant="accent">
+          <Link href={state.redirectUrl || '/'}>Proceed to Login</Link>
+        </Button>
         </div>
     )
   }
@@ -134,6 +134,17 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
 
 export default function ResetPasswordPage() {
   const [formState, setFormState] = useState<ResetPasswordState>({ success: false, message: null });
+  const router = useRouter();
+
+  useEffect(() => {
+    if (formState.success) {
+      const destination = formState.redirectUrl || '/';
+      const t = setTimeout(() => {
+        router.push(destination);
+      }, 1200);
+      return () => clearTimeout(t);
+    }
+  }, [formState, router]);
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">

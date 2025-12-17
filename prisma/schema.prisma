@@ -21,6 +21,7 @@ model Hospital {
   name              String               @unique
   description       String
   city              String
+  address           String?
   useGlobalEmailId Int?
   useGlobalEmail   EmailSettings?    @relation("HospitalUsesGlobalEmail", fields: [useGlobalEmailId], references: [id])
   // If this hospital has its own custom email settings (one-to-one)
@@ -28,6 +29,10 @@ model Hospital {
   customEmail      EmailSettings?  @relation("HospitalCustomEmail")
   dataRetentionDays Int                  @default(90)
   imageUrl          String?
+  ownerName         String?
+  ownerPhone        String?
+  bankDistrict      String?
+  bankBranch        String?
   contactEmail      String               @unique
   contactPhone      String
   password          String

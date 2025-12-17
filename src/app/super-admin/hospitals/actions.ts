@@ -13,8 +13,13 @@ const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   city: z.string().min(2, 'City is required.'),
+  address: z.string().optional(),
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
+  ownerName: z.string().optional(),
+  ownerPhone: z.string().optional(),
+  bankDistrict: z.string().optional(),
+  bankBranch: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
   accountNumber: z.string().min(1, 'Account number is required.'),
   imageUrl: z.string().optional(),
@@ -25,8 +30,13 @@ export type HospitalFormState = {
     name?: string[];
     description?: string[];
     city?: string[];
+    address?: string[];
     contactEmail?: string[];
     contactPhone?: string[];
+    ownerName?: string[];
+    ownerPhone?: string[];
+    bankDistrict?: string[];
+    bankBranch?: string[];
     password?: string[];
     accountNumber?: string[];
     image?: string[];
@@ -198,6 +208,11 @@ export async function getHospitals(page: number, limit: number, query: string) {
       name: true,
       description: true,
       city: true,
+      address: true,
+      ownerName: true,
+      ownerPhone: true,
+      bankDistrict: true,
+      bankBranch: true,
       contactEmail: true,
       contactPhone: true,
       status: true,

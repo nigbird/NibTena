@@ -11,8 +11,13 @@ export type Hospital = {
   id: number;
   name: string;
   city: string;
+  address?: string | null;
   imageUrl: string | null;
   description: string;
+  ownerName?: string | null;
+  ownerPhone?: string | null;
+  bankDistrict?: string | null;
+  bankBranch?: string | null;
   contactEmail: string;
   contactPhone: string;
   password?: string;

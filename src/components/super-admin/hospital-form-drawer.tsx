@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
@@ -38,6 +38,7 @@ export default function HospitalFormDrawer({
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
   
   const initialState: HospitalFormState = { message: null, errors: {} };
   const action = saveHospital.bind(null, hospitalToEdit?.id ?? null);
@@ -95,22 +96,17 @@ export default function HospitalFormDrawer({
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     startTransition(async () => {
-      // Build a FormData with text fields only. If a file is provided, upload it
-      // first to the `/api/upload` endpoint and append the returned image URL.
       const original = new FormData(event.currentTarget);
 
-      // Check for a selected file
       const fileInput = (event.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="image"]');
       let imageUrl: string | null = null;
       if (fileInput?.files?.[0]) {
         const file = fileInput.files[0];
-        // client-side validation already performed in handleImageChange
         const uploadFd = new FormData();
         uploadFd.append('file', file);
         try {
           const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd });
           const json = await resp.json().catch(() => ({}));
-          // Support both `path` (pages route) and `url` (app route) responses
           const returnedUrl = json?.path || json?.url || json?.publicPath || json?.location;
           if (resp.ok && returnedUrl) {
             imageUrl = returnedUrl;
@@ -125,7 +121,6 @@ export default function HospitalFormDrawer({
         }
       }
 
-      // Build a new FormData with all original fields except the file input
       const fd = new FormData();
       for (const [key, value] of original.entries()) {
         if (key === 'image') continue;
@@ -183,19 +178,17 @@ export default function HospitalFormDrawer({
               {state.errors?.description && <p className="text-destructive text-sm">{state.errors.description[0]}</p>}
             </div>
             
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
+             <div className="grid sm:grid-cols-2 gap-4">
+               <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
                   {state.errors?.city && <p className="text-destructive text-sm">{state.errors.city[0]}</p>}
               </div>
-              {!isEditing && (
                 <div className="space-y-2">
-                  <Label htmlFor="password">Admin Password</Label>
-                  <Input id="password" name="password" type="password" placeholder={"Leave blank to auto-generate"} />
-                  {state.errors?.password && <p className="text-destructive text-sm">{state.errors.password[0]}</p>}
+                    <Label htmlFor="address">Specific Address</Label>
+                    <Input id="address" name="address" defaultValue={(hospitalToEdit as any)?.address || ''} />
+                    {state.errors?.address && <p className="text-destructive text-sm">{state.errors.address[0]}</p>}
                 </div>
-              )}
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -210,13 +203,51 @@ export default function HospitalFormDrawer({
                  {state.errors?.contactPhone && <p className="text-destructive text-sm">{state.errors.contactPhone[0]}</p>}
               </div>
             </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
-                {state.errors?.accountNumber && <p className="text-destructive text-sm">{state.errors.accountNumber[0]}</p>}
-            </div>
             
+            <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="ownerName">Owner/Manager Name</Label>
+                    <Input id="ownerName" name="ownerName" defaultValue={(hospitalToEdit as any)?.ownerName || ''} />
+                    {state.errors?.ownerName && <p className="text-destructive text-sm">{state.errors.ownerName[0]}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="ownerPhone">Owner/Manager Phone</Label>
+                    <Input id="ownerPhone" name="ownerPhone" type="tel" defaultValue={(hospitalToEdit as any)?.ownerPhone || ''} />
+                    {state.errors?.ownerPhone && <p className="text-destructive text-sm">{state.errors.ownerPhone[0]}</p>}
+                </div>
+            </div>
+
+             <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="bankDistrict">Bank District</Label>
+                    <Input id="bankDistrict" name="bankDistrict" defaultValue={(hospitalToEdit as any)?.bankDistrict || ''} />
+                    {state.errors?.bankDistrict && <p className="text-destructive text-sm">{state.errors.bankDistrict[0]}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="bankBranch">Bank Branch</Label>
+                    <Input id="bankBranch" name="bankBranch" defaultValue={(hospitalToEdit as any)?.bankBranch || ''} />
+                    {state.errors?.bankBranch && <p className="text-destructive text-sm">{state.errors.bankBranch[0]}</p>}
+                </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="accountNumber">Account Number</Label>
+                    <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
+                    {state.errors?.accountNumber && <p className="text-destructive text-sm">{state.errors.accountNumber[0]}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Admin Password</Label>
+                   <div className="relative">
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank to auto-generate'} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                   </div>
+                  {state.errors?.password && <p className="text-destructive text-sm">{state.errors.password[0]}</p>}
+                </div>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch id="status" name="status" defaultChecked={hospitalToEdit?.status === 'active' || !isEditing} />
               <Label htmlFor="status">Active</Label>

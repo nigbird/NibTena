@@ -77,10 +77,18 @@ async function getPhoneNumberFromCookie() {
   }
 
   try {
+    console.log('appointments.getPhoneNumberFromCookie: raw cookie length:', sessionCookie.length);
     // Decode base64 if it was encoded before storing
     const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    const session = JSON.parse(decoded);
+    let session: any = null;
+    try {
+      session = JSON.parse(decoded);
+    } catch (err) {
+      console.error('appointments.getPhoneNumberFromCookie: failed to parse decoded cookie', err);
+      return null;
+    }
 
+    console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', session.phoneNumber || null);
     return session.phoneNumber || null;
   } catch (err) {
     console.error("Failed to parse miniapp_session cookie:", err);
@@ -94,7 +102,7 @@ export async function getMyAppointmentsForMiniApp() {
   if (!phoneFromCookie) {
     return [];
   }
-
+  console.log('getMyAppointmentsForMiniApp: phoneFromCookie:', phoneFromCookie);
   return await getMyAppointmentsByPhone(phoneFromCookie);
 }
 

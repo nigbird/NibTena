@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     // ✅ Read Authorization header
     const authHeader = request.headers.get("Authorization");
+    console.log('Payment callback - incoming headers:', Object.fromEntries(request.headers.entries()));
 
     if (!authHeader) {
       console.error("❌ Missing Authorization header.");
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Invalid JSON in request body" }, { status: 400 });
     }
 
+    console.log('Payment callback - parsed body keys:', Object.keys(requestBody || {}));
+
     const {
       paidAmount,
       paidByNumber,
@@ -94,6 +97,9 @@ export async function POST(request: NextRequest) {
       token,
       Signature: receivedSignature,
     } = requestBody;
+
+    const mask = (s?: string) => (s ? (s.length <= 8 ? '****' : `${s.slice(0,4)}...${s.slice(-4)}`) : null);
+    console.log('Payment callback - txnRef:', txnRef, 'paidByNumber(masked):', mask(paidByNumber), 'token(masked):', mask(token));
 
 
     // ✅ Check required fields

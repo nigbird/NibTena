@@ -45,6 +45,8 @@ export default async function Home() {
     const cookieStore = cookies();
     const hasMiniAppSession = !!cookieStore.get('miniapp_session');
 
+    console.log('User home page: hasMiniAppSession:', hasMiniAppSession);
+
     const quickActions = hasMiniAppSession
         ? allQuickActions.filter(action => action.label !== 'Profile')
         : allQuickActions;

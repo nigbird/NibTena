@@ -202,10 +202,20 @@ export async function completeBooking(bookingData: any) {
 
   try {
     // Decode base64 if it was encoded before storing
+    console.log('getAuthTokenFromCookie: raw cookie length:', sessionCookie.length);
     const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    const session = JSON.parse(decoded);
+    let session: any = null;
+    try {
+      session = JSON.parse(decoded);
+    } catch (err) {
+      console.error('getAuthTokenFromCookie: failed to parse decoded cookie', err);
+      return null;
+    }
 
-    return session.authToken || null;
+    const authToken = session.authToken || null;
+    const masked = authToken ? (authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`) : null;
+    console.log('getAuthTokenFromCookie: returning masked authToken:', masked);
+    return authToken || null;
   } catch (err) {
     console.error("Failed to parse miniapp_session cookie:", err);
     return null;
@@ -221,10 +231,17 @@ export async function getPhoneNumberFromCookie() {
   }
 
   try {
-    // Decode base64 if it was encoded before storing
+    console.log('getPhoneNumberFromCookie: raw cookie length:', sessionCookie.length);
     const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    const session = JSON.parse(decoded);
+    let session: any = null;
+    try {
+      session = JSON.parse(decoded);
+    } catch (err) {
+      console.error('getPhoneNumberFromCookie: failed to parse decoded cookie', err);
+      return null;
+    }
 
+    console.log('getPhoneNumberFromCookie: derived phoneNumber:', session.phoneNumber || null);
     return session.phoneNumber || null;
   } catch (err) {
     console.error("Failed to parse miniapp_session cookie:", err);
@@ -276,6 +293,10 @@ export async function initiateBookingAndPayment(
   const finalPhone = normalizePhoneNumber(phoneFromCookie || phone);
 
   try {
+    console.log('initiateBookingAndPayment: phoneFromCookie:', phoneFromCookie, 'authToken present:', !!authToken);
+    const maskedAuth = authToken ? (authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`) : null;
+    console.log('initiateBookingAndPayment: using authToken (masked):', maskedAuth, 'finalPhone:', finalPhone, 'transactionId:', transactionId);
+
     const patient = await findOrCreatePatient(finalPhone, { name: fullName, age, gender });
     
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }});
@@ -380,18 +401,25 @@ export async function initiateBookingAndPayment(
       responseData = responseText;
     }
 
+    console.log('initiateBookingAndPayment: payment gateway response status:', response.status, 'body length:', responseText?.length ?? 0);
     if (!response.ok) {
       console.error("Payment Gateway Error:", {
         status: response.status,
         statusText: response.statusText,
         errorData: responseData,
         url: NIB_PAYMENT_URL,
-        payload,
+        // Mask sensitive payload fields for logs
+        payload: {
+          ...payload,
+          token: payload.token ? (payload.token.length <= 8 ? '****' : `${payload.token.slice(0,4)}...${payload.token.slice(-4)}`) : null,
+        },
       });
       throw new Error(`Payment gateway returned ${response.status} ${response.statusText}: ${JSON.stringify(responseData)}`);
     }
 
     const paymentToken = responseData?.token;
+
+    console.log('initiateBookingAndPayment: payment response token (masked):', paymentToken ? (String(paymentToken).length <= 8 ? '****' : `${String(paymentToken).slice(0,4)}...${String(paymentToken).slice(-4)}`) : null);
 
     if (!paymentToken) {
       throw new Error("Payment token not received from gateway.");

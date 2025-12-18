@@ -14,6 +14,9 @@ export default async function UserLayout({
 
   const patient = await getPatientFromCookie();
 
+  console.log('UserLayout: hasMiniAppSession:', hasMiniAppSession, 'cookieLength:', miniappCookie?.value?.length ?? 0);
+  console.log('UserLayout: patient present:', !!patient, patient ? `id=${patient.id}` : null);
+
 
   return (
     <PatientProvider initialPatient={patient} initialSuperAppToken={miniappCookie?.value}>

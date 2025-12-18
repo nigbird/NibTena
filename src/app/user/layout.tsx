@@ -14,12 +14,27 @@ export default async function UserLayout({
 
   const patient = await getPatientFromCookie();
 
+  // If a mini app session cookie exists it was stored as base64(JSON(sessionData)).
+  // Decode it here and pass only the auth token to the client-side provider.
+  let initialSuperAppToken: string | undefined = undefined;
+  try {
+    if (miniappCookie?.value) {
+      const decoded = Buffer.from(miniappCookie.value, 'base64').toString('utf-8');
+      const session = JSON.parse(decoded);
+      initialSuperAppToken = session?.authToken || undefined;
+    }
+  } catch (err) {
+    console.error('UserLayout: failed to decode miniapp_session cookie for initial token:', err);
+  }
+
+  const masked = (t?: string) => (t ? (t.length <= 8 ? '****' : `${t.slice(0,4)}...${t.slice(-4)}`) : null);
   console.log('UserLayout: hasMiniAppSession:', hasMiniAppSession, 'cookieLength:', miniappCookie?.value?.length ?? 0);
   console.log('UserLayout: patient present:', !!patient, patient ? `id=${patient.id}` : null);
+  console.log('UserLayout: initialSuperAppToken (masked):', masked(initialSuperAppToken));
 
 
   return (
-    <PatientProvider initialPatient={patient} initialSuperAppToken={miniappCookie?.value}>
+    <PatientProvider initialPatient={patient} initialSuperAppToken={initialSuperAppToken}>
       <UserLayoutClient hasMiniAppSession={hasMiniAppSession}>
         {children}
       </UserLayoutClient>

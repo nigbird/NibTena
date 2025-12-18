@@ -99,13 +99,18 @@ export async function GET(request: Request) {
     const cookieStore = await cookies();
     // Mask token for logs
     const maskToken = (t: string) => (t.length <= 8 ? '****' : `${t.slice(0,4)}...${t.slice(-4)}`);
-    console.log('Connect route - setting miniapp_session cookie (base64 length):', encodedSession.length, 'httpOnly:', true, 'secure:', process.env.NODE_ENV === 'production');
-    cookieStore.set('miniapp_session', encodedSession, {
+    // Use SameSite=None for embedded/cross-site contexts (Super App WebView).
+    // Note: cookies with SameSite=None must also be Secure in browsers.
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieOptions: any = {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    };
+    console.log('Connect route - setting miniapp_session cookie (base64 length):', encodedSession.length, 'options:', { httpOnly: true, secure: cookieOptions.secure, sameSite: cookieOptions.sameSite, maxAge: cookieOptions.maxAge });
+    cookieStore.set('miniapp_session', encodedSession, cookieOptions);
 
     const url = new URL(request.url);
     const redirectUrl = `${url.protocol}//${url.host}/`;

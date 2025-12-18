@@ -9,7 +9,7 @@ export default async function UserLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = cookies();
-  const miniappCookie = cookieStore.get('miniapp_session');
+  const miniappCookie = (await cookieStore).get('miniapp_session');
   const hasMiniAppSession = !!miniappCookie;
 
   const patient = await getPatientFromCookie();

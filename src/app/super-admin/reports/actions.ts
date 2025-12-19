@@ -6,22 +6,24 @@ import { format, startOfDay, endOfDay, isBefore, isAfter } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
 export async function getHospitalReportData(dateRange?: DateRange) {
-    const whereClause = {
-        ...(dateRange?.from && dateRange?.to && {
-            appointmentDate: {
-                gte: startOfDay(dateRange.from),
-                lte: endOfDay(dateRange.to),
-            }
-        })
-    };
+    // Define the date range for the database query.
+    // If no date range is provided, it will not filter by date.
+    const dateFilter = dateRange?.from && dateRange?.to 
+        ? {
+            gte: startOfDay(dateRange.from),
+            lte: endOfDay(dateRange.to),
+          }
+        : undefined;
 
     const hospitals = await prisma.hospital.findMany({
         include: {
             createdBySuperAdmin: true,
             approvedBySuperAdmin: true,
+            // Include appointments directly filtered by date range and payment status in the query
             appointments: {
                 where: {
-                    status: { not: 'pending-payment' }
+                    status: { not: 'pending-payment' },
+                    ...(dateFilter && { appointmentDate: dateFilter }),
                 },
                 include: {
                     doctor: true
@@ -34,15 +36,10 @@ export async function getHospitalReportData(dateRange?: DateRange) {
     });
     
     return hospitals.map((hospital: any) => {
-        // Filter appointments by date range client-side on the returned data
-        const appointmentsInRange = hospital.appointments.filter((appt: any) => {
-             if (!dateRange?.from || !dateRange?.to) return true; // if no date range, include all
-             const apptDate = startOfDay(new Date(appt.appointmentDate));
-             return !isBefore(apptDate, dateRange.from) && !isAfter(apptDate, dateRange.to);
-        });
-
-        const revenue = appointmentsInRange.reduce((sum: number, appt: any) => {
-            // FIX: Check if appt.doctor exists before accessing consultationFee
+        // The appointments are now pre-filtered by the database query.
+        // We can directly calculate the revenue from this filtered list.
+        const revenue = hospital.appointments.reduce((sum: number, appt: any) => {
+            // The null check for appt.doctor is still important for data integrity.
             return sum + (appt.doctor?.consultationFee || 0);
         }, 0);
         

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter, FileDown } from "lucide-react";
+import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter, FileDown, PieChart as PieChartIcon } from "lucide-react";
 import { getReportData } from './actions';
 import type { Appointment, Doctor, Patient } from '@/lib/definitions';
 import { DateRangePicker } from '@/components/ui/date-range-picker';

@@ -10,9 +10,10 @@ import {
 import { Users, Calendar, BriefcaseMedical } from 'lucide-react';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { HospitalAdminDashboardClient } from '@/components/hospital-admin/HospitalAdminDashboardClient';
 import { redirect } from 'next/navigation';
+import type { Appointment, Doctor } from '@/lib/definitions';
 
 
 export default async function HospitalAdminDashboard() {
@@ -53,9 +54,13 @@ export default async function HospitalAdminDashboard() {
     }
   });
 
-  const appointments = await prisma.appointment.findMany({
+  const appointments: (Appointment & { doctor: Doctor | null, patient: any })[] = await prisma.appointment.findMany({
     where: {
       hospitalId: hospitalId,
+    },
+    include: {
+        doctor: true,
+        patient: true
     }
   });
 
@@ -66,7 +71,7 @@ export default async function HospitalAdminDashboard() {
 
   const chartData = doctors.map(doctor => ({
     name: doctor.name.replace('Dr. ', ''),
-    appointments: appointments.filter(a => a.doctorId === doctor.id).length
+    appointments: appointments.filter(a => a.doctor && a.doctorId === doctor.id).length
   }));
 
   const statusCounts = {
@@ -133,11 +138,13 @@ export default async function HospitalAdminDashboard() {
       </div>
       
       <HospitalAdminDashboardClient
+        initialReportData={{
+            appointments: appointments,
+            doctors: doctors,
+        }}
         chartData={chartData}
         appointmentStatusData={appointmentStatusData}
       />
     </>
   );
 }
-
-    

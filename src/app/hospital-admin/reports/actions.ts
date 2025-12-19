@@ -15,10 +15,10 @@ export async function getReportData(
     patientName?: string
 ) {
   const session = await auth();
-  if (!session?.user) return { appointments: [], doctors: [], stats: { totalAppointments: 0, cancelledAppointments: 0, rescheduledAppointments: 0, totalRevenue: 0 }, doctorRevenueBreakdown: [] };
+  if (!session?.user) return { appointments: [], doctors: [] };
 
   const allowed = await requireHospitalPermission('Reports:View', hospitalId);
-  if (!allowed) return { appointments: [], doctors: [], stats: { totalAppointments: 0, cancelledAppointments: 0, rescheduledAppointments: 0, totalRevenue: 0 }, doctorRevenueBreakdown: [] };
+  if (!allowed) return { appointments: [], doctors: [] };
 
   const createdAtDateFilter = dateRange?.from && dateRange.to ? {
     createdAt: {
@@ -51,39 +51,8 @@ export async function getReportData(
     }
   })
 
-  const totalAppointments = appointments.length;
-  const cancelledAppointments = appointments.filter(a => a.status === 'cancelled').length;
-  const rescheduledAppointments = appointments.filter(a => a.status === 'rescheduled').length;
-  
-  const totalRevenue = appointments
-    .filter(a => a.status !== 'pending-payment')
-    .reduce((sum, a) => {
-        // Fix: Add a null check for the doctor to prevent crash if doctor is deleted
-        if (!a.doctor) {
-            return sum;
-        }
-        return sum + (a.doctor.consultationFee || 0);
-    }, 0);
-
-  const doctorRevenueBreakdown = doctors.map(doctor => {
-    const revenueAppointments = appointments.filter(a => a.doctorId === doctor.id && a.status !== 'pending-payment');
-    const revenue = revenueAppointments.reduce((sum) => sum + (doctor.consultationFee || 0), 0);
-    return {
-      name: doctor.name.replace('Dr. ', ''),
-      appointments: revenueAppointments.length,
-      revenue: revenue
-    };
-  }).filter(d => d.appointments > 0);
-
   return {
     appointments: appointments as (Appointment & { patient: Patient, doctor: Doctor | null })[],
     doctors,
-    stats: {
-        totalAppointments,
-        cancelledAppointments,
-        rescheduledAppointments,
-        totalRevenue,
-    },
-    doctorRevenueBreakdown
   };
 }

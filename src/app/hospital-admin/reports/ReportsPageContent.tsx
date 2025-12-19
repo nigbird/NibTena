@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { LineChart, Filter, FileDown } from "lucide-react";
 import { getReportData } from './actions';
 import type { Appointment, Doctor, Patient } from '@/lib/definitions';

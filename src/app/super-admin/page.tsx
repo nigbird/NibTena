@@ -10,9 +10,10 @@ import { Hospital as HospitalIcon, Users, BriefcaseMedical } from 'lucide-react'
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import SuperAdminDashboardClient from './SuperAdminDashboardClient';
+import type { Appointment, Doctor, Hospital } from '@prisma/client';
 
 export default async function SuperAdminDashboard() {
-  const [hospitals, doctors, appointments, patients] = await Promise.all([
+  const [hospitals, doctorsCount, appointments, patientsCount] = await Promise.all([
     prisma.hospital.findMany({
       include: {
         _count: {
@@ -21,20 +22,39 @@ export default async function SuperAdminDashboard() {
       },
     }),
     prisma.doctor.count(),
-    prisma.appointment.findMany(),
+    prisma.appointment.findMany({
+        include: {
+            hospital: {
+                include: {
+                    _count: {
+                        select: { doctors: true }
+                    }
+                }
+            }
+        }
+    }),
     prisma.patient.count(),
   ]);
-  
-  const totalUsers = patients + doctors + hospitals.length;
 
-  const chartData = hospitals.map(hospital => {
-    const hospitalAppointments = appointments.filter(a => a.hospitalId === hospital.id);
-    return {
-      name: hospital.name.split(' ')[0],
-      doctors: hospital._count.doctors,
-      appointments: hospitalAppointments.length,
-    };
+  const totalUsers = patientsCount + doctorsCount + hospitals.length;
+
+  const hospitalStats: { [key: number]: { name: string; doctors: number; appointments: number } } = {};
+
+  hospitals.forEach(h => {
+    hospitalStats[h.id] = {
+        name: h.name.split(' ')[0],
+        doctors: h._count.doctors,
+        appointments: 0
+    }
   });
+
+  appointments.forEach(a => {
+      if (a.hospital && hospitalStats[a.hospitalId]) {
+          hospitalStats[a.hospitalId].appointments++;
+      }
+  });
+  
+  const chartData = Object.values(hospitalStats);
 
   const statusCounts = {
     'Confirmed': appointments.filter(a => a.status === 'confirmed' || a.status === 'rescheduled').length,
@@ -79,7 +99,7 @@ export default async function SuperAdminDashboard() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctors}</div>
+            <div className="text-2xl font-bold">{doctorsCount}</div>
             <p className="text-xs text-muted-foreground">doctors registered</p>
           </CardContent>
         </Card>

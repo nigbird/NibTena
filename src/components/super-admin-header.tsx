@@ -10,6 +10,7 @@ import {
   Menu,
   Mail,
   Bell,
+  LineChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,6 +85,13 @@ export default function SuperAdminHeader() {
                         >
                         <Mail className="h-5 w-5" />
                         Email
+                    </Link>
+                    <Link
+                        href="/super-admin/reports"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                        >
+                        <LineChart className="h-5 w-5" />
+                        Reports
                     </Link>
                     <Link
                         href="/super-admin/settings"

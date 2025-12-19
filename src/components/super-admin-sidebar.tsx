@@ -10,6 +10,7 @@ import {
   // Settings,
   CircleUser,
   Mail,
+  LineChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ const navLinks = [
   { href: '/super-admin/hospital-approvals', label: 'Approvals', icon: Bell },
   { href: '/super-admin/create-super-admin', label: 'Super Admins', icon: CircleUser },
   { href: '/super-admin/email', label: 'Email', icon: Mail },
+  { href: '/super-admin/reports', label: 'Reports', icon: LineChart },
   // { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];
 

@@ -2,17 +2,26 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
-export async function getHospitalReportData() {
+export async function getHospitalReportData(dateRange?: DateRange) {
+    const whereAppointments = {
+        status: 'completed' as const,
+        ...(dateRange?.from && dateRange?.to && {
+            appointmentDate: {
+                gte: startOfDay(dateRange.from),
+                lte: endOfDay(dateRange.to),
+            }
+        })
+    };
+
     const hospitals = await prisma.hospital.findMany({
         include: {
             createdBySuperAdmin: true,
             approvedBySuperAdmin: true,
             appointments: {
-                where: {
-                    status: 'completed',
-                },
+                where: whereAppointments,
                 include: {
                     doctor: true
                 }
@@ -24,7 +33,8 @@ export async function getHospitalReportData() {
     });
     
     return hospitals.map((hospital: any) => {
-        const monthlyRevenue = hospital.appointments.reduce((sum: number, appt: any) => {
+        const revenue = hospital.appointments.reduce((sum: number, appt: any) => {
+            // Fix: Check if appt.doctor exists before accessing consultationFee
             return sum + (appt.doctor?.consultationFee || 0);
         }, 0);
         
@@ -40,8 +50,7 @@ export async function getHospitalReportData() {
             registrationDate: format(hospital.createdAt, 'yyyy-MM-dd'),
             registeredBy: hospital.createdBySuperAdmin?.name || 'System',
             approvedBy: hospital.approvedBySuperAdmin?.name || 'N/A',
-            monthlyRevenue: monthlyRevenue,
+            revenue: revenue,
         };
     });
 }
-

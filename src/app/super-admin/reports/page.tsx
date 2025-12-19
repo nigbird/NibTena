@@ -30,19 +30,21 @@ export default function SuperAdminReportsPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await getHospitalReportData();
+            const data = await getHospitalReportData(dateRange);
             setReportData(data);
         } catch (error) {
             console.error("Failed to fetch report data:", error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [dateRange]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
     
+    // The data is now pre-filtered by the server action based on dateRange for appointments.
+    // The client-side filter is now only for the registration date.
     const filteredData = useMemo(() => {
         if (!reportData) return [];
         return reportData.filter(item => {
@@ -66,7 +68,7 @@ export default function SuperAdminReportsPage() {
 
         (doc as any).autoTable({
             startY: 35,
-            head: [['S.No', 'Branch', 'District', 'Hospital Name', 'Owner', 'Account', 'Phone', 'Address', 'Reg. Date', 'Registered By', 'Approved By', 'Revenue (Monthly)']],
+            head: [['S.No', 'Branch', 'District', 'Hospital Name', 'Owner', 'Account', 'Phone', 'Address', 'Reg. Date', 'Registered By', 'Approved By', 'Revenue']],
             body: filteredData.map((item, index) => [
                 index + 1,
                 item.bankBranch,
@@ -79,7 +81,7 @@ export default function SuperAdminReportsPage() {
                 item.registrationDate,
                 item.registeredBy,
                 item.approvedBy,
-                item.monthlyRevenue
+                item.revenue
             ]),
             styles: { fontSize: 8 },
             headStyles: { fillColor: [46, 46, 46] },
@@ -108,7 +110,7 @@ export default function SuperAdminReportsPage() {
             'Registration Date': item.registrationDate,
             'Registered by': item.registeredBy,
             'Approved by': item.approvedBy,
-            'Monthly revenue': item.monthlyRevenue,
+            'Revenue': item.revenue,
         }));
         
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -152,7 +154,7 @@ export default function SuperAdminReportsPage() {
                         <TableHead>Account</TableHead>
                         <TableHead>Registered</TableHead>
                         <TableHead>Approved by</TableHead>
-                        <TableHead className="text-right">Monthly Revenue</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -172,7 +174,7 @@ export default function SuperAdminReportsPage() {
                                 <div className="text-xs text-muted-foreground">{item.registrationDate}</div>
                             </TableCell>
                             <TableCell>{item.approvedBy}</TableCell>
-                            <TableCell className="text-right">{item.monthlyRevenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}</TableCell>
+                            <TableCell className="text-right">{item.revenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

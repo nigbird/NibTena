@@ -11,6 +11,7 @@ declare module 'next-auth' {
       hospitalId?: number | null;
       doctorHospitalIds?: number[] | null;
       image?: string | null;
+      mustChangePassword?: boolean;
     };
   }
 

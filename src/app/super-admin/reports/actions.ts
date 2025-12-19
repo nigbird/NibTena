@@ -7,7 +7,7 @@ import type { DateRange } from 'react-day-picker';
 
 export async function getHospitalReportData(dateRange?: DateRange) {
     const whereAppointments = {
-        status: 'completed' as const,
+        status: 'confirmed' as const,
         ...(dateRange?.from && dateRange?.to && {
             appointmentDate: {
                 gte: startOfDay(dateRange.from),

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as UiTableFooter } from '@/components/ui/table';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -51,6 +51,17 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
     fetchData();
   }, [fetchData]);
   
+  const totalRevenue = useMemo(() => {
+    if (!reportData) return 0;
+    return reportData.appointments.reduce((sum, appt) => {
+      // Ensure doctor exists and status is not pending before adding to revenue
+      if (appt.doctor && appt.status !== 'pending-payment') {
+        return sum + (appt.doctor.consultationFee || 0);
+      }
+      return sum;
+    }, 0);
+  }, [reportData]);
+
   const handleDownloadExcel = () => {
     if (!reportData) return;
 
@@ -135,6 +146,14 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
             </TableRow>
           ))}
         </TableBody>
+        <UiTableFooter>
+            <TableRow>
+                <TableCell colSpan={4} className="font-bold text-right">Total Revenue</TableCell>
+                <TableCell className="text-right font-bold">
+                    {totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+                </TableCell>
+            </TableRow>
+        </UiTableFooter>
       </Table>
     );
   };

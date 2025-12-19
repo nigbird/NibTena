@@ -8,7 +8,7 @@ import type { DateRange } from 'react-day-picker';
 export async function getHospitalReportData(dateRange?: DateRange) {
     // Define the date range for the database query.
     // If no date range is provided, it will not filter by date.
-    const dateFilter = dateRange?.from && dateRange?.to 
+    const createdAtDateFilter = dateRange?.from && dateRange?.to 
         ? {
             gte: startOfDay(dateRange.from),
             lte: endOfDay(dateRange.to),
@@ -23,7 +23,7 @@ export async function getHospitalReportData(dateRange?: DateRange) {
             appointments: {
                 where: {
                     status: { not: 'pending-payment' },
-                    ...(dateFilter && { appointmentDate: dateFilter }),
+                    ...(createdAtDateFilter && { createdAt: createdAtDateFilter }),
                 },
                 include: {
                     doctor: true
@@ -40,7 +40,10 @@ export async function getHospitalReportData(dateRange?: DateRange) {
         // We can directly calculate the revenue from this filtered list.
         const revenue = hospital.appointments.reduce((sum: number, appt: any) => {
             // The null check for appt.doctor is still important for data integrity.
-            return sum + (appt.doctor?.consultationFee || 0);
+            if (!appt.doctor) {
+                return sum;
+            }
+            return sum + (appt.doctor.consultationFee || 0);
         }, 0);
         
         return {

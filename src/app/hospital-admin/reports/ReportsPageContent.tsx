@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { LineChart, BarChart as BarChartIcon, Users, BriefcaseMedical, XCircle, DollarSign, RefreshCw, Filter, FileDown } from "lucide-react";
 import { getReportData } from './actions';
 import type { Appointment, Doctor, Patient } from '@/lib/definitions';
@@ -131,17 +131,18 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
         appointmentsTrendData,
         doctorRevenueData,
         appointmentStatusData,
-        hasData: filteredAppointments.length > 0
+        hasData: filteredAppointments.length > 0,
+        filteredAppointments,
     };
 
   }, [reportData, dateRange]);
 
    const handleDownloadExcel = () => {
-    if (!reportData) return;
+    if (!reportData || !filteredData) return;
 
     // 1. Doctors Report Data
     const doctorsReportData = reportData.doctors.map((doctor, index) => {
-      const doctorAppointments = reportData.appointments.filter(a => a.doctorId === doctor.id);
+      const doctorAppointments = filteredData.filteredAppointments.filter(a => a.doctorId === doctor.id);
       const patientCount = new Set(doctorAppointments.map(a => a.patientId)).size;
       const revenue = doctorAppointments
         .filter(a => a.status !== 'pending-payment')
@@ -158,7 +159,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
     });
 
     // 2. Patient Report Data
-    const patientReportData = reportData.appointments.map((appt, index) => {
+    const patientReportData = filteredData.filteredAppointments.map((appt, index) => {
       return {
         'S.No': index + 1,
         'patient Name': appt.patient.name,
@@ -398,7 +399,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
            </div>
         </CardContent>
         <CardFooter className="border-t p-4 flex justify-end gap-2">
-            <Button variant="outline" onClick={handleDownloadExcel} disabled={isLoading || !reportData || reportData.appointments.length === 0}>
+            <Button variant="outline" onClick={handleDownloadExcel} disabled={isLoading || !filteredData || filteredData.filteredAppointments.length === 0}>
                 <FileDown className="mr-2" /> Excel
             </Button>
         </CardFooter>

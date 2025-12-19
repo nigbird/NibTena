@@ -79,9 +79,13 @@ export type PasswordChangeState = {
 
 async function getHashedPasswordForUser(user: AuthUser) {
     const userId = Number(user.id);
+    const userSession = await auth();
+    const isHospitalOwner = userSession?.user?.hospitalId === userId;
+
+
     // The main hospital account's credentials are in the Hospital table.
-    // The isAdmin flag from the session distinguishes it from staff users.
-    if ((user as any).isAdmin) {
+    // We check if the user's ID matches their hospitalId in the session.
+    if (isHospitalOwner) {
          const hospital = await prisma.hospital.findUnique({
             where: { id: userId },
             select: { password: true }
@@ -102,6 +106,7 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     if (!session?.user || Number(session.user.id) !== userId) {
         return { success: false, message: 'Unauthorized.' };
     }
+     const isHospitalOwner = session?.user?.hospitalId === userId;
 
     const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
 
@@ -124,8 +129,8 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
 
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
         
-        // Update the correct table based on isAdmin flag
-        if ((session.user as any).isAdmin) {
+        // Update the correct table based on whether it's the main hospital account
+        if (isHospitalOwner) {
             await prisma.hospital.update({
                 where: { id: userId },
                 data: { 
@@ -151,5 +156,3 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
         return { success: false, message: 'Failed to update password.' };
     }
 }
-
-    

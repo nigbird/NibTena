@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getHospitalReportData } from './actions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as UiTableFooter } from '@/components/ui/table';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import { addDays, format, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -52,6 +52,10 @@ export default function SuperAdminReportsPage() {
              return dateRange?.from && dateRange?.to && !isBefore(regDate, dateRange.from) && !isAfter(regDate, dateRange.to);
         });
     }, [reportData, dateRange]);
+
+    const totalRevenue = useMemo(() => {
+        return filteredData.reduce((sum, item) => sum + item.revenue, 0);
+    }, [filteredData]);
     
     const handleDownloadPdf = () => {
         const doc = new jsPDF();
@@ -178,6 +182,14 @@ export default function SuperAdminReportsPage() {
                         </TableRow>
                     ))}
                 </TableBody>
+                 <UiTableFooter>
+                    <TableRow>
+                        <TableCell colSpan={8} className="font-bold text-right">Total Revenue</TableCell>
+                        <TableCell className="text-right font-bold">
+                            {totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+                        </TableCell>
+                    </TableRow>
+                </UiTableFooter>
             </Table>
         )
     }

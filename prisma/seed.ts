@@ -11,11 +11,12 @@ async function main() {
   const superAdminPassword = await bcrypt.hash('Admin@123', saltRounds);
   await prisma.superAdmin.upsert({
     where: { email: 'superadmin@NibTena.com' },
-    update: { password: superAdminPassword },
+    update: { password: superAdminPassword, role: 'both' },
     create: {
       email: 'superadmin@NibTena.com',
       name: 'Super Admin',
       password: superAdminPassword,
+      role: 'both',
     },
   });
 

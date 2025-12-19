@@ -93,6 +93,7 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
               <TableHead className="hidden md:table-cell">Location</TableHead>
               <TableHead className="hidden lg:table-cell">Account #</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">Approval</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -114,6 +115,11 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                   <TableCell className="hidden lg:table-cell">{hospital.accountNumber}</TableCell>
                   <TableCell>
                     <Badge variant={isInactive ? 'outline' : 'accent'}>{hospital.status}</Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Badge variant={hospital.approvalStatus === 'approved' ? 'accent' : hospital.approvalStatus === 'pending' ? 'outline' : 'destructive'}>
+                      {hospital.approvalStatus}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

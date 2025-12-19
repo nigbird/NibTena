@@ -8,6 +8,8 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
+import { auth } from '../../../../auth';
+import { Prisma } from '@prisma/client';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -50,6 +52,23 @@ export async function saveHospital(
   prevState: HospitalFormState,
   formData: FormData
 ): Promise<HospitalFormState> {
+  const session = (await auth()) as any;
+  if (!session?.user || session.user.role !== 'superadmin') {
+    return {
+      message: 'Unauthorized: only super admins can manage hospitals.',
+      success: false,
+    };
+  }
+  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const canMake = superAdminRole === 'maker' || superAdminRole === 'both';
+  if (!canMake) {
+    return {
+      message: 'Only maker super admins can create or edit hospitals.',
+      success: false,
+    };
+  }
+  const actingSuperAdminId = Number(session.user.id);
+
   const rawData = Object.fromEntries(formData.entries());
 
   if (hospitalId && !rawData.password) {
@@ -73,6 +92,8 @@ export async function saveHospital(
   const dataToSave: any = {
     ...hospitalData,
     status: formData.get('status') === 'on' ? 'active' : 'inactive',
+    approvalStatus: hospitalId ? undefined : 'pending',
+    createdBySuperAdminId: hospitalId ? undefined : actingSuperAdminId,
   };
 
   try {
@@ -91,6 +112,7 @@ export async function saveHospital(
       if (password) {
         dataToSave.password = await bcrypt.hash(password, 10);
         dataToSave.mustChangePassword = true;
+        dataToSave.status = 'inactive'; // keep inactive until approved
         
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
         await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
@@ -100,6 +122,7 @@ export async function saveHospital(
         const tempPassword = crypto.randomBytes(16).toString('hex');
         dataToSave.password = await bcrypt.hash(tempPassword, 10);
         dataToSave.mustChangePassword = true;
+        dataToSave.status = 'inactive'; // keep inactive until approved
 
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
         
@@ -126,6 +149,7 @@ export async function saveHospital(
     }
 
     revalidatePath('/super-admin/hospitals');
+    revalidatePath('/super-admin/hospital-approvals');
     return {
       success: true,
       message: `Hospital ${hospitalId ? 'updated' : 'added'} successfully.`,
@@ -149,6 +173,7 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
   try {
     await prisma.hospital.update({ where: { id: hospitalId }, data: { status } });
     revalidatePath('/super-admin/hospitals');
+    revalidatePath('/super-admin/hospital-approvals');
     return { success: true, message: `Hospital has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
     return { success: false, message: 'Database Error: Failed to update hospital status.' };
@@ -196,13 +221,13 @@ export async function getHospitals(page: number, limit: number, query: string) {
   const where = query
     ? {
         OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { city: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' as Prisma.QueryMode } },
+          { city: { contains: query, mode: 'insensitive' as Prisma.QueryMode } },
         ],
       }
     : {};
   const results = await prisma.hospital.findMany({
-    where,
+    where: where as any,
     select: {
       id: true,
       name: true,
@@ -216,10 +241,14 @@ export async function getHospitals(page: number, limit: number, query: string) {
       contactEmail: true,
       contactPhone: true,
       status: true,
+      approvalStatus: true as any,
+      createdBySuperAdminId: true as any,
+      approvedBySuperAdminId: true as any,
+      approvedAt: true as any,
       imageUrl: true,
       accountNumber: true,
       mustChangePassword: true,
-    },
+    } as any,
     orderBy: { name: 'asc' },
     skip: (page - 1) * limit,
     take: limit,
@@ -231,10 +260,58 @@ export async function getHospitalsCount(query: string) {
   const where = query
     ? {
         OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { city: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' as Prisma.QueryMode } },
+          { city: { contains: query, mode: 'insensitive' as Prisma.QueryMode } },
         ],
       }
     : {};
-  return await prisma.hospital.count({ where });
+  return await prisma.hospital.count({ where: where as any });
+}
+
+export async function getPendingHospitals() {
+  return prisma.hospital.findMany({
+    where: { approvalStatus: 'pending' } as any,
+    include: {
+      createdBySuperAdmin: { select: { id: true, name: true, email: true } } as any,
+    } as any,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function reviewHospital(hospitalId: number, decision: 'approved' | 'rejected') {
+  const session = (await auth()) as any;
+  if (!session?.user || session.user.role !== 'superadmin') {
+    return { success: false, message: 'Unauthorized: only super admins can review hospitals.' };
+  }
+
+  const actingSuperAdminId = Number(session.user.id);
+  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+
+  const canCheck = superAdminRole === 'checker' || superAdminRole === 'both';
+  if (!canCheck) {
+    return { success: false, message: 'Only checker super admins can approve or reject hospitals.' };
+  }
+
+  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId }, select: { createdBySuperAdminId: true as any, approvalStatus: true as any } as any }) as any;
+  if (!hospital) return { success: false, message: 'Hospital not found.' };
+  if (hospital.approvalStatus !== 'pending') {
+    return { success: false, message: 'Hospital has already been reviewed.' };
+  }
+  if (hospital.createdBySuperAdminId && hospital.createdBySuperAdminId === actingSuperAdminId) {
+    return { success: false, message: 'Makers cannot approve their own hospital creations.' };
+  }
+
+  await prisma.hospital.update({
+    where: { id: hospitalId },
+    data: {
+      approvalStatus: decision as any,
+      approvedBySuperAdminId: actingSuperAdminId as any,
+      approvedAt: new Date() as any,
+      status: decision === 'approved' ? 'active' : 'inactive',
+    } as any,
+  });
+
+  revalidatePath('/super-admin/hospitals');
+  revalidatePath('/super-admin/hospital-approvals');
+  return { success: true, message: `Hospital ${decision}.` };
 }

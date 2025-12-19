@@ -28,6 +28,8 @@ import { signOut, useSession } from 'next-auth/react';
 const navLinks = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/super-admin/hospitals', label: 'Hospitals', icon: Hospital },
+  { href: '/super-admin/hospital-approvals', label: 'Approvals', icon: Bell },
+  { href: '/super-admin/create-super-admin', label: 'Super Admins', icon: CircleUser },
   { href: '/super-admin/email', label: 'Email', icon: Mail },
   // { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];

@@ -9,6 +9,7 @@ import {
   Settings,
   Menu,
   Mail,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -62,6 +63,20 @@ export default function SuperAdminHeader() {
                         >
                         <Hospital className="h-5 w-5" />
                         Hospitals
+                    </Link>
+                    <Link
+                        href="/super-admin/hospital-approvals"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                        >
+                        <Bell className="h-5 w-5" />
+                        Approvals
+                    </Link>
+                    <Link
+                        href="/super-admin/create-super-admin"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                        >
+                        <CircleUser className="h-5 w-5" />
+                        Super Admins
                     </Link>
                     <Link
                         href="/super-admin/email"

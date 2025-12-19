@@ -12,8 +12,11 @@ model SuperAdmin {
   email     String   @unique
   name      String
   password  String
+  role      String   @default("maker") // "maker" or "checker"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  createdHospitals Hospital[] @relation("HospitalCreatedBy")
+  approvedHospitals Hospital[] @relation("HospitalApprovedBy")
 }
 
 model Hospital {
@@ -38,6 +41,12 @@ model Hospital {
   password          String
   mustChangePassword Boolean            @default(false)
   status            String               @default("active") // active, inactive
+  approvalStatus   String               @default("approved") // pending, approved, rejected
+  createdBySuperAdminId Int?
+  createdBySuperAdmin SuperAdmin? @relation("HospitalCreatedBy", fields: [createdBySuperAdminId], references: [id])
+  approvedBySuperAdminId Int?
+  approvedBySuperAdmin SuperAdmin? @relation("HospitalApprovedBy", fields: [approvedBySuperAdminId], references: [id])
+  approvedAt        DateTime?
   startTime         String               @default("08:00")
   endTime           String               @default("19:00")
   bookingWindow     Int                  @default(30)

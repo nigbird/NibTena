@@ -22,6 +22,10 @@ export type Hospital = {
   contactPhone: string;
   password?: string;
   status: 'active' | 'inactive';
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  createdBySuperAdminId?: number | null;
+  approvedBySuperAdminId?: number | null;
+  approvedAt?: string | null;
   bookingWindow: number;
   startTime: string;
   endTime: string;

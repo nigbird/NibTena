@@ -149,9 +149,11 @@ const authOptions = {
           
           let user: any = null;
           let isStaff = false; // Flag to identify if the logged-in user is a staff member
+          let superAdminRole: string | undefined;
 
           if (role === 'superadmin') {
             user = await prisma.superAdmin.findUnique({ where: { email } });
+            superAdminRole = user?.role;
           } else if (role === 'hospital') {
             const hospitalAccount = await prisma.hospital.findUnique({ where: { contactEmail: email } });
             if (hospitalAccount) {
@@ -239,6 +241,7 @@ const authOptions = {
                 name: userName,
                 email: userEmail,
                 role: role,
+                superAdminRole,
                 hospitalId: role === 'hospital' ? (isStaff ? (user as any).hospitalId : user.id) : null,
                 doctorHospitalIds,
                 imageUrl: userImage,
@@ -261,6 +264,9 @@ const authOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role as string;
+        if ((user as any).superAdminRole) {
+          (token as any).superAdminRole = (user as any).superAdminRole;
+        }
         token.hospitalId = (user as any).hospitalId;
         token.doctorHospitalIds = (user as any).doctorHospitalIds;
         token.picture = (user as any).imageUrl;
@@ -279,6 +285,7 @@ const authOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        (session.user as any).superAdminRole = (token as any).superAdminRole;
         session.user.hospitalId = token.hospitalId as number | null;
         session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
         session.user.image = token.picture as string | null;

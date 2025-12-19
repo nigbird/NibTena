@@ -2,12 +2,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, isBefore, isAfter } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
 export async function getHospitalReportData(dateRange?: DateRange) {
-    const whereAppointments = {
-        status: 'confirmed' as const,
+    const whereClause = {
         ...(dateRange?.from && dateRange?.to && {
             appointmentDate: {
                 gte: startOfDay(dateRange.from),
@@ -21,7 +20,9 @@ export async function getHospitalReportData(dateRange?: DateRange) {
             createdBySuperAdmin: true,
             approvedBySuperAdmin: true,
             appointments: {
-                where: whereAppointments,
+                where: {
+                    status: { not: 'pending-payment' }
+                },
                 include: {
                     doctor: true
                 }
@@ -33,8 +34,15 @@ export async function getHospitalReportData(dateRange?: DateRange) {
     });
     
     return hospitals.map((hospital: any) => {
-        const revenue = hospital.appointments.reduce((sum: number, appt: any) => {
-            // Fix: Check if appt.doctor exists before accessing consultationFee
+        // Filter appointments by date range client-side on the returned data
+        const appointmentsInRange = hospital.appointments.filter((appt: any) => {
+             if (!dateRange?.from || !dateRange?.to) return true; // if no date range, include all
+             const apptDate = startOfDay(new Date(appt.appointmentDate));
+             return !isBefore(apptDate, dateRange.from) && !isAfter(apptDate, dateRange.to);
+        });
+
+        const revenue = appointmentsInRange.reduce((sum: number, appt: any) => {
+            // FIX: Check if appt.doctor exists before accessing consultationFee
             return sum + (appt.doctor?.consultationFee || 0);
         }, 0);
         

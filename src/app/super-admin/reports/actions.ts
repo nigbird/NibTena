@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 export async function getHospitalReportData() {
     const hospitals = await prisma.hospital.findMany({
         include: {
-            createdBy: true,
-            approvedBy: true,
+            createdBySuperAdmin: true,
+            approvedBySuperAdmin: true,
             appointments: {
                 where: {
                     status: 'completed',
@@ -23,8 +23,8 @@ export async function getHospitalReportData() {
         }
     });
     
-    return hospitals.map(hospital => {
-        const monthlyRevenue = hospital.appointments.reduce((sum, appt) => {
+    return hospitals.map((hospital: any) => {
+        const monthlyRevenue = hospital.appointments.reduce((sum: number, appt: any) => {
             return sum + (appt.doctor?.consultationFee || 0);
         }, 0);
         
@@ -38,9 +38,10 @@ export async function getHospitalReportData() {
             hospitalPhone: hospital.contactPhone,
             hospitalAddress: hospital.address || hospital.city,
             registrationDate: format(hospital.createdAt, 'yyyy-MM-dd'),
-            registeredBy: hospital.createdBy?.name || 'System',
-            approvedBy: hospital.approvedBy?.name || 'N/A',
+            registeredBy: hospital.createdBySuperAdmin?.name || 'System',
+            approvedBy: hospital.approvedBySuperAdmin?.name || 'N/A',
             monthlyRevenue: monthlyRevenue,
         };
     });
 }
+

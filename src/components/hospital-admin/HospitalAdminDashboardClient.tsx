@@ -3,7 +3,7 @@
 
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart as RechartsLineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, PieChart as PieChartIcon, DollarSign, XCircle, RefreshCw, BriefcaseMedical, BarChart as BarChartIcon } from 'lucide-react';
+import { LineChart, PieChart as PieChartIcon, DollarSign, BarChart as BarChartIcon, Users } from 'lucide-react';
 import type { Appointment, Doctor, Patient } from '@/lib/definitions';
 import { useMemo, useState } from 'react';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
@@ -82,48 +82,33 @@ export function HospitalAdminDashboardClient({ initialReportData, chartData, app
             return Object.values(revenueByDoctor).filter(r => r.revenue > 0).sort((a,b) => b.revenue - a.revenue);
         })();
         
+        const uniquePatientIds = new Set<number>();
+        filteredAppointments.forEach(a => {
+          if (a.patient && typeof a.patient.id === 'number') uniquePatientIds.add(a.patient.id as number);
+        });
+
         return {
-            totalAppointments: filteredAppointments.length,
-            cancelledAppointments: filteredAppointments.filter((a) => a.status === 'cancelled').length,
-            rescheduledAppointments: filteredAppointments.filter((a) => a.status === 'rescheduled').length,
-            totalRevenue: totalRevenue,
-            appointmentsTrendData,
-            doctorRevenueData,
+          totalPatients: uniquePatientIds.size,
+          cancelledAppointments: filteredAppointments.filter((a) => a.status === 'cancelled').length,
+          rescheduledAppointments: filteredAppointments.filter((a) => a.status === 'rescheduled').length,
+          totalRevenue: totalRevenue,
+          appointmentsTrendData,
+          doctorRevenueData,
         };
 
   }, [reportData]);
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
               <Card className="shadow-sm bg-blue-50 dark:bg-blue-900/30">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
-                  <BriefcaseMedical className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{filteredData?.totalAppointments}</div>
-                   <p className="text-xs text-muted-foreground">in selected period</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm bg-orange-50 dark:bg-orange-900/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Rescheduled</CardTitle>
-                  <RefreshCw className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredData?.rescheduledAppointments}</div>
-                   <p className="text-xs text-muted-foreground">in selected period</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm bg-red-50 dark:bg-red-900/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredData?.cancelledAppointments}</div>
-                   <p className="text-xs text-muted-foreground">in selected period</p>
+                  <div className="text-2xl font-bold">{filteredData?.totalPatients}</div>
+                  <p className="text-xs text-muted-foreground">booked an appointment</p>
                 </CardContent>
               </Card>
               <Card className="shadow-sm bg-green-50 dark:bg-green-900/30">

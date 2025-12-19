@@ -57,7 +57,11 @@ export default function SuperAdminReportsPage() {
         doc.text("NibTena Hospital Report", 14, 22);
         doc.setFontSize(11);
         doc.setTextColor(100);
-        const dateStr = `Date Range: ${format(dateRange!.from!, 'PPP')} - ${format(dateRange!.to!, 'PPP')}`;
+        
+        const dateStr = dateRange?.from && dateRange?.to
+            ? `Date Range: ${format(dateRange.from, 'PPP')} - ${format(dateRange.to, 'PPP')}`
+            : 'Date Range: Not specified';
+
         doc.text(dateStr, 14, 30);
 
         (doc as any).autoTable({
@@ -75,10 +79,17 @@ export default function SuperAdminReportsPage() {
                 item.registrationDate,
                 item.registeredBy,
                 item.approvedBy,
-                item.monthlyRevenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })
+                item.monthlyRevenue
             ]),
             styles: { fontSize: 8 },
             headStyles: { fillColor: [46, 46, 46] },
+            didParseCell: function (data: any) {
+                if (data.column.dataKey === 11) { 
+                    if (typeof data.cell.raw === 'number') {
+                        data.cell.text = data.cell.raw.toLocaleString('en-US', { style: 'currency', currency: 'ETB' });
+                    }
+                }
+            }
         });
 
         doc.save(`hospital_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -104,7 +115,6 @@ export default function SuperAdminReportsPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Hospitals');
         
-        // Auto-fit columns
         const cols = Object.keys(worksheetData[0] || {}).map(key => ({
             wch: Math.max(20, ...worksheetData.map(row => (row[key as keyof typeof row] || '').toString().length))
         }));

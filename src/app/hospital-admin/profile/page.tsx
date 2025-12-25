@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signOut } from 'next-auth/react';
+import { revokeThenSignOut } from '@/lib/auth-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
@@ -71,7 +72,7 @@ export default function HospitalUserProfilePage() {
     if (passwordState.success) {
       toast({ title: 'Password Updated', description: passwordState.message });
       setTimeout(() => {
-        signOut({ callbackUrl: '/hospital-admin/login' });
+        revokeThenSignOut({ callbackUrl: '/hospital-admin/login' });
       }, 2000);
       setPasswordFormKey(Date.now());
     } else if (passwordState.message) {

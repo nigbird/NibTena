@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DoctorPortalContext } from './doctor-portal/doctor-portal-context';
 import { signOut } from 'next-auth/react';
+import { revokeThenSignOut } from '@/lib/auth-client';
 import { Skeleton } from './ui/skeleton';
 
 const navLinks = [
@@ -101,7 +102,7 @@ export default function DoctorPortalSidebar() {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/doctor-portal/login' })}>
+                <DropdownMenuItem onClick={() => revokeThenSignOut({ callbackUrl: '/doctor-portal/login' })}>
                   Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>

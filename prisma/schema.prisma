@@ -12,6 +12,7 @@ model SuperAdmin {
   email     String   @unique
   name      String
   password  String
+  tokenVersion Int    @default(0)
   role      String   @default("maker") // "maker" or "checker"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -40,6 +41,7 @@ model Hospital {
   contactPhone      String
   password          String
   mustChangePassword Boolean            @default(false)
+  tokenVersion Int    @default(0)
   status            String               @default("active") // active, inactive
   approvalStatus   String               @default("approved") // pending, approved, rejected
   createdBySuperAdminId Int?
@@ -90,6 +92,7 @@ model Doctor {
   contact         String               @unique
   password        String
   mustChangePassword Boolean            @default(false)
+  tokenVersion Int    @default(0)
   specialty       String
   imageUrl        String?
   bio             String
@@ -188,6 +191,7 @@ model User {
   phone      String?
   password   String
   mustChangePassword Boolean  @default(false)
+  tokenVersion Int    @default(0)
   // Optional relation to a role; staff users belong to a hospital
   role       Role?     @relation(fields: [roleId], references: [id])
   roleId     Int?

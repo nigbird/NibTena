@@ -5,6 +5,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import ensureTokenVersionValid from '@/lib/auth-token-version';
 
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
@@ -246,6 +247,7 @@ const authOptions = {
                 doctorHospitalIds,
                 imageUrl: userImage,
                 staffRoleName: roleName,
+                tokenVersion: (user as any).tokenVersion ?? 0,
                 permissionKeys,
                 isAdmin,
                 mustChangePassword,
@@ -261,39 +263,87 @@ const authOptions = {
   ],
   callbacks: {
     jwt({ token, user }: JwtCallbackArgs) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role as string;
-        if ((user as any).superAdminRole) {
-          (token as any).superAdminRole = (user as any).superAdminRole;
+      try {
+        // Ensure token is an object (jose encoder requires an object payload)
+        if (!token || typeof token !== 'object') {
+          token = {} as any;
         }
-        token.hospitalId = (user as any).hospitalId;
-        token.doctorHospitalIds = (user as any).doctorHospitalIds;
-        token.picture = (user as any).imageUrl;
-        if ((user as any).staffRoleName) {
-          token.staffRoleName = (user as any).staffRoleName;
+
+        if (user && typeof user === 'object') {
+          // Initial login: merge user fields into the token
+          token.id = (user as any).id ?? token.id;
+          token.role = (user as any).role ?? token.role;
+          if ((user as any).superAdminRole) {
+            (token as any).superAdminRole = (user as any).superAdminRole;
+          }
+          token.hospitalId = (user as any).hospitalId ?? token.hospitalId;
+          token.doctorHospitalIds = (user as any).doctorHospitalIds ?? token.doctorHospitalIds;
+          token.picture = (user as any).imageUrl ?? token.picture;
+          if ((user as any).staffRoleName) {
+            token.staffRoleName = (user as any).staffRoleName;
+          }
+          if ((user as any).permissionKeys) {
+            token.permissionKeys = (user as any).permissionKeys;
+          }
+          token.isAdmin = (user as any).isAdmin === true || token.isAdmin === true;
+          token.mustChangePassword = (user as any).mustChangePassword === true || token.mustChangePassword === true;
+          token.tokenVersion = (user as any).tokenVersion ?? token.tokenVersion ?? 0;
         }
-        if ((user as any).permissionKeys) {
-          token.permissionKeys = (user as any).permissionKeys;
-        }
-        token.isAdmin = (user as any).isAdmin === true;
-        token.mustChangePassword = (user as any).mustChangePassword === true;
+      } catch (e) {
+        console.error('[auth] jwt callback error', e);
       }
       return token;
     },
-    session({ session, token }: SessionCallbackArgs) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        (session.user as any).superAdminRole = (token as any).superAdminRole;
-        session.user.hospitalId = token.hospitalId as number | null;
-        session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
-        session.user.image = token.picture as string | null;
-        (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
-        (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
-        (session.user as any).isAdmin = (token as any).isAdmin === true;
-        (session.user as any).mustChangePassword = (token as any).mustChangePassword === true;
+    async session({ session, token }: SessionCallbackArgs) {
+      if (!token) {
+        return null as any;
       }
+
+      // Validate token version before returning session
+      // This ensures tokens are invalidated immediately after logout
+      try {
+        const isValid = await ensureTokenVersionValid(token);
+        if (!isValid) {
+          // Token has been revoked - return null to invalidate the session
+          console.log('[auth] Token version mismatch - session invalidated', {
+            tokenId: token.id,
+            tokenRole: token.role,
+            tokenVersion: token.tokenVersion
+          });
+          return null as any;
+        }
+      } catch (error) {
+        // On validation error, fail securely by returning null session
+        console.error('[auth] token version validation error:', error, {
+          tokenId: token.id,
+          tokenRole: token.role,
+          tokenVersion: token.tokenVersion
+        });
+        return null as any;
+      }
+
+      // Ensure session.user exists
+      if (!session.user) {
+        session.user = {
+          id: '',
+          name: '',
+          email: '',
+          role: '',
+        } as any;
+      }
+
+      // Populate session from token
+      session.user.id = token.id as string;
+      session.user.role = token.role as string;
+      (session.user as any).superAdminRole = (token as any).superAdminRole;
+      session.user.hospitalId = token.hospitalId as number | null;
+      session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
+      session.user.image = token.picture as string | null;
+      (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
+      (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
+      (session.user as any).isAdmin = (token as any).isAdmin === true;
+      (session.user as any).mustChangePassword = (token as any).mustChangePassword === true;
+
       return session;
     },
   },
@@ -302,6 +352,10 @@ const authOptions = {
 
 const handler = NextAuth(authOptions as any);
 
+// Export the NextAuth handler correctly for the App Router
+export { handler as GET, handler as POST };
+
+// Provide legacy `handlers` object for any modules that import it (app route expects `handlers`)
 export const handlers = { GET: handler, POST: handler };
 
 async function auth(req?: any, res?: any) {

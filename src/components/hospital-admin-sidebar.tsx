@@ -29,7 +29,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { revokeThenSignOut } from '@/lib/auth-client';
 import { Skeleton } from './ui/skeleton';
 
 const navLinks: { href: string; label: string; icon: any; permissionKey?: string | string[] }[] = [
@@ -186,7 +187,7 @@ export default function HospitalAdminSidebar() {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/hospital-admin/login' })}>
+                <DropdownMenuItem onClick={() => revokeThenSignOut({ callbackUrl: '/hospital-admin/login' })}>
                   Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>

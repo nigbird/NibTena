@@ -24,7 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { revokeThenSignOut } from '@/lib/auth-client';
 
 const navLinks = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
@@ -87,7 +88,7 @@ export default function SuperAdminSidebar() {
                     <span>Settings</span>
                 </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/super-admin/login' })}>
+                <DropdownMenuItem onClick={() => revokeThenSignOut({ callbackUrl: '/super-admin/login' })}>
                   Logout
                 </DropdownMenuItem>
             </DropdownMenuContent>

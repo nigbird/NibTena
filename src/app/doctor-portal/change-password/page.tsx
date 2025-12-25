@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signOut } from 'next-auth/react';
+import { revokeThenSignOut } from '@/lib/auth-client';
 import { updateDoctorPassword, type PasswordChangeState } from '../profile/actions';
 
 function PasswordSubmitButton() {
@@ -47,7 +48,7 @@ export default function DoctorChangePasswordPage() {
     if (passwordState.success) {
       toast({ title: 'Password Updated', description: passwordState.message });
       setFormKey(Date.now());
-      setTimeout(() => signOut({ callbackUrl: '/doctor-portal/login' }), 1500);
+      setTimeout(() => revokeThenSignOut({ callbackUrl: '/doctor-portal/login' }), 1500);
     } else if (passwordState.message) {
       toast({ variant: 'destructive', title: 'Update Failed', description: passwordState.message });
     }

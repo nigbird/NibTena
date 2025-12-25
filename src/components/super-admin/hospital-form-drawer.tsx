@@ -46,6 +46,7 @@ export default function HospitalFormDrawer({
 
   const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
+  const [phoneErrors, setPhoneErrors] = useState<{ contactPhone?: string; ownerPhone?: string }>({});
   
   useEffect(() => {
     if (state.success && !isPending) {
@@ -68,6 +69,7 @@ export default function HospitalFormDrawer({
       formRef.current?.reset();
       setImagePreview(hospitalToEdit?.imageUrl || null);
       setImageValidationErrors([]);
+      setPhoneErrors({});
     }
   }, [isOpen, hospitalToEdit]);
 
@@ -97,6 +99,60 @@ export default function HospitalFormDrawer({
     event.preventDefault();
     startTransition(async () => {
       const original = new FormData(event.currentTarget);
+
+      // Validate and normalize phone numbers for contactPhone and ownerPhone
+      const rawContact = String(original.get('contactPhone') || '').trim();
+      const rawOwner = String(original.get('ownerPhone') || '').trim();
+
+      const normalizeAndValidate = (input: string) => {
+        if (!input) return { ok: false, msg: 'Phone is required', value: '' };
+        // remove spaces, dashes, parentheses, but keep leading + if present
+        let s = input.replace(/[^0-9+]/g, '');
+        const hadPlus = s.startsWith('+');
+        if (hadPlus) s = s.slice(1);
+        // now s contains only digits
+
+        // Helpful constants
+        const digits = s.length;
+
+        // If starts with country code 251
+        if (s.startsWith('251')) {
+          if (digits === 12) {
+            return { ok: true, value: '+' + s };
+          }
+          return { ok: false, msg: 'When using country code 251 the number must be 12 digits (251 + 9 digits), e.g. +2519XXXXXXXX.' , value: '' };
+        }
+
+        // If local format starts with 0 (0 + 9 digits = 10)
+        if (s.startsWith('0')) {
+          if (digits === 10) {
+            return { ok: true, value: '+251' + s.slice(1) };
+          }
+          return { ok: false, msg: 'When using a leading 0 the number must be 10 digits (0 + 9 digits), e.g. 09XXXXXXXX.', value: '' };
+        }
+
+        // If user provided 9 digits (no leading 0) -> assume local and prefix +251
+        if (digits === 9) {
+          return { ok: true, value: '+251' + s };
+        }
+
+        // Catch-all length error message
+        return { ok: false, msg: 'Phone must be 9 digits (local), or 10 digits with leading 0, or 12 digits with country code 251 (e.g. +2519XXXXXXXX).', value: '' };
+      };
+
+      const contactCheck = normalizeAndValidate(rawContact);
+      const ownerCheck = rawOwner ? normalizeAndValidate(rawOwner) : { ok: true, value: '' };
+      const newPhoneErrors: typeof phoneErrors = {};
+      if (!contactCheck.ok) newPhoneErrors.contactPhone = contactCheck.msg;
+      if (rawOwner && !ownerCheck.ok) newPhoneErrors.ownerPhone = ownerCheck.msg;
+      if (Object.keys(newPhoneErrors).length > 0) {
+        setPhoneErrors(newPhoneErrors);
+        return;
+      }
+
+      // replace with normalized values
+      if (contactCheck.ok) original.set('contactPhone', contactCheck.value);
+      if (rawOwner && ownerCheck.ok) original.set('ownerPhone', ownerCheck.value);
 
       const fileInput = (event.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="image"]');
       let imageUrl: string | null = null;
@@ -199,8 +255,12 @@ export default function HospitalFormDrawer({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="contactPhone">Contact Phone</Label>
-                <Input id="contactPhone" name="contactPhone" type="tel" defaultValue={hospitalToEdit?.contactPhone} required />
-                 {state.errors?.contactPhone && <p className="text-destructive text-sm">{state.errors.contactPhone[0]}</p>}
+                <Input id="contactPhone" name="contactPhone" type="tel" defaultValue={hospitalToEdit?.contactPhone} required onInput={() => setPhoneErrors((p) => ({ ...p, contactPhone: undefined }))} />
+                 {phoneErrors.contactPhone ? (
+                   <p className="text-destructive text-sm">{phoneErrors.contactPhone}</p>
+                 ) : (
+                   state.errors?.contactPhone && <p className="text-destructive text-sm">{state.errors.contactPhone[0]}</p>
+                 )}
               </div>
             </div>
             
@@ -212,8 +272,12 @@ export default function HospitalFormDrawer({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="ownerPhone">Owner/Manager Phone</Label>
-                    <Input id="ownerPhone" name="ownerPhone" type="tel" defaultValue={(hospitalToEdit as any)?.ownerPhone || ''} />
-                    {state.errors?.ownerPhone && <p className="text-destructive text-sm">{state.errors.ownerPhone[0]}</p>}
+                    <Input id="ownerPhone" name="ownerPhone" type="tel" defaultValue={(hospitalToEdit as any)?.ownerPhone || ''} onInput={() => setPhoneErrors((p) => ({ ...p, ownerPhone: undefined }))} />
+                    {phoneErrors.ownerPhone ? (
+                      <p className="text-destructive text-sm">{phoneErrors.ownerPhone}</p>
+                    ) : (
+                      state.errors?.ownerPhone && <p className="text-destructive text-sm">{state.errors.ownerPhone[0]}</p>
+                    )}
                 </div>
             </div>
 

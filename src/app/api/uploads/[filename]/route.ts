@@ -57,11 +57,14 @@ export async function GET(
         mimeType = 'application/octet-stream';
     }
 
-    // Set appropriate headers
+    // Set appropriate headers with safe Content-Disposition
     const headers = new Headers();
     headers.set('Content-Type', mimeType);
     headers.set('Content-Length', fileBuffer.length.toString());
     headers.set('Cache-Control', 'public, max-age=31536000, immutable'); // Cache aggressively
+    // Safe Content-Disposition header to prevent inline execution vulnerabilities
+    // Using 'inline' for images is safe as they're already validated as image types
+    headers.set('Content-Disposition', `inline; filename="${filename}"`);
 
     return new NextResponse(fileBuffer, {
       status: 200,

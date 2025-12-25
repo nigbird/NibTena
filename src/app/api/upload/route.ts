@@ -7,6 +7,21 @@ import { randomBytes } from 'crypto';
 // Maximum file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Allowed image MIME types
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+// Allowed file extensions
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+// Risky file formats that should be explicitly blocked
+const RISKY_EXTENSIONS = [
+  'html', 'htm', 'xhtml', 'xml', 'js', 'jsx', 'ts', 'tsx', 'exe', 'bat', 'cmd', 'sh', 'ps1',
+  'vbs', 'jar', 'war', 'php', 'asp', 'aspx', 'jsp', 'py', 'rb', 'pl', 'cgi', 'svg'
+];
+
+// Business context types for upload validation
+type UploadContext = 'hospital' | 'doctor' | 'profile' | 'general';
+
 // Detect image type using magic numbers
 function detectImageType(buffer: Buffer): { mime: string; ext: string } | null {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
@@ -31,14 +46,100 @@ function detectImageType(buffer: Buffer): { mime: string; ext: string } | null {
   return null;
 }
 
+// Check for risky file formats using magic bytes
+function detectRiskyFormat(buffer: Buffer, filename: string): boolean {
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
+  
+  // Check extension against risky list
+  if (RISKY_EXTENSIONS.includes(extension)) {
+    return true;
+  }
+
+  // Check magic bytes for risky formats
+  const bufferStr = buffer.slice(0, 100).toString('ascii', 0, 100);
+  
+  // HTML/XML detection
+  if (bufferStr.trim().startsWith('<!DOCTYPE') || 
+      bufferStr.trim().startsWith('<?xml') ||
+      bufferStr.trim().startsWith('<html') ||
+      bufferStr.trim().startsWith('<script')) {
+    return true;
+  }
+
+  // JavaScript detection
+  if (bufferStr.includes('function') && bufferStr.includes('var') && extension === 'js') {
+    return true;
+  }
+
+  // SVG can contain scripts, so we block it
+  if (extension === 'svg' || bufferStr.trim().startsWith('<svg')) {
+    return true;
+  }
+
+  return false;
+}
+
+// Structured logging for upload attempts
+interface UploadLog {
+  timestamp: string;
+  ip: string | null;
+  userAgent: string | null;
+  filename: string;
+  fileSize: number;
+  fileType: string | null;
+  context: string;
+  success: boolean;
+  reason?: string;
+  anomaly?: string;
+}
+
+function logUploadAttempt(log: UploadLog) {
+  const logEntry = {
+    ...log,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Log to console with structured format
+  if (log.success) {
+    console.log('[UPLOAD_SUCCESS]', JSON.stringify(logEntry));
+  } else {
+    console.warn('[UPLOAD_FAILURE]', JSON.stringify(logEntry));
+  }
+
+  // Detect and log anomalies
+  if (log.fileSize > MAX_FILE_SIZE * 0.9) {
+    console.warn('[UPLOAD_ANOMALY] Large file detected:', JSON.stringify({ ...logEntry, anomaly: 'LARGE_FILE' }));
+  }
+
+  if (log.fileType && !ALLOWED_MIME_TYPES.includes(log.fileType)) {
+    console.warn('[UPLOAD_ANOMALY] Unusual file type:', JSON.stringify({ ...logEntry, anomaly: 'UNUSUAL_FILE_TYPE' }));
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const clientIp = request.headers.get('x-forwarded-for') || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const uploadContext = (request.headers.get('x-upload-context') || 'general') as UploadContext;
+
   try {
     // API key protection
     const providedKey = request.headers.get('x-upload-api-key') || request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
     const configuredKey = process.env.UPLOAD_API_KEY || '';
 
     if (configuredKey && providedKey !== configuredKey) {
-      console.warn('Unauthorized upload attempt');
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: 'unknown',
+        fileSize: 0,
+        fileType: null,
+        context: uploadContext,
+        success: false,
+        reason: 'UNAUTHORIZED'
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -46,19 +147,123 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
 
     if (!file) {
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: 'none',
+        fileSize: 0,
+        fileType: null,
+        context: uploadContext,
+        success: false,
+        reason: 'NO_FILE_PROVIDED'
+      });
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        context: uploadContext,
+        success: false,
+        reason: 'FILE_TOO_LARGE',
+        anomaly: 'LARGE_FILE'
+      });
       return NextResponse.json({ error: 'File too large. Maximum size is 5MB.' }, { status: 400 });
+    }
+
+    // Validate file extension
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        context: uploadContext,
+        success: false,
+        reason: 'INVALID_EXTENSION'
+      });
+      return NextResponse.json({ error: 'Invalid file extension. Only image files are allowed.' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Check for risky file formats BEFORE processing
+    if (detectRiskyFormat(buffer, file.name)) {
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        context: uploadContext,
+        success: false,
+        reason: 'RISKY_FILE_FORMAT',
+        anomaly: 'SECURITY_THREAT'
+      });
+      return NextResponse.json({ error: 'Risky file format detected. Only image files are allowed.' }, { status: 400 });
+    }
+
+    // Detect image type using magic bytes
     const detected = detectImageType(buffer);
     if (!detected) {
-      return NextResponse.json({ error: 'Invalid image file' }, { status: 400 });
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        context: uploadContext,
+        success: false,
+        reason: 'INVALID_IMAGE_MAGIC_BYTES'
+      });
+      return NextResponse.json({ error: 'Invalid image file. File content does not match image format.' }, { status: 400 });
+    }
+
+    // Validate MIME type from client against detected magic bytes
+    const normalizedClientMime = file.type.toLowerCase().replace(/\/x-/, '/');
+    const normalizedDetectedMime = detected.mime.toLowerCase();
+    
+    // Allow some flexibility (e.g., image/jpg vs image/jpeg)
+    const mimeMatches = normalizedClientMime === normalizedDetectedMime ||
+                        (normalizedClientMime === 'image/jpg' && normalizedDetectedMime === 'image/jpeg') ||
+                        (normalizedClientMime === 'image/jpeg' && normalizedDetectedMime === 'image/jpeg');
+
+    if (!mimeMatches && file.type) {
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        context: uploadContext,
+        success: false,
+        reason: 'MIME_TYPE_MISMATCH',
+        anomaly: 'MIME_TYPE_MISMATCH'
+      });
+      return NextResponse.json({ 
+        error: 'File MIME type does not match file content. Possible file type spoofing detected.' 
+      }, { status: 400 });
+    }
+
+    // Business logic validation: restrict file types per context
+    // For now, all contexts allow the same image types, but this can be extended
+    if (uploadContext === 'hospital' || uploadContext === 'doctor' || uploadContext === 'profile') {
+      // All image types are allowed for these contexts
+      // Future: could restrict to specific types per context
     }
 
     // Generate unique filename using a cryptographically secure random generator
@@ -79,6 +284,18 @@ export async function POST(request: NextRequest) {
     // Public URL (make sure you have a route to serve these files)
     const publicUrl = `/api/uploads/${filename}`;
 
+    // Log successful upload
+    logUploadAttempt({
+      timestamp: new Date().toISOString(),
+      ip: clientIp,
+      userAgent,
+      filename,
+      fileSize: file.size,
+      fileType: detected.mime,
+      context: uploadContext,
+      success: true
+    });
+
     return NextResponse.json({
       success: true,
       filename,
@@ -88,7 +305,23 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error uploading file:', error);
+    logUploadAttempt({
+      timestamp: new Date().toISOString(),
+      ip: clientIp,
+      userAgent,
+      filename: 'unknown',
+      fileSize: 0,
+      fileType: null,
+      context: uploadContext,
+      success: false,
+      reason: 'SERVER_ERROR'
+    });
+    console.error('[UPLOAD_ERROR]', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      ip: clientIp,
+      userAgent
+    });
     return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
   }
 }

@@ -325,6 +325,10 @@ export default function MapLocationPicker({
             style={{ height: '100%', width: '100%' }}
             className="z-0"
           >
+                    {/* Ensure any previous Leaflet map instance is removed when this container unmounts.
+                        This prevents "Map container is already initialized" errors when the component
+                        is mounted/unmounted multiple times (e.g., in dialogs/drawers). */}
+                    <MapLifecycle />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -369,6 +373,28 @@ function MapClickHandler({ onMapClick }: { onMapClick: (e: L.LeafletMouseEvent) 
       map.off('click', handleClick);
     };
   }, [map, onMapClick]);
+
+  return null;
+}
+
+// Component that ensures the Leaflet map instance is properly removed on unmount.
+function MapLifecycle() {
+  // useMap must be called inside a MapContainer subtree
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const map: any = (useMap as any)();
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (map && typeof map.remove === 'function') {
+          map.remove();
+        }
+      } catch (err) {
+        // ignore errors during cleanup
+        // console.warn('Error removing leaflet map during cleanup', err);
+      }
+    };
+  }, [map]);
 
   return null;
 }

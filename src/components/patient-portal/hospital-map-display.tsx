@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,12 +8,14 @@ import { MapPin, Mail, Phone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Fix for default marker icons in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  });
+}
 
 interface HospitalMapDisplayProps {
   latitude: number | null;
@@ -43,6 +45,9 @@ export default function HospitalMapDisplay({
   contactEmail,
   contactPhone,
 }: HospitalMapDisplayProps) {
+  const mapContainerIdRef = useRef(`hospital-map-${Math.random().toString(36).substr(2, 9)}`);
+  const [isMapReady, setIsMapReady] = useState(false);
+
   // Default center (Addis Ababa, Ethiopia) if no location
   const defaultCenter: [number, number] = [9.145, 38.7667];
   const hasLocation = latitude !== null && longitude !== null;
@@ -50,6 +55,14 @@ export default function HospitalMapDisplay({
 
   // Build full address display from existing address and city fields
   const displayAddress = address && city ? `${address}, ${city}` : city || 'Address not available';
+
+  // Ensure map only renders after component is mounted
+  useEffect(() => {
+    setIsMapReady(true);
+    return () => {
+      setIsMapReady(false);
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -101,22 +114,28 @@ export default function HospitalMapDisplay({
             <CardTitle>Map Location</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-96 w-full rounded-md overflow-hidden border">
-              <MapContainer
-                key={`map-${latitude}-${longitude}`}
-                center={mapCenter}
-                zoom={15}
-                style={{ height: '100%', width: '100%' }}
-                className="z-0"
-                scrollWheelZoom={true}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={[latitude, longitude]} />
-                <MapUpdater center={[latitude, longitude]} />
-              </MapContainer>
+            <div className="h-96 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current}>
+              {isMapReady ? (
+                <MapContainer
+                  key={mapContainerIdRef.current}
+                  center={mapCenter}
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                  className="z-0"
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <Marker position={[latitude, longitude]} />
+                  <MapUpdater center={[latitude, longitude]} />
+                </MapContainer>
+              ) : (
+                <div className="h-full w-full flex items-center justify-center bg-muted">
+                  <p className="text-sm text-muted-foreground">Loading map...</p>
+                </div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}

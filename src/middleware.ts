@@ -87,6 +87,9 @@ export default withAuth(
         const isDoctorPortalLogin = pathname === '/doctor-portal/login';
         const isAuthRedirectPage = pathname === '/auth/redirect';
 
+        // Allow Super App connect callback to be accessed without a session
+        const isPortalConnect = pathname === '/portal/connect';
+
         const isAnyLogin =
           isSuperAdminLogin ||
           isHospitalAdminLogin ||
@@ -97,6 +100,7 @@ export default withAuth(
           if (isAnyLogin) return true;
           if (pathname === '/' || pathname.startsWith('/user')) return true;
           if (pathname === '/forgot-password' || pathname.startsWith('/reset-password')) return true;
+          if (isPortalConnect) return true;
           return false;
         }
 

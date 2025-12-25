@@ -258,6 +258,14 @@ export async function initiateBookingAndPayment(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  // Declare variables up-front to avoid temporal dead zone issues after bundling/minification
+  let transactionId: string | undefined;
+  let transactionTime: string | undefined;
+  let amount: number | undefined;
+  let hospitalAccount: string | undefined;
+  let hospital: any;
+  let newAppointment: any;
+
   // Debug: log incoming cookies to see if patient session is sent
   try {
     const cookieStore = await cookies();
@@ -295,7 +303,7 @@ export async function initiateBookingAndPayment(
   try {
     console.log('initiateBookingAndPayment: phoneFromCookie:', phoneFromCookie, 'authToken present:', !!authToken);
     const maskedAuth = authToken ? (authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`) : null;
-    console.log('initiateBookingAndPayment: using authToken (masked):', maskedAuth, 'finalPhone:', finalPhone, 'transactionId:', transactionId);
+    console.log('initiateBookingAndPayment: using authToken (masked):', maskedAuth, 'finalPhone:', finalPhone);
 
     const patient = await findOrCreatePatient(finalPhone, { name: fullName, age, gender });
     
@@ -316,9 +324,9 @@ export async function initiateBookingAndPayment(
     });
 
     // 2. Prepare payment request (Step 3)
-    const transactionId = crypto.randomUUID();
-    const transactionTime = format(new Date(), 'yyyyMMddHHmmss');
-    const amount = doctor.consultationFee;
+    transactionId = crypto.randomUUID();
+    transactionTime = format(new Date(), 'yyyyMMddHHmmss');
+    amount = doctor.consultationFee;
 
   const {
     CALLBACK_URL,
@@ -334,7 +342,7 @@ export async function initiateBookingAndPayment(
     return { success: false, message: 'Hospital not found.' };
   }
 
-  const hospitalAccount = hospital.accountNumber?.trim();
+  hospitalAccount = hospital.accountNumber?.trim();
 
   // Require hospital account number (do not use env fallback)
   const accountNoToUse = hospitalAccount;

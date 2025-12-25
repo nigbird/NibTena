@@ -43,10 +43,25 @@ export async function getPatientFromCookie(): Promise<Patient | null> {
     });
 
     if (sessionData && sessionData.phoneNumber) {
-      const patient = await prisma.patient.findUnique({
-        where: { phone: sessionData.phoneNumber },
+      const rawPhone = String(sessionData.phoneNumber).trim();
+
+      // Build a set of candidate phone formats to increase chance of matching
+      const candidates = new Set<string>();
+      candidates.add(rawPhone);
+      if (!rawPhone.startsWith('+')) candidates.add(`+${rawPhone}`);
+      if (rawPhone.startsWith('+')) candidates.add(rawPhone.replace(/^\+/, ''));
+      if (rawPhone.startsWith('0')) candidates.add(rawPhone.replace(/^0+/, ''));
+      if (!rawPhone.startsWith('0')) candidates.add(`0${rawPhone}`);
+
+      const whereOr = Array.from(candidates).map(p => ({ phone: p }));
+
+      const patient = await prisma.patient.findFirst({
+        where: {
+          OR: whereOr,
+        },
       });
-      console.log('getPatientFromCookie: patient lookup result:', patient ? `found id=${patient.id}` : 'not found');
+
+      console.log('getPatientFromCookie: patient lookup result:', patient ? `found id=${patient.id}` : `not found (tried: ${Array.from(candidates).join(', ')})`);
       return patient;
     }
     return null;

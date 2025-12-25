@@ -16,6 +16,9 @@ const HospitalFormSchema = z.object({
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   city: z.string().min(2, 'City is required.'),
   address: z.string().optional(),
+  latitude: z.string().optional().transform((val) => val ? parseFloat(val) : undefined),
+  longitude: z.string().optional().transform((val) => val ? parseFloat(val) : undefined),
+  mapDisplayAddress: z.string().optional(),
   contactEmail: z.string().email({ message: 'Please enter a valid email.' }),
   contactPhone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   ownerName: z.string().optional(),
@@ -33,6 +36,9 @@ export type HospitalFormState = {
     description?: string[];
     city?: string[];
     address?: string[];
+    latitude?: string[];
+    longitude?: string[];
+    mapDisplayAddress?: string[];
     contactEmail?: string[];
     contactPhone?: string[];
     ownerName?: string[];
@@ -94,6 +100,12 @@ export async function saveHospital(
     status: formData.get('status') === 'on' ? 'active' : 'inactive',
     approvalStatus: hospitalId ? undefined : 'pending',
     createdBySuperAdminId: hospitalId ? undefined : actingSuperAdminId,
+    // Handle location fields - only include if they exist
+    ...(hospitalData.latitude !== undefined && hospitalData.longitude !== undefined && {
+      latitude: hospitalData.latitude,
+      longitude: hospitalData.longitude,
+      mapDisplayAddress: hospitalData.mapDisplayAddress || null,
+    }),
   };
 
   try {
@@ -234,6 +246,9 @@ export async function getHospitals(page: number, limit: number, query: string) {
       description: true,
       city: true,
       address: true,
+      latitude: true,
+      longitude: true,
+      mapDisplayAddress: true,
       ownerName: true,
       ownerPhone: true,
       bankDistrict: true,

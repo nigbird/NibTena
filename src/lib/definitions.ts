@@ -12,6 +12,9 @@ export type Hospital = {
   name: string;
   city: string;
   address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  mapDisplayAddress?: string | null;
   imageUrl: string | null;
   description: string;
   ownerName?: string | null;

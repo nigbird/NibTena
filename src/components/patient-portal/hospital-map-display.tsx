@@ -1,0 +1,139 @@
+'use client';
+
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapPin, Mail, Phone } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Fix for default marker icons in Next.js
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+interface HospitalMapDisplayProps {
+  latitude: number | null;
+  longitude: number | null;
+  mapDisplayAddress: string | null;
+  city: string;
+  address?: string | null;
+  contactEmail: string;
+  contactPhone: string;
+}
+
+// Component to update map view when location changes
+function MapUpdater({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, 15);
+  }, [map, center]);
+  return null;
+}
+
+export default function HospitalMapDisplay({
+  latitude,
+  longitude,
+  mapDisplayAddress,
+  city,
+  address,
+  contactEmail,
+  contactPhone,
+}: HospitalMapDisplayProps) {
+  // Default center (Addis Ababa, Ethiopia) if no location
+  const defaultCenter: [number, number] = [9.145, 38.7667];
+  const hasLocation = latitude !== null && longitude !== null;
+  const mapCenter: [number, number] = hasLocation ? [latitude, longitude] : defaultCenter;
+
+  // Build full address display from existing address and city fields
+  const displayAddress = address && city ? `${address}, ${city}` : city || 'Address not available';
+
+  return (
+    <div className="space-y-4">
+      {/* Address Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Location & Contact
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Physical Address */}
+          <div>
+            <h3 className="font-semibold text-sm text-muted-foreground mb-2">Physical Address</h3>
+            <p className="text-base">{displayAddress}</p>
+            {mapDisplayAddress && mapDisplayAddress !== displayAddress && (
+              <p className="text-sm text-muted-foreground mt-1">
+                <span className="font-medium">Map location:</span> {mapDisplayAddress}
+              </p>
+            )}
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-2 pt-2 border-t">
+            <h3 className="font-semibold text-sm text-muted-foreground mb-2">Contact Information</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <a href={`tel:${contactPhone}`} className="text-base hover:underline">
+                  {contactPhone}
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <a href={`mailto:${contactEmail}`} className="text-base hover:underline break-all">
+                  {contactEmail}
+                </a>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Map Display */}
+      {hasLocation ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Map Location</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-96 w-full rounded-md overflow-hidden border">
+              <MapContainer
+                key={`map-${latitude}-${longitude}`}
+                center={mapCenter}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={[latitude, longitude]} />
+                <MapUpdater center={[latitude, longitude]} />
+              </MapContainer>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center text-muted-foreground">
+              <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Map location not available for this hospital.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+

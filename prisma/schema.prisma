@@ -26,6 +26,9 @@ model Hospital {
   description       String
   city              String
   address           String?
+  latitude          Float?
+  longitude         Float?
+  mapDisplayAddress String?
   useGlobalEmailId Int?
   useGlobalEmail   EmailSettings?    @relation("HospitalUsesGlobalEmail", fields: [useGlobalEmailId], references: [id])
   // If this hospital has its own custom email settings (one-to-one)

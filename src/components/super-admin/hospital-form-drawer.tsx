@@ -20,6 +20,7 @@ import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospital
 import type { Hospital } from '@/lib/definitions';
 import { Switch } from '../ui/switch';
 import Image from 'next/image';
+import MapLocationPicker from './map-location-picker';
 
 type HospitalFormDrawerProps = {
   isOpen: boolean;
@@ -47,6 +48,15 @@ export default function HospitalFormDrawer({
   const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
   const [phoneErrors, setPhoneErrors] = useState<{ contactPhone?: string; ownerPhone?: string }>({});
+  const [locationData, setLocationData] = useState<{
+    latitude: number | null;
+    longitude: number | null;
+    mapDisplayAddress: string | null;
+  }>({
+    latitude: (hospitalToEdit as any)?.latitude || null,
+    longitude: (hospitalToEdit as any)?.longitude || null,
+    mapDisplayAddress: (hospitalToEdit as any)?.mapDisplayAddress || null,
+  });
   
   useEffect(() => {
     if (state.success && !isPending) {
@@ -70,6 +80,18 @@ export default function HospitalFormDrawer({
       setImagePreview(hospitalToEdit?.imageUrl || null);
       setImageValidationErrors([]);
       setPhoneErrors({});
+      setLocationData({
+        latitude: (hospitalToEdit as any)?.latitude || null,
+        longitude: (hospitalToEdit as any)?.longitude || null,
+        mapDisplayAddress: (hospitalToEdit as any)?.mapDisplayAddress || null,
+      });
+    } else {
+      // Reset location data when drawer closes to ensure fresh map initialization
+      setLocationData({
+        latitude: null,
+        longitude: null,
+        mapDisplayAddress: null,
+      });
     }
   }, [isOpen, hospitalToEdit]);
 
@@ -183,6 +205,15 @@ export default function HospitalFormDrawer({
         fd.append(key, value as string);
       }
       if (imageUrl) fd.set('imageUrl', imageUrl);
+      
+      // Add location data
+      if (locationData.latitude !== null && locationData.longitude !== null) {
+        fd.set('latitude', locationData.latitude.toString());
+        fd.set('longitude', locationData.longitude.toString());
+        if (locationData.mapDisplayAddress) {
+          fd.set('mapDisplayAddress', locationData.mapDisplayAddress);
+        }
+      }
 
       formAction(fd);
     });
@@ -247,6 +278,21 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
+            <MapLocationPicker
+              latitude={locationData.latitude}
+              longitude={locationData.longitude}
+              mapDisplayAddress={locationData.mapDisplayAddress}
+              city={hospitalToEdit?.city}
+              address={(hospitalToEdit as any)?.address}
+              onLocationChange={(data) => {
+                setLocationData({
+                  latitude: data.latitude,
+                  longitude: data.longitude,
+                  mapDisplayAddress: data.mapDisplayAddress,
+                });
+              }}
+            />
+
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contactEmail">Contact Email</Label>
@@ -303,7 +349,7 @@ export default function HospitalFormDrawer({
                 <div className="space-y-2">
                   <Label htmlFor="password">Admin Password</Label>
                    <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank to auto-generate'} />
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank to auto-generate'} autoComplete="new-password" />
                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                             {showPassword ? <EyeOff /> : <Eye />}
                         </Button>

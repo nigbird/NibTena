@@ -5,6 +5,7 @@ import { Hospital as HospitalIcon } from 'lucide-react';
 import type { Doctor } from '@/lib/definitions';
 import { getHospitalData } from './actions';
 import HospitalDoctorsList from '@/components/patient-portal/hospital-doctors-list';
+import HospitalMapDisplay from '@/components/patient-portal/hospital-map-display';
 
 export default async function HospitalDetailsPage({ params }: { params: { id: string }}) {
   const hospitalId = Number(params.id);
@@ -40,11 +41,25 @@ export default async function HospitalDetailsPage({ params }: { params: { id: st
             </div>
         </div>
         
-      <HospitalDoctorsList 
-        hospitalId={hospitalId}
-        doctors={doctors as Doctor[]} 
-        specialties={specialties} 
-      />
+      <div className="p-4 space-y-6">
+        {/* Hospital Location and Map */}
+        <HospitalMapDisplay
+          latitude={(hospital as any).latitude}
+          longitude={(hospital as any).longitude}
+          mapDisplayAddress={(hospital as any).mapDisplayAddress}
+          city={hospital.city}
+          address={(hospital as any).address}
+          contactEmail={hospital.contactEmail}
+          contactPhone={hospital.contactPhone}
+        />
+
+        {/* Doctors List */}
+        <HospitalDoctorsList 
+          hospitalId={hospitalId}
+          doctors={doctors as Doctor[]} 
+          specialties={specialties} 
+        />
+      </div>
     </div>
   );
 }

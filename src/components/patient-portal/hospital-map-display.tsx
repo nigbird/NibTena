@@ -65,19 +65,18 @@ export default function HospitalMapDisplay({
   }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Address Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Location & Contact
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          Location & Contact
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
           {/* Physical Address */}
           <div>
-            <h3 className="font-semibold text-sm text-muted-foreground mb-2">Physical Address</h3>
+            <h3 className="font-semibold text-sm text-muted-foreground mb-1">Physical Address</h3>
             <p className="text-base">{displayAddress}</p>
             {mapDisplayAddress && mapDisplayAddress !== displayAddress && (
               <p className="text-sm text-muted-foreground mt-1">
@@ -87,9 +86,9 @@ export default function HospitalMapDisplay({
           </div>
 
           {/* Contact Information */}
-          <div className="space-y-2 pt-2 border-t">
+          <div className="space-y-2 pt-4 border-t">
             <h3 className="font-semibold text-sm text-muted-foreground mb-2">Contact Information</h3>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <a href={`tel:${contactPhone}`} className="text-base hover:underline">
@@ -104,55 +103,48 @@ export default function HospitalMapDisplay({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Map Display */}
-      {hasLocation ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Map Location</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-96 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current}>
-              {isMapReady ? (
-                <MapContainer
-                  key={mapContainerIdRef.current}
-                  center={mapCenter}
-                  zoom={15}
-                  style={{ height: '100%', width: '100%' }}
-                  className="z-0"
-                  scrollWheelZoom={true}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker position={[latitude, longitude]} />
-                  <MapUpdater center={[latitude, longitude]} />
-                </MapContainer>
-              ) : (
-                <div className="h-full w-full flex items-center justify-center bg-muted">
-                  <p className="text-sm text-muted-foreground">Loading map...</p>
+        <div>
+          {hasLocation ? (
+            <div className="space-y-2">
+               <div className="h-80 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current}>
+                {isMapReady ? (
+                  <MapContainer
+                    key={mapContainerIdRef.current}
+                    center={mapCenter}
+                    zoom={15}
+                    style={{ height: '100%', width: '100%' }}
+                    className="z-0"
+                    scrollWheelZoom={true}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={[latitude, longitude]} />
+                    <MapUpdater center={[latitude, longitude]} />
+                  </MapContainer>
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-muted">
+                    <p className="text-sm text-muted-foreground">Loading map...</p>
+                  </div>
+                )}
+              </div>
+               <p className="text-xs text-muted-foreground mt-2">
+                Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </p>
+            </div>
+          ) : (
+             <div className="h-full flex items-center justify-center rounded-md border-2 border-dashed bg-muted">
+                 <div className="text-center text-muted-foreground p-8">
+                  <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Map location not available.</p>
                 </div>
-              )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">
-              <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Map location not available for this hospital.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
-

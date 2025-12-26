@@ -31,8 +31,11 @@ async function getSpecialties() {
         where: {
             status: 'active',
             specialty: {
-                not: null,
+                not: '',
             },
+            NOT: {
+                specialty: null,
+            }
         },
         select: {
             specialty: true,

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -103,7 +104,11 @@ export async function getMyAppointmentsForMiniApp() {
     return [];
   }
   console.log('getMyAppointmentsForMiniApp: phoneFromCookie:', phoneFromCookie);
-  return await getMyAppointmentsByPhone(phoneFromCookie);
+  const appointments = await getMyAppointmentsByPhone(phoneFromCookie);
+  if (!appointments) {
+    return [];
+  }
+  return appointments;
 }
 
 export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {

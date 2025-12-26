@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useActionState, useEffect, useState, useContext } from 'react';
@@ -146,7 +147,7 @@ export default function BookingPage() {
                       title: "Payment Successful",
                       description: "Your appointment has been confirmed!",
                     });
-                    const redirectUrl = '/user/appointments?success=true';
+                    const redirectUrl = `/user/confirmation/${data.id}?success=true`;
                     router.push(redirectUrl);
 
                   } else if (attempts >= maxAttempts) {
@@ -185,7 +186,10 @@ export default function BookingPage() {
           });
 
           const bookingDetails = {
+            fullName: state.data.fullName,
             phone: state.data.phone,
+            age: state.data.age,
+            gender: state.data.gender,
             symptoms: state.data.symptoms,
             doctorId,
             hospitalId,
@@ -311,3 +315,4 @@ export default function BookingPage() {
     </div>
   );
 }
+

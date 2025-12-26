@@ -7,11 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-// removed placeholder images; use uploaded imageUrl with fallback
 import DoctorSearch from './DoctorSearch';
 
 async function getDoctorsWithHospitals() {
   const doctors = await prisma.doctor.findMany({
+    where: {
+      status: 'active'
+    },
     include: {
       hospitals: {
         include: {
@@ -26,12 +28,18 @@ async function getDoctorsWithHospitals() {
 
 async function getSpecialties() {
     const distinctSpecialties = await prisma.doctor.findMany({
+        where: {
+            status: 'active',
+            specialty: {
+                not: null,
+            },
+        },
         select: {
             specialty: true,
         },
         distinct: ['specialty'],
     });
-    return distinctSpecialties.map(d => d.specialty);
+    return distinctSpecialties.map(d => d.specialty).filter((s): s is string => s !== null);
 }
 
 function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {
@@ -78,23 +86,39 @@ export default async function SearchPage({
 }: {
   searchParams?: {
     specialty?: string;
+    q?: string;
   };
 }) {
   const specialtyQuery = searchParams?.specialty;
+  const nameQuery = searchParams?.q;
 
   const [allDoctors, specialties] = await Promise.all([
     getDoctorsWithHospitals(),
     getSpecialties()
   ]);
 
-  const filteredDoctors = specialtyQuery
-    ? allDoctors.filter((doc) => doc.specialty === specialtyQuery)
-    : allDoctors;
+  let filteredDoctors = allDoctors;
+
+  if (specialtyQuery && specialtyQuery !== 'all') {
+    filteredDoctors = filteredDoctors.filter((doc) => doc.specialty === specialtyQuery);
+  }
+  
+  if (nameQuery) {
+     filteredDoctors = filteredDoctors.filter((doc) => 
+        doc.name.toLowerCase().includes(nameQuery.toLowerCase()) || 
+        doc.hospitals.some(h => h.hospital.name.toLowerCase().includes(nameQuery.toLowerCase()))
+     );
+  }
+
 
   return (
     <>
       <div className="p-4 space-y-8">
-        <DoctorSearch specialties={specialties} initialSpecialty={specialtyQuery} />
+        <DoctorSearch 
+            specialties={specialties} 
+            initialSpecialty={specialtyQuery} 
+            initialQuery={nameQuery}
+        />
 
         {filteredDoctors.length > 0 ? (
             <div className="space-y-4">
@@ -109,7 +133,7 @@ export default async function SearchPage({
                 No Doctors Found
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-                Try selecting a different specialty or check back later.
+                Try adjusting your search or filter.
             </p>
             </div>
         )}

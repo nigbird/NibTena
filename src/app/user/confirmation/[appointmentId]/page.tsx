@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, Calendar, Clock, User, Stethoscope } from 'lucide-react';
@@ -77,8 +78,8 @@ export default async function ConfirmationPage({ params, searchParams }: { param
                   <div className="flex items-start">
                     <User className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
                     <div>
-                      <span className="font-semibold text-foreground">{appointment.patientName}</span>
-                      <p className="text-sm">Age: {appointment.patientAge}, Gender: {appointment.patientGender}</p>
+                      <span className="font-semibold text-foreground">{(appointment as any).patientName}</span>
+                      <p className="text-sm">Age: {(appointment as any).patientAge}, Gender: {(appointment as any).patientGender}</p>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -112,3 +113,4 @@ export default async function ConfirmationPage({ params, searchParams }: { param
     </div>
   );
 }
+

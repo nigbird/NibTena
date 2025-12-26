@@ -98,7 +98,7 @@ export default function UserLayoutClient({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="-ml-2 group"
+                    className="group"
                     onClick={() => router.back()}
                   >
                     <svg
@@ -135,3 +135,4 @@ export default function UserLayoutClient({
     </div>
   );
 }
+

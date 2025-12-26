@@ -21,12 +21,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import type { Appointment } from '@/lib/definitions';
 import { format } from 'date-fns';
+import { useEffect } from 'react';
+import { getAvailableTimeWindows } from '@/app/user/doctors/[id]/actions';
 
-const availableSlots = [
-  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-  '04:00 PM', '04:30 PM'
-];
 
 type RescheduleDrawerProps = {
   isOpen: boolean;
@@ -39,6 +36,8 @@ export default function RescheduleDrawer({ isOpen, setIsOpen, appointment, onRes
   const [isLoading, setIsLoading] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date(appointment.appointmentDate));
   const [slot, setSlot] = useState<string>(appointment.appointmentSlot);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -52,13 +51,37 @@ export default function RescheduleDrawer({ isOpen, setIsOpen, appointment, onRes
     }
   };
 
+  useEffect(() => {
+    // Fetch available time windows for the doctor's hospital and selected date
+    if (!date) return;
+    const fetchWindows = async () => {
+      if (!appointment.doctorId || !appointment.hospitalId) return;
+      setIsLoadingSchedule(true);
+      try {
+        const windows = await getAvailableTimeWindows(appointment.doctorId, format(date, 'yyyy-MM-dd'), appointment.hospitalId);
+        setAvailableSlots(windows);
+        // If current slot is not in the new list, reset it
+        if (slot && !windows.includes(slot)) {
+          setSlot(windows[0] || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch available windows for reschedule', err);
+        setAvailableSlots([]);
+      } finally {
+        setIsLoadingSchedule(false);
+      }
+    };
+
+    fetchWindows();
+  }, [date, appointment.doctorId, appointment.hospitalId]);
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Reschedule Appointment</SheetTitle>
           <SheetDescription>
-            Select a new date and time for {appointment.patientName}.
+            Select a new date and time for this appointment.
           </SheetDescription>
         </SheetHeader>
         <form id="reschedule-form" onSubmit={handleSubmit} className="grid gap-6 py-4">
@@ -89,7 +112,13 @@ export default function RescheduleDrawer({ isOpen, setIsOpen, appointment, onRes
                 <Select name="appointmentSlot" value={slot} onValueChange={setSlot} required>
                     <SelectTrigger id="appointmentSlot"><SelectValue placeholder="Select a time" /></SelectTrigger>
                     <SelectContent>
-                        {availableSlots.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {isLoadingSchedule ? (
+                          <div className="p-4 flex items-center justify-center"><Loader2 className="animate-spin h-4 w-4 text-muted-foreground" /></div>
+                        ) : availableSlots.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">No available slots for the selected date.</div>
+                        ) : (
+                          availableSlots.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)
+                        )}
                     </SelectContent>
                 </Select>
             </div>

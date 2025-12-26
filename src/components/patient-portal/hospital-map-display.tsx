@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -72,75 +73,66 @@ export default function HospitalMapDisplay({
           Location & Contact
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {/* Physical Address */}
-          <div>
-            <h3 className="font-semibold text-sm text-muted-foreground mb-1">Physical Address</h3>
-            <p className="text-base">{displayAddress}</p>
-            {mapDisplayAddress && mapDisplayAddress !== displayAddress && (
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium">Map location:</span> {mapDisplayAddress}
-              </p>
-            )}
-          </div>
+      <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div className="md:col-span-2 space-y-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-sm text-muted-foreground">Physical Address</h3>
+              <p className="text-base">{displayAddress}</p>
+              {mapDisplayAddress && mapDisplayAddress !== displayAddress && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  <span className="font-medium">Map location:</span> {mapDisplayAddress}
+                </p>
+              )}
+            </div>
 
-          {/* Contact Information */}
-          <div className="space-y-2 pt-4 border-t">
-            <h3 className="font-semibold text-sm text-muted-foreground mb-2">Contact Information</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <a href={`tel:${contactPhone}`} className="text-base hover:underline">
-                  {contactPhone}
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a href={`mailto:${contactEmail}`} className="text-base hover:underline break-all">
-                  {contactEmail}
-                </a>
+            <div className="space-y-3 pt-4 border-t">
+              <h3 className="font-semibold text-sm text-muted-foreground">Contact Information</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${contactPhone}`} className="text-base hover:underline">
+                    {contactPhone}
+                  </a>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${contactEmail}`} className="text-base hover:underline break-all">
+                    {contactEmail}
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
         </div>
 
-        <div>
+        <div className="md:col-span-3 h-80 w-full rounded-md overflow-hidden border">
           {hasLocation ? (
-            <div className="space-y-2">
-               <div className="h-80 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current}>
-                {isMapReady ? (
-                  <MapContainer
-                    key={mapContainerIdRef.current}
-                    center={mapCenter}
-                    zoom={15}
-                    style={{ height: '100%', width: '100%' }}
-                    className="z-0"
-                    scrollWheelZoom={true}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={[latitude, longitude]} />
-                    <MapUpdater center={[latitude, longitude]} />
-                  </MapContainer>
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-muted">
-                    <p className="text-sm text-muted-foreground">Loading map...</p>
-                  </div>
-                )}
+            isMapReady ? (
+              <MapContainer
+                key={mapContainerIdRef.current}
+                center={mapCenter}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={[latitude, longitude]} />
+                <MapUpdater center={[latitude, longitude]} />
+              </MapContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-muted">
+                <p className="text-sm text-muted-foreground">Loading map...</p>
               </div>
-               <p className="text-xs text-muted-foreground mt-2">
-                Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </p>
-            </div>
+            )
           ) : (
-             <div className="h-full flex items-center justify-center rounded-md border-2 border-dashed bg-muted">
-                 <div className="text-center text-muted-foreground p-8">
-                  <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Map location not available.</p>
-                </div>
+            <div className="h-full w-full flex items-center justify-center bg-muted border-2 border-dashed">
+              <div className="text-center text-muted-foreground">
+                <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Map location not available.</p>
+              </div>
             </div>
           )}
         </div>

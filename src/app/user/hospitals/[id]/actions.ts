@@ -24,10 +24,14 @@ export async function getHospitalData(hospitalId: number) {
     if (!hospital) return { hospital: null, doctors: [], specialties: [] };
 
     const doctors = await prisma.doctor.findMany({
-        where: { hospitals: { some: { hospitalId } } }
+        where: { 
+            hospitals: { some: { hospitalId } },
+            status: 'active',
+        }
     });
 
     const specialties = Array.from(new Set(doctors.map(d => d.specialty)));
 
     return { hospital, doctors, specialties };
 }
+

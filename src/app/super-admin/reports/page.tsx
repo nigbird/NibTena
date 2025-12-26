@@ -11,8 +11,6 @@ import { DateRange } from 'react-day-picker';
 import { addDays, format, isAfter, isBefore, startOfDay } from 'date-fns';
 import { Loader2, FileDown, LineChart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -57,49 +55,7 @@ export default function SuperAdminReportsPage() {
         return filteredData.reduce((sum, item) => sum + item.revenue, 0);
     }, [filteredData]);
     
-    const handleDownloadPdf = () => {
-        const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text("NibTena Hospital Report", 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        
-        const dateStr = dateRange?.from && dateRange?.to
-            ? `Date Range: ${format(dateRange.from, 'PPP')} - ${format(dateRange.to, 'PPP')}`
-            : 'Date Range: Not specified';
-
-        doc.text(dateStr, 14, 30);
-
-        (doc as any).autoTable({
-            startY: 35,
-            head: [['S.No', 'Branch', 'District', 'Hospital Name', 'Owner', 'Account', 'Phone', 'Address', 'Reg. Date', 'Registered By', 'Approved By', 'Revenue']],
-            body: filteredData.map((item, index) => [
-                index + 1,
-                item.bankBranch,
-                item.bankDistrict,
-                item.hospitalName,
-                item.ownerName,
-                item.hospitalAccount,
-                item.hospitalPhone,
-                item.hospitalAddress,
-                item.registrationDate,
-                item.registeredBy,
-                item.approvedBy,
-                item.revenue
-            ]),
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [46, 46, 46] },
-            didParseCell: function (data: any) {
-                if (data.column.dataKey === 11) { 
-                    if (typeof data.cell.raw === 'number') {
-                        data.cell.text = data.cell.raw.toLocaleString('en-US', { style: 'currency', currency: 'ETB' });
-                    }
-                }
-            }
-        });
-
-        doc.save(`hospital_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-    }
+    // PDF export removed — use Excel export only
 
     const handleDownloadExcel = async () => {
         const worksheetData = filteredData.map((item, index) => ({
@@ -210,9 +166,6 @@ export default function SuperAdminReportsPage() {
                      <div className="flex flex-col md:flex-row gap-4 pt-4">
                         <DateRangePicker date={dateRange} onDateChange={setDateRange} />
                         <div className="flex-1" />
-                        <Button variant="outline" onClick={handleDownloadPdf} disabled={isLoading || filteredData.length === 0}>
-                            <FileDown className="mr-2" /> PDF
-                        </Button>
                         <Button variant="accent" onClick={handleDownloadExcel} disabled={isLoading || filteredData.length === 0}>
                             <FileDown className="mr-2" /> Excel
                         </Button>

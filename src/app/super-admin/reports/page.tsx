@@ -13,7 +13,7 @@ import { Loader2, FileDown, LineChart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 
@@ -101,7 +101,7 @@ export default function SuperAdminReportsPage() {
         doc.save(`hospital_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     }
 
-    const handleDownloadExcel = () => {
+    const handleDownloadExcel = async () => {
         const worksheetData = filteredData.map((item, index) => ({
             'S.No': index + 1,
             'Branch': item.bankBranch,
@@ -116,19 +116,21 @@ export default function SuperAdminReportsPage() {
             'Approved by': item.approvedBy,
             'Revenue': item.revenue,
         }));
-        
-        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Hospitals');
-        
-        const cols = Object.keys(worksheetData[0] || {}).map(key => ({
-            wch: Math.max(20, ...worksheetData.map(row => (row[key as keyof typeof row] || '').toString().length))
-        }));
-        worksheet['!cols'] = cols;
-        
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
-        saveAs(data, `hospital_report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Hospitals');
+
+        const keys = Object.keys(worksheetData[0] || {});
+        worksheet.columns = keys.map((key) => ({ header: key, key, width: Math.max(20, ...worksheetData.map(row => String(row[key as keyof typeof row] || '').length)) }));
+
+        worksheetData.forEach(row => {
+            // ExcelJS will map properties by key names
+            worksheet.addRow(row as Record<string, any>);
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `hospital_report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     }
 
     const renderTable = () => {

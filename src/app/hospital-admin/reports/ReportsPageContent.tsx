@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as UiTableFooter } from '@/components/ui/table';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 export default function ReportsPageContent({ hospitalId }: { hospitalId: number }) {
@@ -62,7 +62,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
     }, 0);
   }, [reportData]);
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (!reportData) return;
 
     // 1. Doctors Report Data
@@ -94,17 +94,21 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
       };
     });
 
-    // 3. Create Workbook and Worksheets
-    const wb = XLSX.utils.book_new();
-    const wsDoctors = XLSX.utils.json_to_sheet(doctorsReportData);
-    const wsPatients = XLSX.utils.json_to_sheet(patientReportData);
+    // 3. Create workbook using ExcelJS
+    const workbook = new ExcelJS.Workbook();
 
-    XLSX.utils.book_append_sheet(wb, wsDoctors, "Doctors Report");
-    XLSX.utils.book_append_sheet(wb, wsPatients, "Patient Report");
+    const wsDoctors = workbook.addWorksheet('Doctors Report');
+    const doctorKeys = Object.keys(doctorsReportData[0] || {});
+    wsDoctors.columns = doctorKeys.map(key => ({ header: key, key, width: Math.max(15, ...doctorsReportData.map(r => String(r[key as keyof typeof r] || '').length)) }));
+    doctorsReportData.forEach(r => wsDoctors.addRow(r as Record<string, any>));
 
-    // 4. Save file
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+    const wsPatients = workbook.addWorksheet('Patient Report');
+    const patientKeys = Object.keys(patientReportData[0] || {});
+    wsPatients.columns = patientKeys.map(key => ({ header: key, key, width: Math.max(15, ...patientReportData.map(r => String(r[key as keyof typeof r] || '').length)) }));
+    patientReportData.forEach(r => wsPatients.addRow(r as Record<string, any>));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const data = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(data, `hospital_reports_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 

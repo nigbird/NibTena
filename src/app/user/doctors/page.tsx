@@ -31,18 +31,17 @@ async function getSpecialties() {
         where: {
             status: 'active',
             specialty: {
-                not: '',
+                not: {
+                    equals: '',
+                },
             },
-            NOT: {
-                specialty: null,
-            }
         },
         select: {
             specialty: true,
         },
         distinct: ['specialty'],
     });
-    return distinctSpecialties.map(d => d.specialty).filter((s): s is string => s !== null);
+    return distinctSpecialties.map(d => d.specialty).filter((s): s is string => s !== null && s !== '');
 }
 
 function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {

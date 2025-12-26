@@ -57,10 +57,10 @@ export default function UserLayoutClient({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-        <div className="container flex h-16 items-center">
+        <div className="flex h-16 items-center">
           {isHomePage ? (
               // Mini App session present
-              <div className="flex items-center gap-3">
+              <div className="container flex items-center gap-3 w-full">
                  {hasMiniAppSession ? (
                     <>
                       <Avatar className="h-10 w-10 border">
@@ -90,44 +90,48 @@ export default function UserLayoutClient({
                     </div>
                     </>
                  )}
+                 <div className="ml-auto flex items-center gap-2">
+                   {showLoginButton && (
+                     <Button asChild variant="accent" size="sm">
+                       <Link href="/user/profile">Login</Link>
+                     </Button>
+                   )}
+                 </div>
               </div>
           ) : (
-            <div className="flex items-center gap-2">
-              {!hasMiniAppSession ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="group"
-                    onClick={() => router.back()}
+            <>
+              {!hasMiniAppSession && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="group ml-4"
+                  onClick={() => router.back()}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
+                    aria-hidden="true"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
-                      aria-hidden="true"
-                    >
-                      <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
-                    </svg>
-                    <span className="sr-only">Back</span>
-                  </Button>
-                </>
-              ) : null}
-
-              <h1 className="font-headline text-xl font-bold text-foreground">
-                {pageTitle}
-              </h1>
-            </div>
+                    <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
+                  </svg>
+                  <span className="sr-only">Back</span>
+                </Button>
+              )}
+              <div className="container flex items-center justify-between flex-1">
+                <h1 className="font-headline text-xl font-bold text-foreground">
+                  {pageTitle}
+                </h1>
+                <div className="ml-auto flex items-center gap-2">
+                  {showLoginButton && (
+                    <Button asChild variant="accent" size="sm">
+                      <Link href="/user/profile">Login</Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
-
-          <div className="ml-auto flex items-center gap-2">
-            
-            {showLoginButton && (
-              <Button asChild variant="accent" size="sm">
-                <Link href="/user/profile">Login</Link>
-              </Button>
-            )}
-          </div>
         </div>
       </header>
       <main className="flex-1 pb-24">{children}</main>

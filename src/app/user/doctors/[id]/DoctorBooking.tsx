@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { addDays, format } from 'date-fns';
+import { addDays, format, startOfToday } from 'date-fns';
 import { Hospital as HospitalIcon, Clock, Loader2, Calendar } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
@@ -36,9 +37,12 @@ export default function DoctorBooking({
   );
   const [dates] = useState(() => {
     const dates = [];
-    const bookingWindow = doctorHospitals.find(h => h.id === getInitialHospitalId())?.bookingWindow || 14;
+    // Ensure booking window defaults to a reasonable number if not set
+    const hospital = doctorHospitals.find(h => h.id === getInitialHospitalId());
+    const bookingWindow = hospital?.bookingWindow ?? 14;
+    const today = startOfToday(); // Use startOfToday to avoid time-related issues
     for (let i = 0; i < bookingWindow; i++) {
-        dates.push(addDays(new Date(), i));
+        dates.push(addDays(today, i));
     }
     return dates;
   });

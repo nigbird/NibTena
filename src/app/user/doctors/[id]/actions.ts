@@ -3,7 +3,7 @@
 
 import { prisma } from '@/lib/prisma';
 import type { TimeSlot } from '@/lib/definitions';
-import { parse as parseTime, addMinutes, format as formatTime, isBefore, isEqual, isAfter, startOfHour, parseISO, startOfDay, addDays } from 'date-fns';
+import { parse as parseTime, addMinutes, format as formatTime, isBefore, isEqual, isAfter, startOfHour, parseISO, startOfDay, addDays, isToday } from 'date-fns';
 
 /**
  * Parses a time string (HH:mm) into a Date object for today.
@@ -37,6 +37,9 @@ export async function getAvailableTimeWindows(doctorId: number, date: string, ho
     const dayIndex = parsedDate.getDay();
     const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayOfWeek = weekDays[dayIndex];
+    const isForToday = isToday(parsedDate);
+    const now = new Date();
+
 
     const [schedule, appointments] = await Promise.all([
         prisma.doctorSchedule.findUnique({
@@ -89,6 +92,12 @@ export async function getAvailableTimeWindows(doctorId: number, date: string, ho
             const currentWindowEnd = addMinutes(currentWindowStart, slotDuration);
             
             if (isAfter(currentWindowEnd, workingSlotEnd)) break;
+            
+            // If the selected date is today, check if the slot start time is in the past.
+            if (isForToday && isBefore(currentWindowStart, now)) {
+              currentWindowStart = currentWindowEnd;
+              continue;
+            }
 
             const window = { startTime: formatTime(currentWindowStart, 'HH:mm'), endTime: formatTime(currentWindowEnd, 'HH:mm') };
             
@@ -100,12 +109,7 @@ export async function getAvailableTimeWindows(doctorId: number, date: string, ho
                  const formattedEnd = formatTime(currentWindowEnd, 'hh:mm a');
                  const slotKey = `${formattedStart} - ${formattedEnd}`;
 
-                 // A slot is available if the number of appointments booked for it is less than the hourly capacity for that type of slot.
-                 // This logic assumes `patientsPerHour` applies to the size of each slot.
-                 // E.g., if 4 patients/hr, slots are 15 mins. Each 15-min slot can take 1 person.
-                 // A more complex system might allow multiple bookings in a larger slot (e.g. hourly).
-                 // For now, we assume 1 patient per calculated slot.
-                 const maxPerSlot = 1; // Simplified for now.
+                 const maxPerSlot = 1;
                  if ((bookedCounts[slotKey] || 0) < maxPerSlot) {
                     windows.push(slotKey);
                  }

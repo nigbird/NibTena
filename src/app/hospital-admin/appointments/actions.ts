@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
-import { format, parseISO, getDay, parse as parseTime } from 'date-fns';
+import { format, parseISO, getDay, parse as parseTime, isToday, isPast } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
@@ -73,6 +73,20 @@ export async function saveAppointment(
   
   // Parse the date string as a local date to avoid timezone shifts caused by `new Date('YYYY-MM-DD')`
   const appointmentDateObj = parseTime(appointmentDate, 'yyyy-MM-dd', new Date());
+
+  if (isToday(appointmentDateObj)) {
+    const appointmentTime = parseTime(appointmentSlot, 'HH:mm', new Date());
+    if (isPast(appointmentTime)) {
+      return {
+        success: false,
+        message: 'Cannot book an appointment in the past. Please select a future time.',
+        errors: {
+          appointmentSlot: ['This time has already passed.'],
+        },
+      };
+    }
+  }
+
   const appointmentDay = getDay(appointmentDateObj); // Sunday - 0, Monday - 1, etc.
   const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeek = weekDays[appointmentDay];

@@ -20,12 +20,13 @@ export async function getReportData(
   const allowed = await requireHospitalPermission('Reports:View', hospitalId);
   if (!allowed) return { appointments: [], doctors: [] };
 
-  const createdAtDateFilter = dateRange?.from && dateRange.to ? {
-    createdAt: {
-      gte: startOfDay(dateRange.from),
-      lte: endOfDay(dateRange.to),
-    }
-  } : {};
+  const appointmentDateFilter: any = {};
+  if (dateRange?.from) {
+    appointmentDateFilter.gte = startOfDay(dateRange.from);
+  }
+  if (dateRange?.to) {
+    appointmentDateFilter.lte = endOfDay(dateRange.to);
+  }
 
   const doctorFilter = doctorId ? { doctorId: doctorId } : {};
   const patientFilter = patientName ? { patient: { name: { contains: patientName, mode: 'insensitive' } } } : {};
@@ -33,7 +34,7 @@ export async function getReportData(
   const appointments = await prisma.appointment.findMany({
     where: { 
       hospitalId,
-      ...createdAtDateFilter,
+      ...(Object.keys(appointmentDateFilter).length > 0 && { appointmentDate: appointmentDateFilter }),
       ...doctorFilter,
       ...patientFilter
     },
@@ -56,3 +57,4 @@ export async function getReportData(
     doctors,
   };
 }
+

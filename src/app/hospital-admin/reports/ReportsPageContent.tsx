@@ -51,23 +51,29 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  
-    const doctorReportData = useMemo(() => {
+  const doctorsToShow = useMemo(() => {
     if (!reportData) return [];
-    return reportData.doctors.map(doctor => {
+    return selectedDoctorId === 'all'
+      ? reportData.doctors
+      : reportData.doctors.filter(d => d.id === Number(selectedDoctorId));
+  }, [reportData, selectedDoctorId]);
+
+  const doctorReportData = useMemo(() => {
+    if (!reportData) return [];
+    return doctorsToShow.map(doctor => {
       const doctorAppointments = reportData.appointments.filter(a => a.doctorId === doctor.id);
       const patientCount = new Set(doctorAppointments.map(a => a.patientId)).size;
       const revenue = doctorAppointments
         .filter(a => a.status !== 'pending-payment')
         .reduce((sum, a) => sum + (doctor.consultationFee || 0), 0);
-      
+
       return {
         ...doctor,
         patientCount,
         revenue,
       };
     });
-  }, [reportData]);
+  }, [reportData, doctorsToShow]);
 
   const patientReportData = useMemo(() => {
     if (!reportData) return [];

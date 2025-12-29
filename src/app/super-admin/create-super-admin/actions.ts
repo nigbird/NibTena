@@ -27,10 +27,13 @@ export async function createSuperAdmin(formData: FormData) {
   }
 
   const parsed = SuperAdminSchema.safeParse({
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    role: formData.get('role'),
+    name: String(formData.get('name') || ''),
+    email: String(formData.get('email') || ''),
+    // Normalize password: FormData.get may return null if the field wasn't set
+    // (e.g., when editing and left blank). Use empty string to satisfy the
+    // schema's allowance for an empty literal and make password optional.
+    password: String(formData.get('password') || ''),
+    role: String(formData.get('role') || ''),
   });
 
   if (!parsed.success) {
@@ -69,10 +72,12 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
   }
 
   const parsed = SuperAdminSchema.safeParse({
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    role: formData.get('role'),
+    name: String(formData.get('name') || ''),
+    email: String(formData.get('email') || ''),
+    // Normalize password so that null becomes an empty string and does not
+    // fail validation; update logic will treat empty string as "no change".
+    password: String(formData.get('password') || ''),
+    role: String(formData.get('role') || ''),
   });
 
   if (!parsed.success) {

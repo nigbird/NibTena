@@ -18,6 +18,25 @@ model SuperAdmin {
   updatedAt DateTime @updatedAt
   createdHospitals Hospital[] @relation("HospitalCreatedBy")
   approvedHospitals Hospital[] @relation("HospitalApprovedBy")
+  createdHospitalRequests HospitalRequest[] @relation("HospitalRequestCreatedBy")
+  reviewedHospitalRequests HospitalRequest[] @relation("HospitalRequestReviewedBy")
+}
+
+model HospitalRequest {
+  id              Int       @id @default(autoincrement())
+  actionType      String    // "edit" or "delete"
+  hospitalId      Int
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  proposedChanges Json?     // JSON object storing the proposed changes for edit requests
+  status          String    @default("pending") // pending, approved, rejected
+  makerId         Int
+  maker           SuperAdmin @relation("HospitalRequestCreatedBy", fields: [makerId], references: [id])
+  checkerId       Int?
+  checker         SuperAdmin? @relation("HospitalRequestReviewedBy", fields: [checkerId], references: [id])
+  comments        String?   // Comments from checker (especially for rejections)
+  createdAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+  updatedAt       DateTime  @updatedAt
 }
 
 model Hospital {
@@ -64,6 +83,7 @@ model Hospital {
   updatedAt         DateTime             @updatedAt
   User              User[]
   Role              Role[]
+  editDeleteRequests HospitalRequest[]
 }
 model EmailSettings {
   id             Int      @id @default(autoincrement())

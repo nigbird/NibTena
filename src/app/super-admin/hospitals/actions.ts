@@ -114,11 +114,83 @@ export async function saveHospital(
     }
 
     if (hospitalId) {
-      if (password) {
-        dataToSave.password = await bcrypt.hash(password, 10);
-        dataToSave.mustChangePassword = true; // Force password change if manually set
+      // For edits, create a pending request instead of updating directly
+      const existingHospital = await prisma.hospital.findUnique({ 
+        where: { id: hospitalId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          city: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          mapDisplayAddress: true,
+          contactEmail: true,
+          contactPhone: true,
+          ownerName: true,
+          ownerPhone: true,
+          bankDistrict: true,
+          bankBranch: true,
+          accountNumber: true,
+          imageUrl: true,
+          status: true,
+        } as any,
+      });
+
+      if (!existingHospital) {
+        return {
+          message: 'Hospital not found.',
+          success: false,
+        };
       }
-      await prisma.hospital.update({ where: { id: hospitalId }, data: dataToSave });
+
+      // Check if there's already a pending edit request for this hospital
+      const existingPendingRequest = await prisma.hospitalRequest.findFirst({
+        where: {
+          hospitalId: hospitalId,
+          actionType: 'edit',
+          status: 'pending',
+        } as any,
+      });
+
+      if (existingPendingRequest) {
+        return {
+          message: 'A pending edit request already exists for this hospital. Please wait for it to be reviewed.',
+          success: false,
+        };
+      }
+
+      // Prepare proposed changes (exclude password from being stored as JSON unless provided)
+      const proposedChanges: any = { ...dataToSave };
+      // Remove password from proposedChanges if not provided (to avoid storing empty/undefined)
+      if (password) {
+        // Hash password before storing in request
+        proposedChanges.password = await bcrypt.hash(password, 10);
+        proposedChanges.mustChangePassword = true;
+      } else {
+        // Don't include password fields if not changing password
+        delete proposedChanges.password;
+        delete proposedChanges.mustChangePassword;
+      }
+      
+      // Create pending edit request
+      await prisma.hospitalRequest.create({
+        data: {
+          actionType: 'edit',
+          hospitalId: hospitalId,
+          proposedChanges: proposedChanges as any,
+          makerId: actingSuperAdminId,
+          status: 'pending',
+        } as any,
+      });
+
+      revalidatePath('/super-admin/hospitals');
+      revalidatePath('/super-admin/hospital-approvals');
+      return {
+        success: true,
+        message: 'Hospital edit request submitted and is pending approval.',
+      };
     } else {
        // If admin provided a password, hash it and force change on first login.
       if (password) {
@@ -193,39 +265,63 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 }
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
+  const session = (await auth()) as any;
+  if (!session?.user || session.user.role !== 'superadmin') {
+    return { success: false, message: 'Unauthorized: only super admins can delete hospitals.' };
+  }
+  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const canMake = superAdminRole === 'maker' || superAdminRole === 'both';
+  if (!canMake) {
+    return { success: false, message: 'Only maker super admins can delete hospitals.' };
+  }
+  const actingSuperAdminId = Number(session.user.id);
+
   try {
-    await prisma.$transaction(async (tx) => {
-      const doctorsInHospital = await tx.doctor.findMany({
-        where: { hospitals: { some: { hospitalId } } },
-        select: { id: true, _count: { select: { hospitals: true } } },
-      });
+    // Verify hospital exists
+    const hospital = await prisma.hospital.findUnique({ 
+      where: { id: hospitalId },
+      select: { id: true, name: true } as any,
+    });
+    
+    if (!hospital) {
+      return { success: false, message: 'Hospital not found.' };
+    }
 
-      const doctorsToDelete = doctorsInHospital
-        .filter(d => d._count.hospitals === 1)
-        .map(d => d.id);
+    // Check if there's already a pending delete request for this hospital
+    const existingPendingRequest = await prisma.hospitalRequest.findFirst({
+      where: {
+        hospitalId: hospitalId,
+        actionType: 'delete',
+        status: 'pending',
+      } as any,
+    });
 
-      await tx.appointment.deleteMany({ where: { hospitalId } });
-      await tx.doctorSchedule.deleteMany({ where: { hospitalId } });
-      await tx.rolePermission.deleteMany({ where: { role: { hospitalId } } });
-      await tx.role.deleteMany({ where: { hospitalId } });
-      await tx.user.deleteMany({ where: { hospitalId } });
-      await tx.specialty.deleteMany({ where: { hospitalId } });
-      await tx.emailSettings.deleteMany({ where: { hospitalId } });
-      
-      await tx.doctorsOnHospitals.deleteMany({ where: { hospitalId } });
+    if (existingPendingRequest) {
+      return { 
+        success: false, 
+        message: 'A pending delete request already exists for this hospital. Please wait for it to be reviewed.' 
+      };
+    }
 
-      if (doctorsToDelete.length > 0) {
-        await tx.doctor.deleteMany({ where: { id: { in: doctorsToDelete } } });
-      }
-
-      await tx.hospital.delete({ where: { id: hospitalId } });
+    // Create pending delete request instead of deleting immediately
+    await prisma.hospitalRequest.create({
+      data: {
+        actionType: 'delete',
+        hospitalId: hospitalId,
+        makerId: actingSuperAdminId,
+        status: 'pending',
+      } as any,
     });
 
     revalidatePath('/super-admin/hospitals');
-    return { success: true, message: 'Hospital and all associated data deleted successfully.' };
-  } catch (error) {
-    console.error("Failed to delete hospital:", error);
-    return { success: false, message: 'Database Error: Failed to delete hospital.' };
+    revalidatePath('/super-admin/hospital-approvals');
+    return { success: true, message: 'Hospital delete request submitted and is pending approval.' };
+  } catch (error: any) {
+    console.error("Failed to create delete request:", error);
+    if (error?.code === 'P2002') {
+      return { success: false, message: 'A pending delete request for this hospital already exists.' };
+    }
+    return { success: false, message: 'Database Error: Failed to create delete request.' };
   }
 }
 
@@ -329,4 +425,135 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
   revalidatePath('/super-admin/hospitals');
   revalidatePath('/super-admin/hospital-approvals');
   return { success: true, message: `Hospital ${decision}.` };
+}
+
+export async function getPendingHospitalRequests() {
+  return prisma.hospitalRequest.findMany({
+    where: { status: 'pending' } as any,
+    include: {
+      hospital: {
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          contactEmail: true,
+          contactPhone: true,
+          accountNumber: true,
+        } as any,
+      },
+      maker: {
+        select: { id: true, name: true, email: true },
+      },
+    } as any,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function reviewHospitalRequest(
+  requestId: number,
+  decision: 'approved' | 'rejected',
+  comments?: string
+): Promise<{ success: boolean; message: string }> {
+  const session = (await auth()) as any;
+  if (!session?.user || session.user.role !== 'superadmin') {
+    return { success: false, message: 'Unauthorized: only super admins can review requests.' };
+  }
+
+  const actingSuperAdminId = Number(session.user.id);
+  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+
+  const canCheck = superAdminRole === 'checker' || superAdminRole === 'both';
+  if (!canCheck) {
+    return { success: false, message: 'Only checker super admins can approve or reject requests.' };
+  }
+
+  try {
+    const request = await prisma.hospitalRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        hospital: true,
+      } as any,
+    }) as any;
+
+    if (!request) {
+      return { success: false, message: 'Request not found.' };
+    }
+
+    if (request.status !== 'pending') {
+      return { success: false, message: 'Request has already been reviewed.' };
+    }
+
+    if (request.makerId === actingSuperAdminId) {
+      return { success: false, message: 'Makers cannot approve their own requests.' };
+    }
+
+    // Update request status
+    await prisma.hospitalRequest.update({
+      where: { id: requestId },
+      data: {
+        status: decision,
+        checkerId: actingSuperAdminId,
+        reviewedAt: new Date(),
+        comments: comments || null,
+      } as any,
+    });
+
+    // If approved, apply the changes
+    if (decision === 'approved') {
+      if (request.actionType === 'edit') {
+        const proposedChanges = request.proposedChanges as any;
+        // Remove password from update if it wasn't changed (to avoid unnecessary updates)
+        const updateData: any = { ...proposedChanges };
+        if (!proposedChanges.password) {
+          delete updateData.password;
+          delete updateData.mustChangePassword;
+        }
+
+        await prisma.hospital.update({
+          where: { id: request.hospitalId },
+          data: updateData as any,
+        });
+      } else if (request.actionType === 'delete') {
+        // Perform soft delete (set status to inactive) or hard delete as per policy
+        // Using soft delete by setting status to 'inactive' and adding a deleted flag
+        // You can change this to hard delete if preferred
+        await prisma.$transaction(async (tx) => {
+          const doctorsInHospital = await tx.doctor.findMany({
+            where: { hospitals: { some: { hospitalId: request.hospitalId } } },
+            select: { id: true, _count: { select: { hospitals: true } } },
+          });
+
+          const doctorsToDelete = doctorsInHospital
+            .filter((d: any) => d._count.hospitals === 1)
+            .map((d: any) => d.id);
+
+          await tx.appointment.deleteMany({ where: { hospitalId: request.hospitalId } });
+          await tx.doctorSchedule.deleteMany({ where: { hospitalId: request.hospitalId } });
+          await tx.rolePermission.deleteMany({ where: { role: { hospitalId: request.hospitalId } } });
+          await tx.role.deleteMany({ where: { hospitalId: request.hospitalId } });
+          await tx.user.deleteMany({ where: { hospitalId: request.hospitalId } });
+          await tx.specialty.deleteMany({ where: { hospitalId: request.hospitalId } });
+          await tx.emailSettings.deleteMany({ where: { hospitalId: request.hospitalId } });
+          
+          await tx.doctorsOnHospitals.deleteMany({ where: { hospitalId: request.hospitalId } });
+
+          if (doctorsToDelete.length > 0) {
+            await tx.doctor.deleteMany({ where: { id: { in: doctorsToDelete } } });
+          }
+
+          await tx.hospital.delete({ where: { id: request.hospitalId } });
+        });
+      }
+    }
+
+    revalidatePath('/super-admin/hospitals');
+    revalidatePath('/super-admin/hospital-approvals');
+    return { 
+      success: true, 
+      message: `Hospital ${request.actionType} request ${decision}${comments ? `: ${comments}` : '.'}` 
+    };
+  } catch (error: any) {
+    console.error('[reviewHospitalRequest] error', error);
+    return { success: false, message: `Database Error: Failed to review request.` };
+  }
 }

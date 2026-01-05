@@ -339,7 +339,9 @@ const authOptions = {
       session.user.hospitalId = token.hospitalId as number | null;
       session.user.doctorHospitalIds = token.doctorHospitalIds as number[] | null;
       session.user.image = token.picture as string | null;
-      (session.user as any).roleName = (token as any).staffRoleName as string | undefined;
+      if (token.staffRoleName) {
+        (session.user as any).roleName = token.staffRoleName as string | undefined;
+      }
       (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
       (session.user as any).isAdmin = (token as any).isAdmin === true;
       (session.user as any).mustChangePassword = (token as any).mustChangePassword === true;

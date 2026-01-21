@@ -16,14 +16,18 @@ export async function ensureTokenVersionValid(token: any) {
         dbRecord = await prisma.superAdmin.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         break;
       case 'hospital':
-        // For hospital role, it could be:
-        // 1. Main hospital account (in Hospital table)
-        // 2. Staff member (in User table, but role='hospital')
-        // Try Hospital table first, then User table if not found
-        dbRecord = await prisma.hospital.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
-        if (!dbRecord) {
-          // Not in Hospital table, try User table (staff member)
+        // For hospital role, it could be a main hospital account or a staff member.
+        // We use the `isStaff` flag in the token to distinguish.
+        if (token.isStaff) {
           dbRecord = await prisma.user.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
+        } else {
+          // Default to Hospital table
+          dbRecord = await prisma.hospital.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
+          
+          // Fallback: If not found in Hospital and isStaff is undefined (legacy token), try User
+          if (!dbRecord && token.isStaff === undefined) {
+             dbRecord = await prisma.user.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
+          }
         }
         break;
       case 'doctor':
@@ -50,12 +54,22 @@ export async function ensureTokenVersionValid(token: any) {
   }
 }
 
-export async function incrementTokenVersionForRole(role: string, id: number) {
+export async function incrementTokenVersionForRole(role: string, id: number, isStaff?: boolean) {
   switch (role) {
     case 'superadmin':
       return prisma.superAdmin.update({ where: { id }, data: { tokenVersion: { increment: 1 } } });
     case 'hospital':
       // For hospital role, check both tables - try Hospital first, then User
+      // If isStaff is explicitly provided, we know which table to target.
+      if (isStaff === true) {
+        return prisma.user.update({ where: { id }, data: { tokenVersion: { increment: 1 } } });
+      }
+      if (isStaff === false) {
+         return prisma.hospital.update({ where: { id }, data: { tokenVersion: { increment: 1 } } });
+      }
+
+      // If isStaff is undefined (legacy call), we have to guess or try both?
+      // Try Hospital first, then User. This is risky for collisions but preserves old behavior.
       try {
         const hospital = await prisma.hospital.findUnique({ where: { id }, select: { id: true } });
         if (hospital) {

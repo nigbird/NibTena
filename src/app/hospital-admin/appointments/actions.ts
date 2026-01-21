@@ -221,7 +221,27 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
 
     const appointments = await prisma.appointment.findMany({
       where,
-      include: { doctor: { select: { id: true, name: true, contact: true, specialty: true, imageUrl: true, status: true } }, patient: true },
+      include: { 
+        doctor: { 
+          select: { 
+            id: true, 
+            name: true, 
+            contact: true, 
+            specialty: true, 
+            imageUrl: true, 
+            status: true 
+          } 
+        }, 
+        patient: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            gender: true,
+            age: true,
+          }
+        } 
+      },
       orderBy: { appointmentDate: 'desc' },
       skip: (page - 1) * limit,
       take: limit,

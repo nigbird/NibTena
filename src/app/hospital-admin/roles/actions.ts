@@ -184,8 +184,20 @@ export async function getUsersByHospitalId(hospitalId: number) {
         not: hospital.contactEmail,
       },
     },
-    include: {
-      role: true,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      roleId: true,
+      status: true,
+      createdAt: true,
+      role: {
+        select: {
+          id: true,
+          name: true,
+        }
+      }
     },
     orderBy: { name: 'asc' },
   });

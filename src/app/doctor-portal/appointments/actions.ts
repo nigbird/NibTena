@@ -23,7 +23,15 @@ export async function getAppointmentsByDoctorIdForDoctor(doctorId: number, hospi
             status: true,
           }
         },
-        patient: true,
+        patient: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            gender: true,
+            age: true,
+          }
+        },
     },
     orderBy: {
       appointmentDate: 'asc',

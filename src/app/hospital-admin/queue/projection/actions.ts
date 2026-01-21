@@ -29,5 +29,12 @@ export async function getDoctorsByHospitalId(hospitalId: number) {
 
     return await prisma.doctor.findMany({
         where: { hospitals: { some: { hospitalId } } },
+        select: {
+            id: true,
+            name: true,
+            specialty: true,
+            imageUrl: true,
+            status: true,
+        }
     });
 }

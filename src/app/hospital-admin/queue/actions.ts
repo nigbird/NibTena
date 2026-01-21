@@ -25,7 +25,17 @@ export async function getAppointmentsByHospitalId(hospitalId: number, page: numb
             status: { in: ['confirmed', 'checked-in', 'in-progress'] },
         },
         include: {
-            patient: true,
+            patient: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    gender: true,
+                    dateOfBirth: true,
+                    imageUrl: true,
+                }
+            },
         },
         orderBy: [
             { appointmentSlot: 'asc' },
@@ -65,5 +75,12 @@ export async function getDoctorsByHospitalId(hospitalId: number) {
 
     return await prisma.doctor.findMany({
         where: { hospitals: { some: { hospitalId } } },
+        select: {
+            id: true,
+            name: true,
+            specialty: true,
+            imageUrl: true,
+            status: true,
+        }
     });
 }

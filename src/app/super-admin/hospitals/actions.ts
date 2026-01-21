@@ -382,7 +382,18 @@ export async function getHospitalsCount(query: string) {
 export async function getPendingHospitals() {
   return prisma.hospital.findMany({
     where: { approvalStatus: 'pending' } as any,
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      city: true,
+      address: true,
+      contactEmail: true,
+      contactPhone: true,
+      imageUrl: true,
+      status: true,
+      approvalStatus: true as any,
+      createdAt: true,
       createdBySuperAdmin: { select: { id: true, name: true, email: true } } as any,
     } as any,
     orderBy: { createdAt: 'desc' },
@@ -428,8 +439,8 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
 }
 
 export async function getPendingHospitalRequests() {
-  return prisma.hospitalRequest.findMany({
-    where: { status: 'pending' } as any,
+  const requests = await prisma.hospitalRequest.findMany({
+    where: { status: 'pending' },
     include: {
       hospital: {
         select: {
@@ -450,13 +461,23 @@ export async function getPendingHospitalRequests() {
           bankBranch: true,
           imageUrl: true,
           status: true,
-        } as any,
+        },
       },
       maker: {
         select: { id: true, name: true, email: true },
       },
-    } as any,
+    },
     orderBy: { createdAt: 'desc' },
+  });
+
+  // Filter out password from proposedChanges in the response
+  return requests.map((req) => {
+    const proposedChanges = req.proposedChanges as any;
+    if (proposedChanges && typeof proposedChanges === 'object') {
+      const { password, ...safeChanges } = proposedChanges;
+      return { ...req, proposedChanges: safeChanges };
+    }
+    return req;
   });
 }
 

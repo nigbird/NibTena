@@ -35,7 +35,7 @@ const SimplifiedEmailSettingsSchema = z.object({
     hospitalId: z.number().optional().nullable(),
     name: z.string().min(1, 'Configuration name is required.'),
     smtpUser: z.string().email('Please enter a valid Gmail address.'),
-    smtpPass: z.string().min(1, 'App Password is required.'),
+    smtpPass: z.string().optional(),
 });
 
 
@@ -51,16 +51,27 @@ export async function getEmailSettings(hospitalId: number) {
       orderBy: { name: 'asc' },
     }),
   ]);
+
+  // Mask sensitive data before returning to client
+  if (customSettings) {
+    customSettings.smtpPass = '';
+    customSettings.imapPass = null;
+  }
+  globalSettings.forEach(s => {
+    s.smtpPass = '';
+    s.imapPass = null;
+  });
+
   return { customSettings, globalSettings };
 }
 
 export async function updateEmailSettings(hospitalId: number, data: Partial<EmailSettingsType>) {
     // This action is now simplified for Gmail only for the hospital-facing UI
     const parsed = SimplifiedEmailSettingsSchema.parse(data);
-    const validatedData = {
+    
+    const validatedData: any = {
         name: parsed.name,
         smtpUser: parsed.smtpUser,
-        smtpPass: parsed.smtpPass,
         // Set Gmail defaults
         smtpHost: 'smtp.gmail.com',
         smtpPort: 587,
@@ -68,9 +79,14 @@ export async function updateEmailSettings(hospitalId: number, data: Partial<Emai
         imapHost: 'imap.gmail.com',
         imapPort: 993,
         imapUser: parsed.smtpUser, // Use same user for IMAP
-        imapPass: parsed.smtpPass, // Use same pass for IMAP
         imapEncryption: 'ssl',
     };
+
+    // Only update password if provided
+    if (parsed.smtpPass && parsed.smtpPass.length > 0) {
+        validatedData.smtpPass = parsed.smtpPass;
+        validatedData.imapPass = parsed.smtpPass;
+    }
 
   const settingsData = {
     ...validatedData,

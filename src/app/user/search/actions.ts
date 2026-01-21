@@ -19,6 +19,17 @@ export async function getDoctorsAndHospitalsByQuery(query: string): Promise<{ do
                     { specialty: { contains: lowercasedQuery, mode: 'insensitive' } },
                 ],
             },
+            select: {
+                id: true,
+                name: true,
+                specialty: true,
+                imageUrl: true,
+                contact: true,
+                status: true,
+                rating: true,
+                experience: true,
+                consultationFee: true,
+            }
         }),
         prisma.hospital.findMany({
             where: {
@@ -27,6 +38,16 @@ export async function getDoctorsAndHospitalsByQuery(query: string): Promise<{ do
                     { city: { contains: lowercasedQuery, mode: 'insensitive' } },
                 ],
             },
+            select: {
+                id: true,
+                name: true,
+                city: true,
+                imageUrl: true,
+                contactPhone: true,
+                contactEmail: true,
+                address: true,
+                status: true,
+            }
         }),
     ]);
 

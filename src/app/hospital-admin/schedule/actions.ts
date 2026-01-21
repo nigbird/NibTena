@@ -25,6 +25,13 @@ export async function getDoctorsByHospitalId(hospitalId: number) {
         },
         orderBy: {
             name: 'asc'
+        },
+        select: {
+            id: true,
+            name: true,
+            specialty: true,
+            imageUrl: true,
+            status: true,
         }
     });
 }

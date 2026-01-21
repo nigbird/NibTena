@@ -50,7 +50,15 @@ export async function getReportData(
           status: true,
         }
       },
-      patient: true,
+      patient: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          gender: true,
+          age: true,
+        }
+      },
     }
   });
   

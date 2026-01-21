@@ -88,7 +88,21 @@ export async function getHospitalById(hospitalId: number) {
   if (!allowed) return null;
 
   return await prisma.hospital.findUnique({
-    where: { id: hospitalId }
+    where: { id: hospitalId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      address: true,
+      website: true,
+      description: true,
+      logo: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      // Explicitly excluding password
+    }
   });
 }
 

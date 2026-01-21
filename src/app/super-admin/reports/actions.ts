@@ -17,22 +17,17 @@ export async function getHospitalReportData(dateRange?: DateRange) {
 
     const hospitals = await prisma.hospital.findMany({
         include: {
-            createdBySuperAdmin: true,
-            approvedBySuperAdmin: true,
+            createdBySuperAdmin: { select: { id: true, name: true, email: true } },
+            approvedBySuperAdmin: { select: { id: true, name: true, email: true } },
             // Include appointments directly filtered by date range and payment status in the query
             appointments: {
-                where: {
-                    status: { not: 'pending-payment' },
-                    ...(createdAtDateFilter && { createdAt: createdAtDateFilter }),
-                },
+                where: { status: { not: 'pending-payment' }, ...(createdAtDateFilter && { createdAt: createdAtDateFilter }) },
                 include: {
-                    doctor: true
+                    doctor: { select: { id: true, consultationFee: true } }
                 }
             },
         },
-        orderBy: {
-            createdAt: 'desc',
-        }
+        orderBy: { createdAt: 'desc' }
     });
     
     return hospitals.map((hospital: any) => {

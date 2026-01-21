@@ -13,13 +13,35 @@ import type { Hospital as HospitalType } from '@/lib/definitions';
 async function getDoctorData(doctorId: number) {
   const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      include: {
-          hospitals: {
-              include: {
-                  hospital: true,
-              },
-          },
-      },
+      select: {
+        id: true,
+        name: true,
+        contact: true,
+        specialty: true,
+        imageUrl: true,
+        bio: true,
+        consultationFee: true,
+        rating: true,
+        experience: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        hospitals: {
+          include: {
+            hospital: {
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                contactEmail: true,
+                contactPhone: true,
+                imageUrl: true,
+                status: true,
+              }
+            }
+          }
+        }
+      }
   });
 
   if (!doctor) {

@@ -66,8 +66,9 @@ export async function updateDoctorProfile(
     }
     
     const updatedDoctor = await prisma.doctor.update({
-        where: { id: doctorId },
-        data: dataToUpdate,
+      where: { id: doctorId },
+      data: dataToUpdate,
+      select: { name: true, imageUrl: true }
     });
     
     if (updatedDoctor) {
@@ -169,11 +170,12 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
         
         await prisma.doctor.update({
-            where: { id: doctorId },
-            data: { 
-                password: newHashedPassword,
-                mustChangePassword: false, // User has now changed their password
-            },
+          where: { id: doctorId },
+          data: { 
+            password: newHashedPassword,
+            mustChangePassword: false,
+          },
+          select: { id: true }
         });
 
         // Sign out is handled on the client after success

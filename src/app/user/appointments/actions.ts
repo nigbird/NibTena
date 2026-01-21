@@ -22,16 +22,35 @@ export async function getMyAppointments(patientId: number) {
 
   try {
     const appointments = await prisma.appointment.findMany({
-      where: {
-        patientId: patientId,
-      },
+      where: { patientId: patientId },
       include: {
-        doctor: true,
-        hospital: true,
+        doctor: {
+          select: {
+            id: true,
+            name: true,
+            contact: true,
+            specialty: true,
+            imageUrl: true,
+            bio: true,
+            consultationFee: true,
+            rating: true,
+            experience: true,
+            status: true,
+          }
+        },
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            imageUrl: true,
+            contactEmail: true,
+            contactPhone: true,
+            status: true,
+          }
+        }
       },
-      orderBy: {
-        appointmentDate: 'desc',
-      },
+      orderBy: { appointmentDate: 'desc' },
     });
     return appointments;
   } catch (error) {
@@ -60,7 +79,33 @@ export async function getMyAppointmentsByPhone(phone: string) {
 
     return prisma.appointment.findMany({
       where: { patientId: patient.id },
-      include: { doctor: true, hospital: true },
+      include: {
+        doctor: {
+          select: {
+            id: true,
+            name: true,
+            contact: true,
+            specialty: true,
+            imageUrl: true,
+            bio: true,
+            consultationFee: true,
+            rating: true,
+            experience: true,
+            status: true,
+          }
+        },
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            imageUrl: true,
+            contactEmail: true,
+            contactPhone: true,
+            status: true,
+          }
+        }
+      },
       orderBy: { appointmentDate: 'desc' },
     });
   } catch (error) {

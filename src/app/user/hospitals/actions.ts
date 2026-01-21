@@ -7,6 +7,16 @@ export async function getHospitalsAndCities() {
     const hospitals = await prisma.hospital.findMany({
         where: { status: 'active' },
         orderBy: { name: 'asc' },
+        select: {
+            id: true,
+            name: true,
+            city: true,
+            imageUrl: true,
+            description: true,
+            contactEmail: true,
+            contactPhone: true,
+            status: true,
+        }
     });
 
     const cities = Array.from(new Set(hospitals.map(h => h.city).filter(Boolean))).sort();
@@ -35,9 +45,14 @@ export async function getHospitalData(hospitalId: number) {
     if (!hospital) return { hospital: null, doctors: [], specialties: [] };
 
     const doctors = await prisma.doctor.findMany({
-        where: { 
-            hospitals: { some: { hospitalId } },
-            status: 'active',
+        where: { hospitals: { some: { hospitalId } }, status: 'active' },
+        select: {
+            id: true,
+            name: true,
+            specialty: true,
+            imageUrl: true,
+            contact: true,
+            status: true,
         }
     });
 

@@ -39,18 +39,22 @@ export async function getReportData(
       ...patientFilter
     },
     include: {
-      doctor: true,
+      doctor: {
+        select: {
+          id: true,
+          name: true,
+          contact: true,
+          specialty: true,
+          consultationFee: true,
+          imageUrl: true,
+          status: true,
+        }
+      },
       patient: true,
     }
   });
   
-  const doctors = await prisma.doctor.findMany({
-    where: {
-      hospitals: {
-        some: { hospitalId }
-      }
-    }
-  })
+  const doctors = await prisma.doctor.findMany({ where: { hospitals: { some: { hospitalId } } }, select: { id: true, name: true, specialty: true, imageUrl: true, status: true } })
 
   return {
     appointments: appointments as (Appointment & { patient: Patient, doctor: Doctor | null })[],

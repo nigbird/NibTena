@@ -42,29 +42,28 @@ export async function requestPasswordReset(
   try {
     let user: UserIdentity | null = null;
 
-    const superAdmin = await prisma.superAdmin.findUnique({ where: { email } });
+    const superAdmin = await prisma.superAdmin.findUnique({ where: { email }, select: { id: true, email: true } });
     if (superAdmin) {
       user = { id: superAdmin.id, type: 'superadmin', email: superAdmin.email, hospitalId: null };
     }
 
     if (!user) {
-      const hospital = await prisma.hospital.findUnique({ where: { contactEmail: email } });
+      const hospital = await prisma.hospital.findUnique({ where: { contactEmail: email }, select: { id: true, contactEmail: true } });
       if (hospital) {
         user = { id: hospital.id, type: 'hospital', email: hospital.contactEmail, hospitalId: hospital.id };
       }
     }
 
     if (!user) {
-      const staffUser = await prisma.user.findUnique({ where: { email } });
+      const staffUser = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, hospitalId: true } });
       if (staffUser) {
         user = { id: staffUser.id, type: 'user', email: staffUser.email, hospitalId: staffUser.hospitalId ?? null };
       }
     }
     
     if (!user) {
-      const doctor = await prisma.doctor.findUnique({ where: { contact: email } });
+      const doctor = await prisma.doctor.findUnique({ where: { contact: email }, select: { id: true, contact: true } });
       if (doctor) {
-        // Try to pick a hospital associated with the doctor (if any)
         const docHospital = await prisma.doctorsOnHospitals.findFirst({ where: { doctorId: doctor.id } });
         user = { id: doctor.id, type: 'doctor', email: doctor.contact, hospitalId: docHospital?.hospitalId ?? null };
       }

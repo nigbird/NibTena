@@ -54,8 +54,8 @@ export async function bookAppointment(
 
   try {
     const doctor = await prisma.doctor.findUnique({
-        where: { id: doctorId },
-        include: { hospitals: true }
+      where: { id: doctorId },
+      select: { id: true, name: true, hospitals: { select: { hospitalId: true } } }
     });
 
     if (!doctor || !doctor.hospitals[0]) {

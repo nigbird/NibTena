@@ -482,7 +482,18 @@ export async function reviewHospitalRequest(
     const request = await prisma.hospitalRequest.findUnique({
       where: { id: requestId },
       include: {
-        hospital: true,
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            address: true,
+            contactEmail: true,
+            contactPhone: true,
+            imageUrl: true,
+            status: true,
+          }
+        }
       } as any,
     }) as any;
 

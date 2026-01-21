@@ -11,17 +11,35 @@ import DoctorSearch from './DoctorSearch';
 
 async function getDoctorsWithHospitals() {
   const doctors = await prisma.doctor.findMany({
-    where: {
-      status: 'active'
-    },
-    include: {
+    where: { status: 'active' },
+    select: {
+      id: true,
+      name: true,
+      specialty: true,
+      imageUrl: true,
+      bio: true,
+      consultationFee: true,
+      rating: true,
+      experience: true,
+      contact: true,
+      status: true,
       hospitals: {
         include: {
-          hospital: true,
+          hospital: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              imageUrl: true,
+              contactEmail: true,
+              contactPhone: true,
+              status: true,
+            }
+          }
         },
-        take: 1, // Only take the first hospital for the list view
+        take: 1,
       },
-    },
+    }
   });
   return doctors;
 }

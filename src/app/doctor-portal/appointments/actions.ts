@@ -12,7 +12,17 @@ export async function getAppointmentsByDoctorIdForDoctor(doctorId: number, hospi
       hospitalId: hospitalId
     },
     include: {
-        hospital: true,
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            imageUrl: true,
+            contactEmail: true,
+            contactPhone: true,
+            status: true,
+          }
+        },
         patient: true,
     },
     orderBy: {

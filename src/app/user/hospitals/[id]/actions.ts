@@ -24,9 +24,14 @@ export async function getHospitalData(hospitalId: number) {
     if (!hospital) return { hospital: null, doctors: [], specialties: [] };
 
     const doctors = await prisma.doctor.findMany({
-        where: { 
-            hospitals: { some: { hospitalId } },
-            status: 'active',
+        where: { hospitals: { some: { hospitalId } }, status: 'active' },
+        select: {
+            id: true,
+            name: true,
+            specialty: true,
+            imageUrl: true,
+            contact: true,
+            status: true,
         }
     });
 

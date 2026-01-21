@@ -13,25 +13,25 @@ export async function ensureTokenVersionValid(token: any) {
     let dbRecord: any = null;
     switch (role) {
       case 'superadmin':
-        dbRecord = await prisma.superAdmin.findUnique({ where: { id: uid } });
+        dbRecord = await prisma.superAdmin.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         break;
       case 'hospital':
         // For hospital role, it could be:
         // 1. Main hospital account (in Hospital table)
         // 2. Staff member (in User table, but role='hospital')
         // Try Hospital table first, then User table if not found
-        dbRecord = await prisma.hospital.findUnique({ where: { id: uid } });
+        dbRecord = await prisma.hospital.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         if (!dbRecord) {
           // Not in Hospital table, try User table (staff member)
-          dbRecord = await prisma.user.findUnique({ where: { id: uid } });
+          dbRecord = await prisma.user.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         }
         break;
       case 'doctor':
-        dbRecord = await prisma.doctor.findUnique({ where: { id: uid } });
+        dbRecord = await prisma.doctor.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         break;
       default:
         // staff user
-        dbRecord = await prisma.user.findUnique({ where: { id: uid } });
+        dbRecord = await prisma.user.findUnique({ where: { id: uid }, select: { tokenVersion: true } });
         break;
     }
 
@@ -57,7 +57,7 @@ export async function incrementTokenVersionForRole(role: string, id: number) {
     case 'hospital':
       // For hospital role, check both tables - try Hospital first, then User
       try {
-        const hospital = await prisma.hospital.findUnique({ where: { id } });
+        const hospital = await prisma.hospital.findUnique({ where: { id }, select: { id: true } });
         if (hospital) {
           return prisma.hospital.update({ where: { id }, data: { tokenVersion: { increment: 1 } } });
         }

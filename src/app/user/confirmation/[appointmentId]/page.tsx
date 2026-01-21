@@ -21,7 +21,19 @@ async function getConfirmationData(appointmentId: string) {
     }
 
     const doctor = await prisma.doctor.findUnique({
-        where: { id: appointment.doctorId },
+      where: { id: appointment.doctorId },
+      select: {
+        id: true,
+        name: true,
+        specialty: true,
+        imageUrl: true,
+        bio: true,
+        consultationFee: true,
+        rating: true,
+        experience: true,
+        contact: true,
+        status: true,
+      }
     });
 
     return { appointment, doctor };

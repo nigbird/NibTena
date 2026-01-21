@@ -40,6 +40,16 @@ export default async function HospitalAdminDashboard() {
 
   const hospital = await prisma.hospital.findUnique({
     where: { id: hospitalId },
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      address: true,
+      contactEmail: true,
+      contactPhone: true,
+      imageUrl: true,
+      status: true,
+    }
   });
 
   if (!hospital) {
@@ -47,20 +57,31 @@ export default async function HospitalAdminDashboard() {
   }
 
   const doctors = await prisma.doctor.findMany({
-    where: {
-      hospitals: {
-        some: { hospitalId }
-      }
+    where: { hospitals: { some: { hospitalId } } },
+    select: {
+      id: true,
+      name: true,
+      specialty: true,
+      imageUrl: true,
+      contact: true,
+      status: true,
     }
   });
 
   const appointments: (Appointment & { doctor: Doctor | null, patient: any })[] = await prisma.appointment.findMany({
-    where: {
-      hospitalId: hospitalId,
-    },
+    where: { hospitalId },
     include: {
-        doctor: true,
-        patient: true
+        doctor: {
+          select: {
+            id: true,
+            name: true,
+            contact: true,
+            specialty: true,
+            imageUrl: true,
+            status: true,
+          }
+        },
+        patient: true,
     }
   });
 

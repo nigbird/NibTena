@@ -43,6 +43,7 @@ export async function updateUserProfile(
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: validatedFields.data,
+      select: { name: true, email: true }
     });
     revalidatePath('/hospital-admin/profile');
     return { 

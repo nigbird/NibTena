@@ -15,23 +15,17 @@ import type { Appointment, Doctor, Hospital } from '@prisma/client';
 export default async function SuperAdminDashboard() {
   const [hospitals, doctorsCount, appointments, patientsCount] = await Promise.all([
     prisma.hospital.findMany({
-      include: {
-        _count: {
-          select: { doctors: true },
-        },
-      },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { doctors: true } }
+      }
     }),
     prisma.doctor.count(),
     prisma.appointment.findMany({
-        include: {
-            hospital: {
-                include: {
-                    _count: {
-                        select: { doctors: true }
-                    }
-                }
-            }
-        }
+      include: {
+        hospital: { select: { id: true, name: true, _count: { select: { doctors: true } } } }
+      }
     }),
     prisma.patient.count(),
   ]);

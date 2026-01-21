@@ -182,20 +182,18 @@ export async function getEmailTransporter(hospitalId?: number) {
     
     // If hospitalId is provided, try to find its specific configuration
     if (hospitalId) {
-        const hospital = await prisma.hospital.findUnique({
-            where: { id: hospitalId },
-            include: { customEmail: true }
-        });
+      const hospital = await prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { useGlobalEmailId: true, customEmail: { select: { id: true, name: true, smtpHost: true, smtpPort: true, smtpUser: true, smtpPass: true, smtpEncryption: true, configured: true, isGlobal: true } } }
+      });
 
-        if (hospital) {
-            if (hospital.useGlobalEmailId) {
-                configToUse = await prisma.emailSettings.findUnique({
-                    where: { id: hospital.useGlobalEmailId }
-                });
-            } else if (hospital.customEmail) {
-                configToUse = hospital.customEmail;
-            }
+      if (hospital) {
+        if (hospital.useGlobalEmailId) {
+          configToUse = await prisma.emailSettings.findUnique({ where: { id: hospital.useGlobalEmailId } });
+        } else if (hospital.customEmail) {
+          configToUse = hospital.customEmail as any;
         }
+      }
     }
 
     // If no hospital-specific config is found (or no hospitalId was given),
@@ -324,7 +322,7 @@ export async function sendHospitalEmail(
 ) {
   try {
     const { transporter, fromUser } = await getEmailTransporter(hospitalId);
-    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+    const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId }, select: { name: true } });
     
     const info = await transporter.sendMail({
       from: `"${hospital?.name || 'NibAppointment System'}" <${fromUser}>`,

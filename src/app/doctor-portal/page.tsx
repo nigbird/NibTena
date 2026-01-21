@@ -21,9 +21,7 @@ export default async function DoctorPortalPage() {
     }
     const doctorId = parseInt(session.user.id, 10);
 
-  const doctor = await prisma.doctor.findUnique({
-    where: { id: doctorId },
-  });
+  const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { id: true, name: true } });
 
   const allAppointments = await prisma.appointment.findMany({
     where: { doctorId: doctorId },

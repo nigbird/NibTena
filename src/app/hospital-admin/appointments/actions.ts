@@ -220,11 +220,11 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
     };
 
     const appointments = await prisma.appointment.findMany({
-        where,
-        include: { doctor: true, patient: true },
-        orderBy: { appointmentDate: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+      where,
+      include: { doctor: { select: { id: true, name: true, contact: true, specialty: true, imageUrl: true, status: true } }, patient: true },
+      orderBy: { appointmentDate: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
     return appointments.map(a => ({...a, appointmentDate: format(new Date(a.appointmentDate), 'yyyy-MM-dd')}));
 }
@@ -248,9 +248,7 @@ export async function getAppointmentsCount(hospitalId: number, query: string) {
 }
 
 export async function getDoctorsByHospitalId(hospitalId: number) {
-    return await prisma.doctor.findMany({
-        where: { hospitals: { some: { hospitalId } } },
-    });
+    return await prisma.doctor.findMany({ where: { hospitals: { some: { hospitalId } } }, select: { id: true, name: true, specialty: true, imageUrl: true, status: true } });
 }
 
 export async function getDoctorScheduleForDate(doctorId: number, date: string, hospitalId: number) {

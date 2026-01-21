@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import sanitize from '@/lib/response-sanitizer';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,13 +19,27 @@ export async function GET(request: Request) {
   try {
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        contact: true,
+        specialty: true,
+        imageUrl: true,
+        bio: true,
+        consultationFee: true,
+        rating: true,
+        experience: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
         hospitals: {
           include: {
-            hospital: true,
-          },
-        },
-      },
+            hospital: {
+              select: { id: true, name: true, contactEmail: true, city: true, imageUrl: true }
+            }
+          }
+        }
+      }
     });
 
     if (!doctor) {
@@ -33,8 +48,8 @@ export async function GET(request: Request) {
 
     const doctorHospitals = doctor.hospitals.map(h => h.hospital);
 
-    // We are returning the full doctor object and the list of hospitals
-    return NextResponse.json({ doctor, doctorHospitals });
+    // Sanitize response to ensure no sensitive fields (e.g. password) leak to clients
+    return NextResponse.json(sanitize({ doctor, doctorHospitals }));
 
   } catch (error) {
     console.error('Failed to fetch doctor data:', error);

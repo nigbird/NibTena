@@ -42,7 +42,7 @@ export async function GET(req: Request) {
         // Staff users can have role='hospital' but are in User table, not Hospital table
         const staffUser = await prisma.user.findUnique({ 
           where: { id: uid }, 
-          include: { role: { include: { permissions: { include: { permission: true } } } } } 
+          select: { id: true, hospitalId: true, role: { include: { permissions: { include: { permission: true } } } }, },
         });
         
         if (staffUser) {
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
           const hid = Number(hospitalId ?? uid);
           if (!isNaN(hid)) {
             // Check if this ID exists in Hospital table (main hospital account)
-            const hospital = await prisma.hospital.findUnique({ where: { id: hid } });
+            const hospital = await prisma.hospital.findUnique({ where: { id: hid }, select: { id: true } });
             if (hospital) {
               // Main hospital account is admin by default (checked via isAdmin flag)
               if (isAdmin) {
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
         if (!isNaN(userIdNum)) {
           const staffUser = await prisma.user.findUnique({ 
             where: { id: userIdNum }, 
-            include: { role: { include: { permissions: { include: { permission: true } } } } } 
+            select: { id: true, hospitalId: true, role: { include: { permissions: { include: { permission: true } } } }, },
           });
           
           if (staffUser) {
@@ -147,7 +147,7 @@ export async function GET(req: Request) {
         const hid = Number(hospitalId ?? uid);
         if (!isNaN(hid)) {
           // Check if this ID exists in Hospital table (main hospital account)
-          const hospital = await prisma.hospital.findUnique({ where: { id: hid } });
+          const hospital = await prisma.hospital.findUnique({ where: { id: hid }, select: { id: true } });
           if (hospital) {
             // Main hospital account is admin by default (checked via isAdmin flag)
             if (isAdmin) {

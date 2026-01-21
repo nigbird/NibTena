@@ -307,7 +307,7 @@ export async function initiateBookingAndPayment(
 
     const patient = await findOrCreatePatient(finalPhone, { name: fullName, age, gender });
     
-    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }});
+    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { id: true, name: true, consultationFee: true } });
     if (!doctor) return { success: false, message: 'Doctor not found.'};
     
     // 1. Create the appointment first
@@ -336,7 +336,7 @@ export async function initiateBookingAndPayment(
   } = process.env;
 
   // Find the hospital to use its account number for payments. Fall back to env var if missing.
-  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId }, select: { id: true, accountNumber: true, name: true } });
   if (!hospital) {
     console.error('Hospital not found for id', hospitalId);
     return { success: false, message: 'Hospital not found.' };

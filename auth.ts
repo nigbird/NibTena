@@ -247,6 +247,7 @@ const authOptions = {
                 doctorHospitalIds,
                 imageUrl: userImage,
                 staffRoleName: roleName,
+                isStaff: isStaff, // Explicitly pass isStaff flag
                 tokenVersion: (user as any).tokenVersion ?? 0,
                 permissionKeys,
                 isAdmin,
@@ -281,6 +282,9 @@ const authOptions = {
           token.picture = (user as any).imageUrl ?? token.picture;
           if ((user as any).staffRoleName) {
             token.staffRoleName = (user as any).staffRoleName;
+          }
+          if ((user as any).isStaff !== undefined) {
+            token.isStaff = (user as any).isStaff;
           }
           if ((user as any).permissionKeys) {
             token.permissionKeys = (user as any).permissionKeys;
@@ -345,6 +349,7 @@ const authOptions = {
       (session.user as any).permissionKeys = (token as any).permissionKeys as string[] | undefined;
       (session.user as any).isAdmin = (token as any).isAdmin === true;
       (session.user as any).mustChangePassword = (token as any).mustChangePassword === true;
+      (session.user as any).isStaff = (token as any).isStaff === true;
 
       return session;
     },

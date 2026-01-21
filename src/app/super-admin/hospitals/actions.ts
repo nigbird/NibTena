@@ -199,7 +199,14 @@ export async function saveHospital(
         dataToSave.status = 'inactive'; // keep inactive until approved
         
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
-        await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
+        const emailResult = await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
+        
+        if (!emailResult.success) {
+            // Rollback
+            await prisma.hospital.delete({ where: { id: created.id } });
+            console.error('[saveHospital] Email failed, hospital deleted:', emailResult.error);
+            return { message: `Hospital creation failed: Could not send welcome email. ${emailResult.error}`, success: false };
+        }
 
       } else {
         // If no password was provided, create with a temp hash and send a "set password" link.
@@ -213,7 +220,14 @@ export async function saveHospital(
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '24h' });
-        await sendSetPasswordEmail(created.contactEmail, token);
+        const emailResult = await sendSetPasswordEmail(created.contactEmail, token);
+        
+        if (!emailResult.success) {
+            // Rollback
+            await prisma.hospital.delete({ where: { id: created.id } });
+            console.error('[saveHospital] Email failed, hospital deleted:', emailResult.error);
+            return { message: `Hospital creation failed: Could not send activation email. ${emailResult.error}`, success: false };
+        }
       }
       
       // Create the Owner role for the new hospital regardless of password flow

@@ -97,7 +97,14 @@ export async function saveDoctor(
       if (password) {
         dataToCreate.password = await bcrypt.hash(password, 10);
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
-        await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
+        const emailResult = await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
+        
+        if (!emailResult.success) {
+            // Rollback
+            await prisma.doctor.delete({ where: { id: newDoctor.id } });
+            console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
+            return { message: `Doctor creation failed: Could not send welcome email. ${emailResult.error}`, success: false };
+        }
       } else {
         const tempPassword = crypto.randomBytes(16).toString('hex');
         dataToCreate.password = await bcrypt.hash(tempPassword, 10);
@@ -108,7 +115,14 @@ export async function saveDoctor(
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         
         const token = jwt.sign({ userId: newDoctor.id, userType: 'doctor', email: newDoctor.contact }, secret, { expiresIn: '24h' });
-        await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
+        const emailResult = await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
+        
+        if (!emailResult.success) {
+             // Rollback
+            await prisma.doctor.delete({ where: { id: newDoctor.id } });
+            console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
+            return { message: `Doctor creation failed: Could not send activation email. ${emailResult.error}`, success: false };
+        }
       }
     }
     revalidatePath('/hospital-admin/doctors');

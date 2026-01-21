@@ -190,7 +190,6 @@ export async function getUsersByHospitalId(hospitalId: number) {
       email: true,
       phone: true,
       roleId: true,
-      status: true,
       createdAt: true,
       role: {
         select: {
@@ -235,8 +234,19 @@ export async function createUser(hospitalId: number, formData: FormData) {
       dataToCreate.password = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({ data: dataToCreate });
       
-      const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
-      await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
+      try {
+        const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
+        const emailResult = await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
+        
+        if (!emailResult.success) {
+            throw new Error(emailResult.error || 'Failed to send welcome email');
+        }
+      } catch (emailError: any) {
+        // Rollback: Delete the user if email fails
+        await prisma.user.delete({ where: { id: user.id } });
+        console.error('[createUser] Email failed, user deleted:', emailError);
+        return { success: false, message: `User creation failed: Could not send welcome email. ${emailError.message}` };
+      }
       
       revalidatePath('/hospital-admin/roles');
       return { success: true, user };
@@ -248,12 +258,23 @@ export async function createUser(hospitalId: number, formData: FormData) {
 
         const user = await prisma.user.create({ data: dataToCreate });
 
-        // Now send the "set password" link.
-        const secret = process.env.AUTH_SECRET;
-        if (!secret) throw new Error('AUTH_SECRET is not set.');
-        
-        const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
-        await sendSetPasswordEmail(user.email, token, hospitalId);
+        try {
+            // Now send the "set password" link.
+            const secret = process.env.AUTH_SECRET;
+            if (!secret) throw new Error('AUTH_SECRET is not set.');
+            
+            const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
+            const emailResult = await sendSetPasswordEmail(user.email, token, hospitalId);
+
+            if (!emailResult.success) {
+                throw new Error(emailResult.error || 'Failed to send set-password email');
+            }
+        } catch (emailError: any) {
+            // Rollback: Delete the user if email fails
+            await prisma.user.delete({ where: { id: user.id } });
+            console.error('[createUser] Email failed, user deleted:', emailError);
+            return { success: false, message: `User creation failed: Could not send activation email. ${emailError.message}` };
+        }
         
         revalidatePath('/hospital-admin/roles');
         return { success: true, user };

@@ -1,7 +1,8 @@
 
-'use server';
+"use server";
 
 import { prisma } from '@/lib/prisma';
+import { requireHospitalPermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import type { EmailSettings } from '@prisma/client';
 import { z } from 'zod';
@@ -66,6 +67,8 @@ export async function getEmailSettings(hospitalId: number) {
 }
 
 export async function updateEmailSettings(hospitalId: number, data: Partial<EmailSettingsType>) {
+  const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
+  if (!allowed) throw new Error('Unauthorized');
     // This action is now simplified for Gmail only for the hospital-facing UI
     const parsed = SimplifiedEmailSettingsSchema.parse(data);
     
@@ -408,6 +411,8 @@ export async function deleteGlobalEmailSetting(id: number) {
 }
 
 export async function setHospitalEmailPreference(hospitalId: number, type: 'custom' | 'global', globalId: number | null) {
+  const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
+  if (!allowed) throw new Error('Unauthorized');
   if (type === 'global' && globalId) {
     await prisma.hospital.update({
       where: { id: hospitalId },

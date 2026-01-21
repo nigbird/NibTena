@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireHospitalPermission } from '@/lib/permissions';
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const id = Number(params.id);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const allowed = await requireHospitalPermission('Settings:Update', id);
+    if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     const { dataRetentionDays } = await req.json();
     if (typeof dataRetentionDays !== 'number' || dataRetentionDays < 1) {
       return NextResponse.json({ error: 'Invalid value' }, { status: 400 });
@@ -25,6 +28,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   try {
     const id = Number(params.id);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const allowed = await requireHospitalPermission('Settings:View', id);
+    if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     const hospital = await prisma.hospital.findUnique({
       where: { id },
       select: { id: true, dataRetentionDays: true }

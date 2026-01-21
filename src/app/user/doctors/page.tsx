@@ -46,14 +46,12 @@ async function getDoctorsWithHospitals() {
 
 async function getSpecialties() {
     const distinctSpecialties = await prisma.doctor.findMany({
-        where: {
-            status: 'active',
-            specialty: {
-                NOT: {
-                    equals: '',
-                },
-            },
+      where: {
+        status: 'active',
+        specialty: {
+          not: '',
         },
+      },
         select: {
             specialty: true,
         },

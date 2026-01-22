@@ -75,9 +75,21 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   if (!colorConfig.length) {
     return null
   }
+  // Read the nonce from the meta tag injected by the middleware-forwarded header
+  const [nonce, setNonce] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    try {
+      const m = document.querySelector('meta[name="csp-nonce"]') as HTMLMetaElement | null;
+      if (m?.content) setNonce(m.content);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   return (
     <style
+      // include the nonce attribute so CSP allows this inline style
+      {...(nonce ? { nonce } : {})}
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(

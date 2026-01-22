@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { verifyCsrfToken } from '@/lib/csrf';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import { Prisma } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
@@ -76,6 +77,11 @@ export async function saveHospital(
     };
   }
   const actingSuperAdminId = user.id;
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const rawData = Object.fromEntries(formData.entries());
 

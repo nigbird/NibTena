@@ -17,6 +17,7 @@ import { KeyRound, Loader2, MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { requestPasswordReset } from './actions';
 import type { RequestResetState } from './actions';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function SubmitButton() {
   const [isPending] = useTransition();
@@ -34,6 +35,7 @@ function SubmitButton() {
 export default function ForgotPasswordPage() {
   const initialState: RequestResetState = { success: false, message: null };
   const [state, formAction] = useActionState(requestPasswordReset, initialState);
+  const csrfToken = useCsrfToken();
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF9F6] p-4">
@@ -65,6 +67,7 @@ export default function ForgotPasswordPage() {
               </div>
             ) : (
               <form action={formAction} className="grid gap-4">
+                <input type="hidden" name="_csrf" value={csrfToken} />
                 <div className="grid gap-2">
                   <Label htmlFor="email" className="text-[#2E2E2E]">Email Address</Label>
                   <Input id="email" name="email" type="email" placeholder="you@example.com" required />

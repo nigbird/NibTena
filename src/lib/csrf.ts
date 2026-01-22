@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
-
-const COOKIE_NAME = 'csrfToken';
+import { COOKIE_NAME } from './csrf-common';
 
 export function createCsrfToken() {
   return crypto.randomBytes(24).toString('hex');

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { sendPasswordResetEmail } from '@/lib/email-actions';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const RequestResetSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -26,6 +27,11 @@ export async function requestPasswordReset(
   prevState: RequestResetState,
   formData: FormData
 ): Promise<RequestResetState> {
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const validatedFields = RequestResetSchema.safeParse({
     email: formData.get('email'),
   });

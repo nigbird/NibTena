@@ -157,6 +157,7 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
       </Card>
 
       <form action={updateAction}>
+        <input type="hidden" name="_csrf" value={csrfToken} />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

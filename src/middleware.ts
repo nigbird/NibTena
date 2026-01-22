@@ -1,7 +1,7 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
-import { COOKIE_NAME } from './lib/csrf';
+import { COOKIE_NAME } from './lib/csrf-common';
 import { validateTokenStructure } from '@/lib/token-validation';
 
 export default withAuth(

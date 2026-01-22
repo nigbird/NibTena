@@ -11,6 +11,7 @@ import { validatePasswordAsync } from '@/lib/password-policy';
 import { createAuditLog } from '@/lib/audit';
 import { getVerifiedUser } from '@/lib/permissions';
 import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -46,6 +47,11 @@ export async function updateDoctorProfile(
   const user = await getVerifiedUser();
   if (!user || user.id !== doctorId || user.role !== 'doctor') {
     return { success: false, message: 'Unauthorized: You can only update your own profile.' };
+  }
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
   const rawData = Object.fromEntries(formData.entries());

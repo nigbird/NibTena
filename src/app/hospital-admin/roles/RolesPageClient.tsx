@@ -67,6 +67,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 
 type Permission = { id: number; name: string; description: string; category: string, key: string };
@@ -423,6 +424,7 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
     formData.append('name', name);
     formData.append('isAdmin', String(isAdmin));
     formData.append('permissions', JSON.stringify(selectedPerms));
+    formData.append('_csrf', csrfToken);
     if (isEditing) {
         formData.append('id', role.id);
     }

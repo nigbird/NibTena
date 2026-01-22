@@ -214,6 +214,8 @@ export default function HospitalFormDrawer({
           fd.set('mapDisplayAddress', locationData.mapDisplayAddress);
         }
       }
+      
+      fd.append('_csrf', csrfToken);
 
       formAction(fd);
     });

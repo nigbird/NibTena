@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import { createAuditLog } from '@/lib/audit';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const CreateRoleSchema = z.object({
   name: z.string().min(2, 'Role name must be at least 2 characters'),
@@ -87,6 +88,11 @@ export async function createRole(hospitalId: number, formData: FormData) {
   const allowed = await requireHospitalPermission('Roles:Create', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const raw = Object.fromEntries(formData.entries());
   const parsed = CreateRoleSchema.safeParse({
     name: String(raw.name || ''),
@@ -140,6 +146,11 @@ export async function updateRole(formData: FormData) {
   const roleRec = await prisma.role.findUnique({ where: { id: roleId }, select: { hospitalId: true } });
   const allowed = roleRec ? await requireHospitalPermission('Roles:Update', roleRec.hospitalId) : false;
   if (!allowed) return { success: false, message: 'Unauthorized' };
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const parsed = UpdateRoleSchema.safeParse({
     id: roleId,
@@ -255,6 +266,11 @@ export async function createUser(hospitalId: number, formData: FormData) {
   const allowed = await requireHospitalPermission('Users:Create', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const raw = Object.fromEntries(formData.entries());
   
   const parsed = CreateUserSchema.safeParse(raw);
@@ -375,6 +391,11 @@ export async function updateUser(userId: number, formData: FormData) {
   const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
   const allowed = target ? await requireHospitalPermission('Users:Update', target.hospitalId) : false;
   if (!allowed) return { success: false, message: 'Unauthorized' };
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const raw = Object.fromEntries(formData.entries()) as any;
   if (raw.password === '') {

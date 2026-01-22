@@ -19,6 +19,7 @@ import { KeyRound, Loader2, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide
 import Link from 'next/link';
 import { resetPassword, type ResetPasswordState } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -41,6 +42,7 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
   const initialState: ResetPasswordState = { success: false, message: null };
   const resetPasswordWithToken = resetPassword.bind(null, token || '');
   const [state, formAction] = useActionState(resetPasswordWithToken, initialState);
+  const csrfToken = useCsrfToken();
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -98,6 +100,7 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
 
   return (
     <form action={formAction} className="grid gap-4">
+      <input type="hidden" name="_csrf" value={csrfToken} />
       <div className="grid gap-2">
         <Label htmlFor="newPassword">New Password</Label>
         <div className="relative">

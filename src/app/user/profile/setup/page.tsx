@@ -41,6 +41,7 @@ export default function ProfileSetupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { patient, setPatient } = useContext(PatientContext);
+  const csrfToken = useCsrfToken();
 
   const initialState: ProfileSetupState = {
     message: null,
@@ -111,6 +112,7 @@ export default function ProfileSetupPage() {
 
         <CardContent>
           <form action={dispatch} className="space-y-6">
+            <input type="hidden" name="_csrf" value={csrfToken} />
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" name="name" defaultValue={patient.name ?? ''} required />

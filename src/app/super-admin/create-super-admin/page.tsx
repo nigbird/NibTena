@@ -59,6 +59,7 @@ function SuperAdminForm({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const csrfToken = useCsrfToken();
 
   useEffect(() => {
     if (isOpen) {

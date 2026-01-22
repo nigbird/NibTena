@@ -49,6 +49,7 @@ export default function DoctorProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const csrfToken = useCsrfToken();
 
   useEffect(() => {
     async function fetchData() {
@@ -205,6 +206,7 @@ export default function DoctorProfilePage() {
                 </CardHeader>
                 <CardContent>
                     <form action={dispatchPassword} key={passwordFormKey} className="space-y-6 max-w-md">
+                         <input type="hidden" name="_csrf" value={csrfToken} />
                          <div className="space-y-2">
                             <Label htmlFor="currentPassword">Current Password</Label>
                              <div className="relative">

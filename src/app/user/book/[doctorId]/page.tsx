@@ -226,6 +226,7 @@ export default function BookingPage() {
         </CardHeader>
         <CardContent>
           <form action={dispatch} className="space-y-6">
+            <input type="hidden" name="_csrf" value={csrfToken} />
             
             <div className="space-y-3">
                 <Label>Who are you booking for?</Label>

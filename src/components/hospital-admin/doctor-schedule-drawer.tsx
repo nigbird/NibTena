@@ -26,7 +26,6 @@ import { format, parse } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { useFormStatus } from 'react-dom';
 
-
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 type DaySchedule = {
@@ -87,7 +86,9 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
   const [doctorSelectionError, setDoctorSelectionError] = useState<string | null>(null);
+  );
   
+  const csrfToken = useCsrfToken(
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);
@@ -179,6 +180,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
         schedules: schedules
     };
     formData.append('scheduleData', JSON.stringify(scheduleData));
+    formData.append('_csrf', csrfToken);
 
     submissionAttemptRef.current = true;
     formAction(formData as unknown as FormData);

@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const AppointmentFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -33,6 +34,11 @@ export async function bookAppointment(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const validatedFields = AppointmentFormSchema.safeParse({
     fullName: formData.get('fullName'),

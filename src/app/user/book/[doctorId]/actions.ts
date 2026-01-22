@@ -9,6 +9,7 @@ import { addMinutes, format, parseISO, startOfDay } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { createAndStoreOtp } from '@/lib/otp';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 // Normalize phone numbers to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
@@ -76,6 +77,11 @@ export async function startBookingProcess(
   prevState: State,
   formData: FormData
 ): Promise<State> {
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   // Debug: log incoming cookies to see if patient session is sent
   try {
     const cookieStore = await cookies();

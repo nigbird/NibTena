@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 // ✅ Zod schema for validation
 const ProfileSetupSchema = z.object({
@@ -31,6 +32,11 @@ export async function updatePatientProfile(
   patientId: number,
   formData: FormData
 ): Promise<ProfileSetupState> {
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   try {
     const validatedFields = ProfileSetupSchema.safeParse({
       name: formData.get('name'),

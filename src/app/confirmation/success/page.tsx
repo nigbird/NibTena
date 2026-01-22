@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { bookAppointment, type State } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function SubmitButton() {
   const { pending } = useFormStatus();

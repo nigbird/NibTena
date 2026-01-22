@@ -6,6 +6,7 @@ import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { verifyCsrfToken } from '@/lib/csrf';
 import type { TimeSlot } from '@/lib/definitions';
 import { parse as parseTime, isBefore, isEqual, isAfter, format } from 'date-fns';
 import { doSlotsOverlap } from '@/lib/time-utils';
@@ -99,6 +100,11 @@ export async function saveDoctorSchedule(
 
     const allowed = await requireHospitalPermission('Schedules:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
+
+    const _csrf = formData.get('_csrf') as string | null;
+    if (!verifyCsrfToken(_csrf)) {
+        return { success: false, message: 'Invalid or missing CSRF token.' };
+    }
 
     const rawData = formData.get('scheduleData');
 

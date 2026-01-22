@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const ResetPasswordSchema = z
   .object({
@@ -45,6 +46,11 @@ export async function resetPassword(
     return { success: false, message: 'Invalid or missing reset token.' };
   }
   
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const validatedFields = ResetPasswordSchema.safeParse(
     Object.fromEntries(formData.entries())
   );

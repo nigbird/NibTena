@@ -88,6 +88,11 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
     return { success: false, message: 'Unauthorized' };
   }
 
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const parsed = SuperAdminSchema.safeParse({
     name: String(formData.get('name') || ''),
     email: String(formData.get('email') || ''),

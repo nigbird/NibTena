@@ -1,11 +1,11 @@
-import { auth } from '../../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import ScheduleSettingsPageContent from './ScheduleSettingsPageContent';
 
 export default async function ScheduleSettingsPage() {
-    const session = await auth();
-    if (!session?.user?.hospitalId) {
+    const user = await getVerifiedUser();
+    if (!user || !user.hospitalId) {
         redirect('/hospital-admin/login');
     }
-    return <ScheduleSettingsPageContent hospitalId={session.user.hospitalId} />;
+    return <ScheduleSettingsPageContent hospitalId={user.hospitalId} />;
 }

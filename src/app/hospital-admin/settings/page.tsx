@@ -1,18 +1,16 @@
 
 import { Suspense } from 'react';
-import { auth } from '../../../../auth';
+import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import SettingsPageClient from './SettingsPageClient';
-import { requireHospitalPermission } from '@/lib/permissions';
 
 export default async function SettingsPage() {
-  const session = await auth();
-  const hid = session?.user?.hospitalId ? Number(session.user.hospitalId) : null;
-  if (!hid) {
+  const user = await getVerifiedUser();
+  if (!user || !user.hospitalId) {
     redirect('/hospital-admin/login');
   }
 
-  const allowed = await requireHospitalPermission('Settings:View', hid as number);
+  const allowed = await requireHospitalPermission('Settings:View', user.hospitalId);
   if (!allowed) {
     redirect('/hospital-admin');
   }
@@ -20,7 +18,7 @@ export default async function SettingsPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       {/* client component will fetch and manage specialties via server actions */}
-      <SettingsPageClient hospitalId={hid as number} />
+      <SettingsPageClient hospitalId={user.hospitalId} />
     </Suspense>
   );
 }

@@ -2,13 +2,12 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/../../auth';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { startOfDay, endOfDay } from 'date-fns';
 
 export async function getAppointmentsByHospitalId(hospitalId: number, page: number = 1, limit: number = 100) {
-    const session = await auth();
-    if (!session?.user) return [];
+    const user = await getVerifiedUser();
+    if (!user) return [];
     const allowed = await requireHospitalPermission('Queue:View', hospitalId);
     if (!allowed) return [];
 
@@ -47,8 +46,8 @@ export async function getAppointmentsByHospitalId(hospitalId: number, page: numb
 }
 
 export async function getTodaysAppointmentsCount(hospitalId: number) {
-    const session = await auth();
-    if (!session?.user) return 0;
+    const user = await getVerifiedUser();
+    if (!user) return 0;
     const allowed = await requireHospitalPermission('Queue:View', hospitalId);
     if (!allowed) return 0;
 
@@ -68,8 +67,8 @@ export async function getTodaysAppointmentsCount(hospitalId: number) {
 }
 
 export async function getDoctorsByHospitalId(hospitalId: number) {
-    const session = await auth();
-    if (!session?.user) return [];
+    const user = await getVerifiedUser();
+    if (!user) return [];
     const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
     if (!allowed) return [];
 

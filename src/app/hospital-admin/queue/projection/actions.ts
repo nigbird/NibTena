@@ -2,12 +2,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/../../auth';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 
 export async function getAppointmentsByHospitalId(hospitalId: number) {
-    const session = await auth();
-    if (!session?.user) return [];
+    const user = await getVerifiedUser();
+    if (!user) return [];
     const allowed = await requireHospitalPermission('Queue:View', hospitalId);
     if (!allowed) return [];
 
@@ -22,8 +21,8 @@ export async function getAppointmentsByHospitalId(hospitalId: number) {
 }
 
 export async function getDoctorsByHospitalId(hospitalId: number) {
-    const session = await auth();
-    if (!session?.user) return [];
+    const user = await getVerifiedUser();
+    if (!user) return [];
     const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
     if (!allowed) return [];
 

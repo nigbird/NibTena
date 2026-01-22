@@ -6,8 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
-import { auth, signOut } from '@/../../auth';
-import type { User as AuthUser } from 'next-auth';
+import { signOut } from '@/../../auth';
+import { getVerifiedUser, VerifiedUser } from '@/lib/permissions';
 
 const UserProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -29,9 +29,15 @@ export async function updateUserProfile(
   prevState: UserProfileState,
   formData: FormData
 ): Promise<UserProfileState> {
-  const session = await auth();
-  if (!session?.user || Number(session.user.id) !== userId) {
+  const user = await getVerifiedUser();
+  if (!user || user.id !== userId) {
     return { success: false, message: 'Unauthorized' };
+  }
+
+  // This action is specifically for the User table.
+  // Hospital entities manage their details in Settings.
+  if (user.entityType !== 'user') {
+      return { success: false, message: 'This action is only for staff users.' };
   }
 
   const validatedFields = UserProfileSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -79,24 +85,17 @@ export type PasswordChangeState = {
   success?: boolean;
 };
 
-async function getHashedPasswordForUser(user: AuthUser) {
-    const userId = Number(user.id);
-    const userSession = await auth();
-    const isHospitalOwner = userSession?.user?.hospitalId === userId;
-
-
-    // The main hospital account's credentials are in the Hospital table.
-    // We check if the user's ID matches their hospitalId in the session.
-    if (isHospitalOwner) {
+async function getHashedPasswordForUser(user: VerifiedUser) {
+    if (user.entityType === 'hospital') {
          const hospital = await prisma.hospital.findUnique({
-            where: { id: userId },
+            where: { id: user.id },
             select: { password: true }
         });
         return hospital?.password;
     } else {
-        // All other staff users are in the User table.
+        // Assumes entityType === 'user' (staff)
         const staffUser = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: user.id },
             select: { password: true }
         });
         return staffUser?.password;
@@ -104,12 +103,11 @@ async function getHashedPasswordForUser(user: AuthUser) {
 }
 
 export async function updateUserPassword(userId: number, prevState: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
-    const session = await auth();
-    if (!session?.user || Number(session.user.id) !== userId) {
+    const user = await getVerifiedUser();
+    if (!user || user.id !== userId) {
         return { success: false, message: 'Unauthorized.' };
     }
-     const isHospitalOwner = session?.user?.hospitalId === userId;
-
+    
     const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validatedFields.success) {
@@ -125,7 +123,7 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     }
 
     try {
-        const storedHash = await getHashedPasswordForUser(session.user);
+        const storedHash = await getHashedPasswordForUser(user);
         if (!storedHash) {
              return { success: false, message: 'User not found.' };
         }
@@ -137,8 +135,8 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
 
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
         
-        // Update the correct table based on whether it's the main hospital account
-        if (isHospitalOwner) {
+        // Update the correct table based on entityType
+        if (user.entityType === 'hospital') {
             await prisma.hospital.update({
                 where: { id: userId },
                 data: { 

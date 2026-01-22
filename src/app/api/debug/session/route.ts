@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { auth } from '../../../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 
 export async function GET(req: Request) {
   try {
+    // SECURITY: Only allow verified superadmins to inspect session details
+    const user = await getVerifiedUser();
+    if (!user || user.role !== 'superadmin') {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     // server-side session (uses auth helper)
     const session = await auth();
 

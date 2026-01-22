@@ -4,8 +4,7 @@
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, requireHospitalPermission } from '@/lib/permissions';
-import { auth } from '@/../../auth';
+import { requirePermission, requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
@@ -40,10 +39,19 @@ const UpdateUserSchema = CreateUserSchema.extend({
 });
 
 export async function getAllPermissions() {
+  const user = await getVerifiedUser();
+  if (!user) return [];
   return await prisma.permission.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
 }
 
 export async function getRolesByHospitalId(hospitalId: number) {
+  const user = await getVerifiedUser();
+  if (!user) return [];
+  
+  // Ensure user has access to this hospital's roles
+  const allowed = await requireHospitalPermission('Roles:View', hospitalId) || await requireHospitalPermission('Users:View', hospitalId);
+  if (!allowed) return [];
+
   return await prisma.role.findMany({
     where: { hospitalId },
     include: {
@@ -55,15 +63,25 @@ export async function getRolesByHospitalId(hospitalId: number) {
 }
 
 export async function getRoleById(roleId: number) {
-  return await prisma.role.findUnique({
+  const user = await getVerifiedUser();
+  if (!user) return null;
+
+  const role = await prisma.role.findUnique({
     where: { id: roleId },
     include: { permissions: { include: { permission: true } }, users: true },
   });
+
+  if (role) {
+    const allowed = await requireHospitalPermission('Roles:View', role.hospitalId) || await requireHospitalPermission('Users:View', role.hospitalId);
+    if (!allowed) return null;
+  }
+
+  return role;
 }
 
 export async function createRole(hospitalId: number, formData: FormData) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   const allowed = await requireHospitalPermission('Roles:Create', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
@@ -95,7 +113,7 @@ export async function createRole(hospitalId: number, formData: FormData) {
     }
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'CREATE_ROLE',
       targetId: role.id,
@@ -112,8 +130,8 @@ export async function createRole(hospitalId: number, formData: FormData) {
 }
 
 export async function updateRole(formData: FormData) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   const raw = Object.fromEntries(formData.entries());
   const roleId = Number(raw.id);
@@ -149,7 +167,7 @@ export async function updateRole(formData: FormData) {
     }
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_ROLE',
       targetId: id,
@@ -166,8 +184,8 @@ export async function updateRole(formData: FormData) {
 }
 
 export async function deleteRole(roleId: number) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   const roleRec = await prisma.role.findUnique({ where: { id: roleId }, select: { hospitalId: true } });
   const allowed = roleRec ? await requireHospitalPermission('Roles:Delete', roleRec.hospitalId) : false;
@@ -178,7 +196,7 @@ export async function deleteRole(roleId: number) {
     await prisma.rolePermission.deleteMany({ where: { roleId } });
     await prisma.role.delete({ where: { id: roleId } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'DELETE_ROLE',
       targetId: roleId,
@@ -193,8 +211,8 @@ export async function deleteRole(roleId: number) {
 }
 
 export async function getUsersByHospitalId(hospitalId: number) {
-  const session = await auth();
-  if (!session?.user) return [];
+  const user = await getVerifiedUser();
+  if (!user) return [];
   const allowed = await requireHospitalPermission('Users:View', hospitalId);
   if (!allowed) return [];
 
@@ -230,8 +248,8 @@ export async function getUsersByHospitalId(hospitalId: number) {
 }
 
 export async function createUser(hospitalId: number, formData: FormData) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   const allowed = await requireHospitalPermission('Users:Create', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
@@ -263,70 +281,80 @@ export async function createUser(hospitalId: number, formData: FormData) {
         return { success: false, message: pwCheck.errors.join(' ') };
       }
       dataToCreate.password = await bcrypt.hash(password, 10);
-      const user = await prisma.user.create({ data: dataToCreate });
+      const userRec = await prisma.user.create({ data: dataToCreate });
       
       try {
         const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
         const emailResult = await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
         
         if (!emailResult.success) {
-            throw new Error(emailResult.error || 'Failed to send welcome email');
+            // Do NOT delete the created user when a password was provided.
+            // Email is best-effort in this flow; return success but notify caller about the email failure.
+            console.error('[createUser] Welcome email failed but user retained:', emailResult.error);
+            await createAuditLog({
+              actorId: user.id,
+              actorType: 'User',
+              action: 'CREATE_USER',
+              targetId: userRec.id,
+              targetType: 'User',
+              changes: { name, email, roleId }
+            });
+            revalidatePath('/hospital-admin/roles');
+            return { success: true, user: userRec, message: `User created but welcome email failed: ${emailResult.error}` };
         }
       } catch (emailError: any) {
-        // Rollback: Delete the user if email fails
-        await prisma.user.delete({ where: { id: user.id } });
-        console.error('[createUser] Email failed, user deleted:', emailError);
-        return { success: false, message: `User creation failed: Could not send welcome email. ${emailError.message}` };
+        // If sendWelcomeEmail threw an unexpected error, log and continue as best-effort
+        console.error('[createUser] Welcome email error (non-fatal):', emailError);
       }
 
       await createAuditLog({
-        actorId: session.user.id || 'unknown',
+        actorId: user.id,
         actorType: 'User',
         action: 'CREATE_USER',
-        targetId: user.id,
+        targetId: userRec.id,
         targetType: 'User',
         changes: { name, email, roleId }
       });
       
       revalidatePath('/hospital-admin/roles');
-      return { success: true, user };
+      return { success: true, user: userRec };
 
     } else {
         // If no password, create user with a temporary password to satisfy DB constraints
         const tempPassword = crypto.randomBytes(16).toString('hex');
         dataToCreate.password = await bcrypt.hash(tempPassword, 10);
 
-        const user = await prisma.user.create({ data: dataToCreate });
+        const userRec = await prisma.user.create({ data: dataToCreate });
 
         try {
             // Now send the "set password" link.
             const secret = process.env.AUTH_SECRET;
             if (!secret) throw new Error('AUTH_SECRET is not set.');
             
-            const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '1h' });
-            const emailResult = await sendSetPasswordEmail(user.email, token, hospitalId);
+            const token = jwt.sign({ userId: userRec.id, userType: 'user', email: userRec.email }, secret, { expiresIn: '1h' });
+            const emailResult = await sendSetPasswordEmail(userRec.email, token, hospitalId);
 
             if (!emailResult.success) {
                 throw new Error(emailResult.error || 'Failed to send set-password email');
             }
         } catch (emailError: any) {
             // Rollback: Delete the user if email fails
-            await prisma.user.delete({ where: { id: user.id } });
+            await prisma.user.delete({ where: { id: userRec.id } });
             console.error('[createUser] Email failed, user deleted:', emailError);
             return { success: false, message: `User creation failed: Could not send activation email. ${emailError.message}` };
         }
 
         await createAuditLog({
-            actorId: session.user.id || 'unknown',
+            actorId: user.id,
             actorType: 'User',
             action: 'CREATE_USER',
-            targetId: user.id,
+            targetId: userRec.id,
             targetType: 'User',
             changes: { name, email, roleId }
         });
         
         revalidatePath('/hospital-admin/roles');
-        return { success: true, user };
+        return { success: true, user: userRec };
     }
 
   } catch (error) {
@@ -339,8 +367,8 @@ export async function createUser(hospitalId: number, formData: FormData) {
 }
 
 export async function updateUser(userId: number, formData: FormData) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   // Ensure user belongs to same hospital
   const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
@@ -378,8 +406,12 @@ export async function updateUser(userId: number, formData: FormData) {
     
     await prisma.user.update({ where: { id }, data: dataToUpdate });
 
+    // Revoke existing sessions for this user (defense-in-depth)
+    // We treat staff users as role='hospital' with isStaff=true
+    await incrementTokenVersionForRole('hospital', id, true);
+
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_USER',
       targetId: id,
@@ -399,8 +431,8 @@ export async function updateUser(userId: number, formData: FormData) {
 }
 
 export async function deleteUser(userId: number) {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
   const allowed = target ? await requireHospitalPermission('Users:Delete', target.hospitalId) : false;
@@ -409,7 +441,7 @@ export async function deleteUser(userId: number) {
   try {
     await prisma.user.delete({ where: { id: userId } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'DELETE_USER',
       targetId: userId,

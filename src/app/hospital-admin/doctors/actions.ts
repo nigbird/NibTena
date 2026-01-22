@@ -2,8 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/../../auth';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -46,8 +45,8 @@ export async function saveDoctor(
   prevState: DoctorFormState, 
   formData: FormData
 ): Promise<DoctorFormState> {
-  const session = await auth();
-  if (!session?.user) return { message: 'Unauthorized', success: false };
+  const user = await getVerifiedUser();
+  if (!user) return { message: 'Unauthorized', success: false };
 
   // require different permissions depending on whether we're creating or updating
   const isUpdate = !!doctorId;
@@ -100,7 +99,7 @@ export async function saveDoctor(
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
 
       await createAuditLog({
-        actorId: session.user.id || 'unknown',
+        actorId: user.id,
         actorType: 'User',
         action: 'UPDATE_DOCTOR_PROFILE',
         targetId: doctorId,
@@ -124,7 +123,7 @@ export async function saveDoctor(
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
 
         await createAuditLog({
-          actorId: session.user.id || 'unknown',
+          actorId: user.id,
           actorType: 'User',
           action: 'CREATE_DOCTOR',
           targetId: newDoctor.id,
@@ -148,7 +147,7 @@ export async function saveDoctor(
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
 
         await createAuditLog({
-          actorId: session.user.id || 'unknown',
+          actorId: user.id,
           actorType: 'User',
           action: 'CREATE_DOCTOR',
           targetId: newDoctor.id,
@@ -191,15 +190,20 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
     const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { hospitals: { select: { hospitalId: true } } } });
     const hospitalId = doc?.hospitals?.[0]?.hospitalId;
     if (!hospitalId) return { success: false, message: 'Not found.' };
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const user = await getVerifiedUser();
+    if (!user) return { success: false, message: 'Unauthorized' };
     const allowed = await requireHospitalPermission('Doctors:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
     
+    // Revoke sessions if doctor is deactivated
+    if (status === 'inactive') {
+        await incrementTokenVersionForRole('doctor', doctorId);
+    }
+
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_DOCTOR_STATUS',
       targetId: doctorId,
@@ -220,8 +224,8 @@ export async function deleteDoctor(doctorId: number): Promise<{ success: boolean
     const hospitalId = doc?.hospitals?.[0]?.hospitalId;
     if (!hospitalId) return { success: false, message: 'Doctor not found or not associated with a hospital.' };
     
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const user = await getVerifiedUser();
+    if (!user) return { success: false, message: 'Unauthorized' };
     
     const allowed = await requireHospitalPermission('Doctors:Delete', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
@@ -234,7 +238,7 @@ export async function deleteDoctor(doctorId: number): Promise<{ success: boolean
     });
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'DELETE_DOCTOR',
       targetId: doctorId,
@@ -250,8 +254,8 @@ export async function deleteDoctor(doctorId: number): Promise<{ success: boolean
 }
 
 export async function getDoctors(hospitalId: number, page: number, limit: number, query: string) {
-    const session = await auth();
-    if (!session?.user) return [];
+    const user = await getVerifiedUser();
+    if (!user) return [];
     const allowed = await requireHospitalPermission('Doctors:View', hospitalId);
     if (!allowed) return [];
 
@@ -280,8 +284,8 @@ export async function getDoctors(hospitalId: number, page: number, limit: number
 }
 
 export async function getDoctorsCount(hospitalId: number, query: string) {
-  const session = await auth();
-  if (!session?.user) return 0;
+  const user = await getVerifiedUser();
+  if (!user) return 0;
   const allowed = await requireHospitalPermission('Users:View', hospitalId);
   if (!allowed) return 0;
 

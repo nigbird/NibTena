@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from '../../../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
     }
 
-    // Require authenticated session
-    const session = await auth();
-    if (!session || !session.user) {
+    // Require authenticated session via server-side verification
+    const user = await getVerifiedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,8 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: 'pending-payment' }, { status: 200 });
     }
 
-    const user: any = session.user;
-    const userIdNum = Number(user.id);
+    const userIdNum = user.id;
 
     const isAdmin = user.isAdmin === true;
     const isHospitalScopedAdmin = user.role === 'hospital' && user.hospitalId && user.hospitalId === appointment.hospitalId;

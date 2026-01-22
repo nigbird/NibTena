@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { addMinutes, format, parseISO, startOfDay } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
+import { createAndStoreOtp } from '@/lib/otp';
 
 // Normalize phone numbers to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
@@ -57,17 +58,12 @@ async function findOrCreatePatient(phone: string, defaults: { name: string, age:
 
 export async function generateAndSaveOtp(phone: string): Promise<string> {
   const normalized = normalizePhoneNumber(phone);
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
-
-  // Use upsert so we don't violate unique constraint if an OTP already exists for this phone
-  await prisma.otp.upsert({
-    where: { phone: normalized },
-    update: { code, expiresAt },
-    create: { phone: normalized, code, expiresAt },
-  });
-
-  console.log(`OTP for ${normalized} is: ${code}`); // For testing purposes
+  const code = await createAndStoreOtp(normalized);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`OTP for ${normalized} is: ${code}`);
+  } else {
+    console.log(`OTP generated for ${normalized}`);
+  }
   return code;
 }
 

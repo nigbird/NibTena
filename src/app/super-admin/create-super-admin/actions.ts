@@ -1,12 +1,12 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { auth } from '../../../../auth';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { revalidatePath } from 'next/cache';
 import { createAuditLog } from '@/lib/audit';
+import { getVerifiedUser } from '@/lib/permissions';
 
 const SuperAdminSchema = z.object({
   name: z.string().min(2),
@@ -23,8 +23,8 @@ export async function getSuperAdmins() {
 }
 
 export async function createSuperAdmin(formData: FormData) {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized' };
   }
 
@@ -64,7 +64,7 @@ export async function createSuperAdmin(formData: FormData) {
     } as any);
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'SuperAdmin',
       action: 'CREATE_SUPER_ADMIN',
       targetId: newAdmin.id,
@@ -83,8 +83,8 @@ export async function createSuperAdmin(formData: FormData) {
 }
 
 export async function updateSuperAdmin(id: number, formData: FormData) {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized' };
   }
 
@@ -123,7 +123,7 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
     await prisma.superAdmin.update({ where: { id }, data: dataToUpdate as any });
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'SuperAdmin',
       action: 'UPDATE_SUPER_ADMIN',
       targetId: id,
@@ -142,13 +142,13 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
 }
 
 export async function deleteSuperAdmin(id: number) {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized' };
   }
 
   // Prevent self-deletion
-  if (Number(session.user.id) === id) {
+  if (user.id === id) {
     return { success: false, message: "You cannot delete your own account." };
   }
 
@@ -156,7 +156,7 @@ export async function deleteSuperAdmin(id: number) {
     await prisma.superAdmin.delete({ where: { id } });
 
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'SuperAdmin',
       action: 'DELETE_SUPER_ADMIN',
       targetId: id,

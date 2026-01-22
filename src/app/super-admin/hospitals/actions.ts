@@ -9,9 +9,9 @@ import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
-import { auth } from '../../../../auth';
 import { Prisma } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
+import { getVerifiedUser } from '@/lib/permissions';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -60,14 +60,14 @@ export async function saveHospital(
   prevState: HospitalFormState,
   formData: FormData
 ): Promise<HospitalFormState> {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return {
       message: 'Unauthorized: only super admins can manage hospitals.',
       success: false,
     };
   }
-  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const superAdminRole = user.superAdminRole || 'maker';
   const canMake = superAdminRole === 'maker' || superAdminRole === 'both';
   if (!canMake) {
     return {
@@ -75,7 +75,7 @@ export async function saveHospital(
       success: false,
     };
   }
-  const actingSuperAdminId = Number(session.user.id);
+  const actingSuperAdminId = user.id;
 
   const rawData = Object.fromEntries(formData.entries());
 
@@ -316,11 +316,20 @@ export async function saveHospital(
 
 export async function updateHospitalStatus(hospitalId: number, status: 'active' | 'inactive') {
   try {
+    const user = await getVerifiedUser();
+    if (!user || user.role !== 'superadmin') {
+      return { success: false, message: 'Unauthorized: only super admins can update hospital status.' };
+    }
+    const superAdminRole = user.superAdminRole || 'maker';
+    const canMake = superAdminRole === 'maker' || superAdminRole === 'both';
+    if (!canMake) {
+      return { success: false, message: 'Only maker super admins can update hospital status.' };
+    }
+
     await prisma.hospital.update({ where: { id: hospitalId }, data: { status } });
     
-    const session = await auth();
     await createAuditLog({
-      actorId: session?.user?.id || 'unknown',
+      actorId: user.id,
       actorType: 'SuperAdmin',
       action: 'UPDATE_HOSPITAL_STATUS',
       targetId: hospitalId,
@@ -337,16 +346,16 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 }
 
 export async function deleteHospital(hospitalId: number): Promise<{ success: boolean; message: string }> {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized: only super admins can delete hospitals.' };
   }
-  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const superAdminRole = user.superAdminRole || 'maker';
   const canMake = superAdminRole === 'maker' || superAdminRole === 'both';
   if (!canMake) {
     return { success: false, message: 'Only maker super admins can delete hospitals.' };
   }
-  const actingSuperAdminId = Number(session.user.id);
+  const actingSuperAdminId = user.id;
 
   try {
     // Verify hospital exists
@@ -406,6 +415,11 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
 }
 
 export async function getHospitals(page: number, limit: number, query: string) {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
+    return []; // Or throw error, but empty array is safer for UI
+  }
+
   const where = query
     ? {
         OR: [
@@ -448,6 +462,10 @@ export async function getHospitals(page: number, limit: number, query: string) {
 }
 
 export async function getHospitalsCount(query: string) {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
+    return 0;
+  }
   const where = query
     ? {
         OR: [
@@ -460,6 +478,10 @@ export async function getHospitalsCount(query: string) {
 }
 
 export async function getPendingHospitals() {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
+    return [];
+  }
   return prisma.hospital.findMany({
     where: { approvalStatus: 'pending' } as any,
     select: {
@@ -481,13 +503,13 @@ export async function getPendingHospitals() {
 }
 
 export async function reviewHospital(hospitalId: number, decision: 'approved' | 'rejected') {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized: only super admins can review hospitals.' };
   }
 
-  const actingSuperAdminId = Number(session.user.id);
-  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const actingSuperAdminId = user.id;
+  const superAdminRole = user.superAdminRole || 'maker';
 
   const canCheck = superAdminRole === 'checker' || superAdminRole === 'both';
   if (!canCheck) {
@@ -528,6 +550,10 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
 }
 
 export async function getPendingHospitalRequests() {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
+    return [];
+  }
   const requests = await prisma.hospitalRequest.findMany({
     where: { status: 'pending' },
     include: {
@@ -575,13 +601,13 @@ export async function reviewHospitalRequest(
   decision: 'approved' | 'rejected',
   comments?: string
 ): Promise<{ success: boolean; message: string }> {
-  const session = (await auth()) as any;
-  if (!session?.user || session.user.role !== 'superadmin') {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized: only super admins can review requests.' };
   }
 
-  const actingSuperAdminId = Number(session.user.id);
-  const superAdminRole = (session.user as any).superAdminRole || 'maker';
+  const actingSuperAdminId = user.id;
+  const superAdminRole = user.superAdminRole || 'maker';
 
   const canCheck = superAdminRole === 'checker' || superAdminRole === 'both';
   if (!canCheck) {

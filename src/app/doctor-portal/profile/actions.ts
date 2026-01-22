@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { auth } from '@/../../auth';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { createAuditLog } from '@/lib/audit';
+import { getVerifiedUser } from '@/lib/permissions';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -41,6 +42,10 @@ export async function updateDoctorProfile(
   prevState: DoctorProfileState,
   formData: FormData
 ): Promise<DoctorProfileState> {
+  const user = await getVerifiedUser();
+  if (!user || user.id !== doctorId || user.role !== 'doctor') {
+    return { success: false, message: 'Unauthorized: You can only update your own profile.' };
+  }
 
   const rawData = Object.fromEntries(formData.entries());
   const imageFile = formData.get('image') as File | null;
@@ -154,8 +159,8 @@ async function getHashedPasswordForDoctor(doctorId: number) {
 }
 
 export async function updateDoctorPassword(doctorId: number, prevState: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
-    const session = await auth();
-    if (!session?.user || Number(session.user.id) !== doctorId) {
+    const user = await getVerifiedUser();
+    if (!user || user.id !== doctorId || user.role !== 'doctor') {
         return { success: false, message: 'Unauthorized.' };
     }
 
@@ -193,6 +198,9 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
           },
           select: { id: true }
         });
+
+        // Revoke all sessions (including current one)
+        await incrementTokenVersionForRole('doctor', doctorId);
 
         await createAuditLog({
           actorId: doctorId,

@@ -1,5 +1,5 @@
 
-import { auth } from '../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import {
   Card,
@@ -15,11 +15,11 @@ import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 
 export default async function DoctorPortalPage() {
-    const session = await auth();
-    if (!session?.user || session.user.role !== 'doctor') {
+    const user = await getVerifiedUser();
+    if (!user || user.role !== 'doctor') {
         redirect('/doctor-portal/login');
     }
-    const doctorId = parseInt(session.user.id, 10);
+    const doctorId = user.id;
 
   const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { id: true, name: true } });
 

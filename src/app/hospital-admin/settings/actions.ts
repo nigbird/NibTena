@@ -5,8 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
-import { auth } from '@/../../auth';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
 import { createAuditLog } from '@/lib/audit';
 
 const AddSpecialtySchema = z.object({
@@ -20,8 +19,8 @@ export type SpecialtyActionState = {
 };
 
 export async function getHospitalSpecialties(hospitalId: number) {
-  const session = await auth();
-  if (!session?.user) return [];
+  const user = await getVerifiedUser();
+  if (!user) return [];
   const allowed = await requireHospitalPermission('Settings:View', hospitalId);
   if (!allowed) return [];
 
@@ -32,8 +31,8 @@ export async function getHospitalSpecialties(hospitalId: number) {
 }
 
 export async function addSpecialty(hospitalId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -50,7 +49,7 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
     }
     const newSpec = await prisma.specialty.create({ data: { name: parsed.data.name, hospitalId } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'CREATE_SPECIALTY',
       targetId: newSpec.id,
@@ -66,8 +65,8 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
 }
 
 export async function updateSpecialty(hospitalId: number, specialtyId: number, prevState: SpecialtyActionState, formData: FormData) : Promise<SpecialtyActionState> {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -83,7 +82,7 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
 
     await prisma.specialty.update({ where: { id: specialtyId }, data: { name: parsed.data.name } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_SPECIALTY',
       targetId: specialtyId,
@@ -99,8 +98,8 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
 }
 
 export async function getHospitalById(hospitalId: number) {
-  const session = await auth();
-  if (!session?.user) return null;
+  const user = await getVerifiedUser();
+  if (!user) return null;
   const allowed = await requireHospitalPermission('Settings:View', hospitalId);
   if (!allowed) return null;
 
@@ -148,8 +147,8 @@ export async function updateHospitalGeneralSettings(
   prevState: GeneralSettingsState,
   formData: FormData
 ): Promise<GeneralSettingsState> {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: "Unauthorized." };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: "Unauthorized." };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: "Unauthorized." };
 
@@ -194,7 +193,7 @@ export async function updateHospitalGeneralSettings(
     });
     
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_HOSPITAL_GENERAL_SETTINGS',
       targetId: hospitalId,
@@ -224,8 +223,8 @@ export async function toggleSpecialtyActive(specialtyId: number) {
   // Resolve hospitalId then check permission
   const spec = await prisma.specialty.findUnique({ where: { id: specialtyId }, select: { hospitalId: true } });
   if (!spec) return { success: false, message: 'Not found.' };
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', spec.hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -234,7 +233,7 @@ export async function toggleSpecialtyActive(specialtyId: number) {
     if (!spec) return { success: false, message: 'Not found.' };
     await prisma.specialty.update({ where: { id: specialtyId }, data: { active: !spec.active } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'UPDATE_SPECIALTY_STATUS',
       targetId: specialtyId,
@@ -252,15 +251,15 @@ export async function toggleSpecialtyActive(specialtyId: number) {
 export async function deleteSpecialty(specialtyId: number) {
   const spec = await prisma.specialty.findUnique({ where: { id: specialtyId }, select: { hospitalId: true } });
   if (!spec) return { success: false, message: 'Not found.' };
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', spec.hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   try {
     await prisma.specialty.delete({ where: { id: specialtyId } });
     await createAuditLog({
-      actorId: session.user.id || 'unknown',
+      actorId: user.id,
       actorType: 'User',
       action: 'DELETE_SPECIALTY',
       targetId: specialtyId,

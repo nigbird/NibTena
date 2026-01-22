@@ -1,17 +1,17 @@
 import { Suspense } from 'react';
-import { auth } from '../../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import DoctorsPageContent from './DoctorsPageContent';
 
 export default async function DoctorsPage() {
-    const session = await auth();
-    if (!session?.user?.hospitalId) {
+    const user = await getVerifiedUser();
+    if (!user || !user.hospitalId) {
         redirect('/hospital-admin/login');
     }
     
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <DoctorsPageContent hospitalId={session.user.hospitalId} />
+            <DoctorsPageContent hospitalId={user.hospitalId} />
         </Suspense>
     )
 }

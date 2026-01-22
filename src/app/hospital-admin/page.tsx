@@ -1,5 +1,5 @@
 
-import { auth } from '../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 import {
   Card,
   CardContent,
@@ -15,18 +15,17 @@ import { HospitalAdminDashboardClient } from '@/components/hospital-admin/Hospit
 import { redirect } from 'next/navigation';
 import type { Appointment, Doctor } from '@/lib/definitions';
 
-
 export default async function HospitalAdminDashboard() {
-  const session = await auth();
-  if (!session?.user?.hospitalId) {
+  const user = await getVerifiedUser();
+  if (!user || !user.hospitalId) {
     redirect('/hospital-admin/login');
   }
-  
-  const hospitalId = session.user.hospitalId;
+
+  const hospitalId = user.hospitalId;
 
   // Enforce that the user has at least one hospital-level view permission or is an admin
   const { requireHospitalPermission } = await import('@/lib/permissions');
-  const canView = (session.user as any).isAdmin === true
+  const canView = user.isAdmin === true
     || await requireHospitalPermission('Appointments:View', hospitalId)
     || await requireHospitalPermission('Doctors:View', hospitalId)
     || await requireHospitalPermission('Users:View', hospitalId)

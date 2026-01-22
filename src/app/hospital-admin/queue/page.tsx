@@ -1,11 +1,11 @@
-import { auth } from '../../../../auth';
+import { getVerifiedUser } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import QueueManagementPageContent from './QueueManagementPageContent';
 
 export default async function QueueManagementPage() {
-    const session = await auth();
-    if (!session?.user?.hospitalId) {
+    const user = await getVerifiedUser();
+    if (!user || !user.hospitalId) {
         redirect('/hospital-admin/login');
     }
-    return <QueueManagementPageContent hospitalId={session.user.hospitalId} />;
+    return <QueueManagementPageContent hospitalId={user.hospitalId} />;
 }

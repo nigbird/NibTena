@@ -1,7 +1,6 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
-import crypto from 'crypto';
 import { COOKIE_NAME } from './lib/csrf';
 
 export default withAuth(
@@ -10,7 +9,23 @@ export default withAuth(
     // Generate a per-request CSP nonce and attach it to the request headers
     // so server components (e.g. layout) can consume it and render nonce'd inline
     // scripts/styles. We also apply the CSP on the response below.
-    const nonce = crypto.randomBytes(16).toString('base64');
+    const webCrypto: any = (globalThis as any).crypto;
+    function randomBase64(bytesLen: number) {
+      const arr = webCrypto.getRandomValues(new Uint8Array(bytesLen));
+      let binary = '';
+      for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
+      // btoa should be available in the Edge runtime; fallback to Buffer when available
+      if (typeof btoa === 'function') return btoa(binary);
+      // @ts-ignore - Buffer may not be available in Edge, but Node runtime will use this
+      return Buffer.from(arr).toString('base64');
+    }
+
+    function randomHex(bytesLen: number) {
+      const arr = webCrypto.getRandomValues(new Uint8Array(bytesLen));
+      return Array.from(arr).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    const nonce = randomBase64(16);
     const forwarded = new Headers(req.headers);
     forwarded.set('x-nonce', nonce);
 
@@ -21,7 +36,7 @@ export default withAuth(
     try {
       const existing = req.cookies.get(COOKIE_NAME);
       if (!existing) {
-        const t = crypto.randomBytes(24).toString('hex');
+        const t = randomHex(24);
         const res = NextResponse.next({ request: { headers: forwarded } });
         // set the double-submit CSRF cookie (non-HttpOnly so client can read it)
         res.cookies.set(COOKIE_NAME, t, {
@@ -54,36 +69,38 @@ export default withAuth(
     // Use forwarded headers for downstream rendering
     // Note: when returning NextResponse.next below, we pass `request: { headers: forwarded }`.
     const pathname = req.nextUrl.pathname;
-    const mustChangePassword = token.mustChangePassword === true;
-    const role = token.role as string | undefined;
+    const mustChangePassword = token?.mustChangePassword === true;
+    const role = token?.role as string | undefined;
 
     /* ===============================
        FORCE PASSWORD CHANGE
     =============================== */
-    if (mustChangePassword && role) {
+    if (mustChangePassword) {
       const forcedRoutes: Record<string, string> = {
         hospital: '/hospital-admin/change-password',
         doctor: '/doctor-portal/change-password',
       };
 
-      const targetPath = forcedRoutes[role];
-        if (targetPath && !pathname.startsWith(targetPath)) {
-          const url = req.nextUrl.clone();
-          url.pathname = targetPath;
-          url.searchParams.set('from', pathname);
-          const redirectRes = NextResponse.redirect(url);
-          // attach CSP and nonce to redirects too
-          const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
-          redirectRes.headers.set('Content-Security-Policy', csp);
-          redirectRes.headers.set('x-nonce', nonce);
-          return redirectRes;
-        }
+      // If role is missing or not recognized, fall back to a generic change-password page.
+      // This ensures forced password change cannot be bypassed by a missing/ malformed role.
+      const targetPath = (role && forcedRoutes[role]) ? forcedRoutes[role] : '/change-password';
+      if (!pathname.startsWith(targetPath)) {
+        const url = req.nextUrl.clone();
+        url.pathname = targetPath;
+        url.searchParams.set('from', pathname);
+        const redirectRes = NextResponse.redirect(url);
+        // attach CSP and nonce to redirects too
+        const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        redirectRes.headers.set('Content-Security-Policy', csp);
+        redirectRes.headers.set('x-nonce', nonce);
+        return redirectRes;
+      }
     }
 
     /* ===============================
        HOSPITAL STAFF LANDING
     =============================== */
-    if (token.role === 'hospital' && token.isAdmin !== true) {
+    if (token?.role === 'hospital' && token?.isAdmin !== true) {
       if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') {
         const permKeys: string[] = (token as any)?.permissionKeys || [];
         const allowedPrefixes = new Set<string>();

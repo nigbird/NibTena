@@ -2,8 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { requireHospitalPermission } from '@/lib/permissions';
-import { auth } from '@/../../auth';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -95,8 +94,8 @@ export async function saveDoctorSchedule(
     prevState: ScheduleSaveState,
     formData: FormData
 ): Promise<ScheduleSaveState> {
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const user = await getVerifiedUser();
+    if (!user) return { success: false, message: 'Unauthorized' };
 
     const allowed = await requireHospitalPermission('Schedules:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
@@ -217,7 +216,7 @@ export async function saveDoctorSchedule(
         }
 
         await createAuditLog({
-            actorId: session.user.id || 'unknown',
+            actorId: user.id,
             actorType: 'User',
             action: 'UPDATE_DOCTOR_SCHEDULE',
             targetId: doctorId,
@@ -256,8 +255,8 @@ type HospitalSettingsState = {
 };
 
 export async function updateHospitalSettings(hospitalId: number, prevState: HospitalSettingsState, formData: FormData): Promise<HospitalSettingsState> {
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const user = await getVerifiedUser();
+    if (!user) return { success: false, message: 'Unauthorized' };
     const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -278,7 +277,7 @@ export async function updateHospitalSettings(hospitalId: number, prevState: Hosp
         });
 
         await createAuditLog({
-            actorId: session.user.id || 'unknown',
+            actorId: user.id,
             actorType: 'User',
             action: 'UPDATE_HOSPITAL_SCHEDULE_SETTINGS',
             targetId: hospitalId,

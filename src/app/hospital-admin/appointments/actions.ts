@@ -7,8 +7,7 @@ import { revalidatePath } from 'next/cache';
 import type { Appointment } from '@/lib/definitions';
 import { format, parseISO, getDay, parse as parseTime, isToday, isPast } from 'date-fns';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/../../auth';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { isTimeInRanges, isBefore, isEqual, isAfter } from '@/lib/time-utils';
 
 const AppointmentFormSchema = z.object({
@@ -51,8 +50,8 @@ export async function saveAppointment(
   prevState: AppointmentFormState, 
   formData: FormData
 ): Promise<AppointmentFormState> {
-  const session = await auth();
-  if (!session?.user) return { success: false, message: 'Unauthorized' };
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
 
   // require granular permissions: create vs update
   const isUpdate = !!appointmentId;
@@ -169,8 +168,8 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'co
   try {
     const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: { hospitalId: true } });
     if (!appt) return { success: false, message: 'Not found.' };
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    const user = await getVerifiedUser();
+    if (!user) return { success: false, message: 'Unauthorized' };
     const allowed = await requireHospitalPermission('Appointments:Update', appt.hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -190,8 +189,9 @@ export async function deleteAppointment(appointmentId: string) {
   try {
     const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: { hospitalId: true } });
     if (!appt) return { success: false, message: 'Not found.' };
-    const session = await auth();
-    if (!session?.user) return { success: false, message: 'Unauthorized' };
+    
+    // Use getVerifiedUser implicitly via requireHospitalPermission, or check explicit auth if needed.
+    // We'll trust requireHospitalPermission to verify the user.
     const allowed = await requireHospitalPermission('Appointments:Delete', appt.hospitalId);
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
@@ -204,8 +204,6 @@ export async function deleteAppointment(appointmentId: string) {
 }
 
 export async function getAppointments(hospitalId: number, page: number, limit: number, query: string) {
-    const session = await auth();
-    if (!session?.user) return [];
     const allowed = await requireHospitalPermission('Appointments:View', hospitalId);
     if (!allowed) return [];
 
@@ -250,8 +248,8 @@ export async function getAppointments(hospitalId: number, page: number, limit: n
 }
 
 export async function getAppointmentsCount(hospitalId: number, query: string) {
-    const session = await auth();
-    if (!session?.user) return 0;
+    const user = await getVerifiedUser();
+    if (!user) return 0;
     const allowed = await requireHospitalPermission('Appointments:View', hospitalId);
     if (!allowed) return 0;
 

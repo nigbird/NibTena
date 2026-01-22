@@ -10,6 +10,7 @@ import { auth } from '@/../../auth';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { createAuditLog } from '@/lib/audit';
 import { getVerifiedUser } from '@/lib/permissions';
+import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),

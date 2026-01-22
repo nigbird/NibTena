@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
+import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';

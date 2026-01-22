@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
+import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';

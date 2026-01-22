@@ -7,6 +7,7 @@ import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import jwt from 'jsonwebtoken';
@@ -82,6 +83,10 @@ export async function saveDoctor(
     
     if (doctorId) {
       if (password) {
+        const pwCheck = await validatePasswordAsync(password);
+        if (!pwCheck.valid) {
+          return { message: pwCheck.errors.join(' '), success: false };
+        }
         dataToUpdate.password = await bcrypt.hash(password, 10);
         dataToUpdate.mustChangePassword = true;
       }
@@ -95,15 +100,20 @@ export async function saveDoctor(
       };
 
       if (password) {
+        const pwCheck = await validatePasswordAsync(password);
+        if (!pwCheck.valid) {
+          return { message: pwCheck.errors.join(' '), success: false };
+        }
         dataToCreate.password = await bcrypt.hash(password, 10);
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
         const emailResult = await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
-        
+
         if (!emailResult.success) {
-            // Rollback
-            await prisma.doctor.delete({ where: { id: newDoctor.id } });
-            console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
-            return { message: `Doctor creation failed: Could not send welcome email. ${emailResult.error}`, success: false };
+          // Do NOT delete the created doctor when a password was provided.
+          // Email is best-effort in this flow; return success but notify caller about the email failure.
+          console.error('[saveDoctor] Welcome email failed but doctor retained:', emailResult.error);
+          revalidatePath('/hospital-admin/doctors');
+          return { success: true, message: `Doctor added but welcome email failed: ${emailResult.error}` };
         }
       } else {
         const tempPassword = crypto.randomBytes(16).toString('hex');
@@ -118,10 +128,11 @@ export async function saveDoctor(
         const emailResult = await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
         
         if (!emailResult.success) {
-             // Rollback
-            await prisma.doctor.delete({ where: { id: newDoctor.id } });
-            console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
-            return { message: `Doctor creation failed: Could not send activation email. ${emailResult.error}`, success: false };
+           // Rollback: remove hospital associations before deleting doctor to satisfy FK constraints
+          await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId: newDoctor.id } });
+          await prisma.doctor.delete({ where: { id: newDoctor.id } });
+          console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
+          return { message: `Doctor creation failed: Could not send activation email. ${emailResult.error}`, success: false };
         }
       }
     }

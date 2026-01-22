@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '../../../../auth';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 import { revalidatePath } from 'next/cache';
 
 const SuperAdminSchema = z.object({
@@ -47,6 +48,11 @@ export async function createSuperAdmin(formData: FormData) {
 
   if (!password) {
     return { success: false, message: 'Password is required for new admins.' };
+  }
+
+  const pwCheck = await validatePasswordAsync(password);
+  if (!pwCheck.valid) {
+    return { success: false, message: pwCheck.errors.join(' ') };
   }
 
   const hashed = await bcrypt.hash(password, 10);
@@ -95,6 +101,10 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
   };
 
   if (password) {
+    const pwCheck = await validatePasswordAsync(password);
+    if (!pwCheck.valid) {
+      return { success: false, message: pwCheck.errors.join(' ') };
+    }
     dataToUpdate.password = await bcrypt.hash(password, 10);
   }
 

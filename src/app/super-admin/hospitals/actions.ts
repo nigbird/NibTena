@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
@@ -165,7 +166,11 @@ export async function saveHospital(
       const proposedChanges: any = { ...dataToSave };
       // Remove password from proposedChanges if not provided (to avoid storing empty/undefined)
       if (password) {
-        // Hash password before storing in request
+        // Validate & hash password before storing in request
+        const pwCheck = await validatePasswordAsync(password);
+        if (!pwCheck.valid) {
+          return { errors: { password: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' '), success: false };
+        }
         proposedChanges.password = await bcrypt.hash(password, 10);
         proposedChanges.mustChangePassword = true;
       } else {
@@ -194,6 +199,10 @@ export async function saveHospital(
     } else {
        // If admin provided a password, hash it and force change on first login.
       if (password) {
+        const pwCheck = await validatePasswordAsync(password);
+        if (!pwCheck.valid) {
+          return { errors: { password: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' '), success: false };
+        }
         dataToSave.password = await bcrypt.hash(password, 10);
         dataToSave.mustChangePassword = true;
         dataToSave.status = 'inactive'; // keep inactive until approved

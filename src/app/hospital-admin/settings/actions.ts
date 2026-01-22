@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
 import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
+import { createAuditLog } from '@/lib/audit';
 
 const AddSpecialtySchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -47,7 +48,15 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
     if (existing) {
       return { message: 'Specialty already exists for this hospital.', success: false };
     }
-    await prisma.specialty.create({ data: { name: parsed.data.name, hospitalId } });
+    const newSpec = await prisma.specialty.create({ data: { name: parsed.data.name, hospitalId } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'CREATE_SPECIALTY',
+      targetId: newSpec.id,
+      targetType: 'Specialty',
+      changes: { name: parsed.data.name, hospitalId }
+    });
     revalidatePath('/hospital-admin/settings');
     return { message: 'Specialty added.', success: true };
   } catch (error) {
@@ -73,6 +82,14 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
     if (!spec || spec.hospitalId !== hospitalId) return { message: 'Not found.', success: false };
 
     await prisma.specialty.update({ where: { id: specialtyId }, data: { name: parsed.data.name } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_SPECIALTY',
+      targetId: specialtyId,
+      targetType: 'Specialty',
+      changes: { oldName: spec.name, newName: parsed.data.name }
+    });
     revalidatePath('/hospital-admin/settings');
     return { message: 'Specialty updated.', success: true };
   } catch (error) {
@@ -176,6 +193,15 @@ export async function updateHospitalGeneralSettings(
       data: dataToUpdate,
     });
     
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_HOSPITAL_GENERAL_SETTINGS',
+      targetId: hospitalId,
+      targetType: 'Hospital',
+      changes: { ...dataToUpdate, imageUrl: dataToUpdate.imageUrl ? 'Updated' : undefined }
+    });
+
     revalidatePath('/hospital-admin/settings');
     revalidatePath(`/user/hospitals/${hospitalId}`);
 
@@ -207,6 +233,14 @@ export async function toggleSpecialtyActive(specialtyId: number) {
     const spec = await prisma.specialty.findUnique({ where: { id: specialtyId } });
     if (!spec) return { success: false, message: 'Not found.' };
     await prisma.specialty.update({ where: { id: specialtyId }, data: { active: !spec.active } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_SPECIALTY_STATUS',
+      targetId: specialtyId,
+      targetType: 'Specialty',
+      changes: { active: !spec.active }
+    });
     revalidatePath('/hospital-admin/settings');
     return { success: true, message: 'Specialty toggled.' };
   } catch (error) {
@@ -225,6 +259,13 @@ export async function deleteSpecialty(specialtyId: number) {
 
   try {
     await prisma.specialty.delete({ where: { id: specialtyId } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'DELETE_SPECIALTY',
+      targetId: specialtyId,
+      targetType: 'Specialty',
+    });
     revalidatePath('/hospital-admin/settings');
     return { success: true, message: 'Specialty deleted.' };
   } catch (error) {

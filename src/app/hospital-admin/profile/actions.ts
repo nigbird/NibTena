@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 import { auth, signOut } from '@/../../auth';
 import type { User as AuthUser } from 'next-auth';
 
@@ -116,6 +117,12 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     }
     
     const { currentPassword, newPassword } = validatedFields.data;
+
+    // Enforce strong password policy on the new password (including breach check)
+    const pwCheck = await validatePasswordAsync(newPassword);
+    if (!pwCheck.valid) {
+      return { errors: { newPassword: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' ') };
+    }
 
     try {
         const storedHash = await getHashedPasswordForUser(session.user);

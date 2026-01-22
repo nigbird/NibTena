@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 
 const ResetPasswordSchema = z
   .object({
@@ -67,6 +68,12 @@ export async function resetPassword(
 
     const { userId, userType } = decoded;
     const { newPassword } = validatedFields.data;
+
+    // Enforce password policy including breach check
+    const pwCheck = await validatePasswordAsync(newPassword);
+    if (!pwCheck.valid) {
+      return { success: false, message: pwCheck.errors.join(' '), errors: { newPassword: [pwCheck.errors.join(' ')] } };
+    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     let redirectUrl = '/';

@@ -271,3 +271,17 @@ model RateLimit {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
+
+// ✅ Added: Centralized Audit Logging
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  actorId     String   // ID of the user performing the action (stored as string)
+  actorType   String   // 'SuperAdmin' | 'HospitalAdmin' | 'Doctor' | 'User'
+  action      String   // e.g., 'UPDATE_HOSPITAL_SETTINGS', 'UPDATE_ROLE'
+  targetId    String?  // ID of the resource being modified
+  targetType  String?  // 'Hospital', 'Doctor', 'Role', etc.
+  changes     Json?    // Stores the before/after or just the changes
+  ipAddress   String?  // Optional: capture IP
+  userAgent   String?  // Optional: capture User Agent
+  createdAt   DateTime @default(now())
+}

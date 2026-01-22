@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/../../auth';
+import { validatePasswordAsync } from '@/lib/password-policy';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -155,6 +156,11 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
     }
     
     const { currentPassword, newPassword } = validatedFields.data;
+
+    const pwCheck = await validatePasswordAsync(newPassword);
+    if (!pwCheck.valid) {
+      return { errors: { newPassword: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' ') };
+    }
 
     try {
         const storedHash = await getHashedPasswordForDoctor(doctorId);

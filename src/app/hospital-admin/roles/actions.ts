@@ -8,9 +8,11 @@ import { requirePermission, requireHospitalPermission } from '@/lib/permissions'
 import { auth } from '@/../../auth';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
+import { createAuditLog } from '@/lib/audit';
 
 const CreateRoleSchema = z.object({
   name: z.string().min(2, 'Role name must be at least 2 characters'),
@@ -92,6 +94,15 @@ export async function createRole(hospitalId: number, formData: FormData) {
       await prisma.rolePermission.createMany({ data: rp });
     }
 
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'CREATE_ROLE',
+      targetId: role.id,
+      targetType: 'Role',
+      changes: { name, isAdmin, permissions }
+    });
+
     revalidatePath('/hospital-admin/roles');
     return { success: true, role };
   } catch (error) {
@@ -137,6 +148,15 @@ export async function updateRole(formData: FormData) {
       }
     }
 
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_ROLE',
+      targetId: id,
+      targetType: 'Role',
+      changes: { name, isAdmin, permissions }
+    });
+
     revalidatePath('/hospital-admin/roles');
     return { success: true };
   } catch (error) {
@@ -157,6 +177,13 @@ export async function deleteRole(roleId: number) {
     await prisma.user.updateMany({ where: { roleId }, data: { roleId: null } });
     await prisma.rolePermission.deleteMany({ where: { roleId } });
     await prisma.role.delete({ where: { id: roleId } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'DELETE_ROLE',
+      targetId: roleId,
+      targetType: 'Role'
+    });
     revalidatePath('/hospital-admin/roles');
     return { success: true };
   } catch (error) {
@@ -229,8 +256,12 @@ export async function createUser(hospitalId: number, formData: FormData) {
       mustChangePassword: true,
     };
     
-    // If admin provided a password, hash it.
+    // If admin provided a password, validate and hash it.
     if (password) {
+      const pwCheck = await validatePasswordAsync(password);
+      if (!pwCheck.valid) {
+        return { success: false, message: pwCheck.errors.join(' ') };
+      }
       dataToCreate.password = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({ data: dataToCreate });
       
@@ -247,6 +278,15 @@ export async function createUser(hospitalId: number, formData: FormData) {
         console.error('[createUser] Email failed, user deleted:', emailError);
         return { success: false, message: `User creation failed: Could not send welcome email. ${emailError.message}` };
       }
+
+      await createAuditLog({
+        actorId: session.user.id || 'unknown',
+        actorType: 'User',
+        action: 'CREATE_USER',
+        targetId: user.id,
+        targetType: 'User',
+        changes: { name, email, roleId }
+      });
       
       revalidatePath('/hospital-admin/roles');
       return { success: true, user };
@@ -275,6 +315,15 @@ export async function createUser(hospitalId: number, formData: FormData) {
             console.error('[createUser] Email failed, user deleted:', emailError);
             return { success: false, message: `User creation failed: Could not send activation email. ${emailError.message}` };
         }
+
+        await createAuditLog({
+            actorId: session.user.id || 'unknown',
+            actorType: 'User',
+            action: 'CREATE_USER',
+            targetId: user.id,
+            targetType: 'User',
+            changes: { name, email, roleId }
+        });
         
         revalidatePath('/hospital-admin/roles');
         return { success: true, user };
@@ -319,11 +368,24 @@ export async function updateUser(userId: number, formData: FormData) {
     };
     
     if (password) {
+      const pwCheck = await validatePasswordAsync(password);
+      if (!pwCheck.valid) {
+        return { success: false, message: pwCheck.errors.join(' ') };
+      }
       dataToUpdate.password = await bcrypt.hash(password, 10);
       dataToUpdate.mustChangePassword = true;
     }
     
     await prisma.user.update({ where: { id }, data: dataToUpdate });
+
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_USER',
+      targetId: id,
+      targetType: 'User',
+      changes: { name, email, roleId, passwordChanged: !!password }
+    });
 
     revalidatePath('/hospital-admin/roles');
     return { success: true };
@@ -346,6 +408,13 @@ export async function deleteUser(userId: number) {
 
   try {
     await prisma.user.delete({ where: { id: userId } });
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'DELETE_USER',
+      targetId: userId,
+      targetType: 'User'
+    });
     revalidatePath('/hospital-admin/roles');
     return { success: true };
   } catch (error) {

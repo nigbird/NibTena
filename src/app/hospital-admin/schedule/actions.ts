@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireHospitalPermission } from '@/lib/permissions';
 import { auth } from '@/../../auth';
+import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { TimeSlot } from '@/lib/definitions';
@@ -215,6 +216,15 @@ export async function saveDoctorSchedule(
             }
         }
 
+        await createAuditLog({
+            actorId: session.user.id || 'unknown',
+            actorType: 'User',
+            action: 'UPDATE_DOCTOR_SCHEDULE',
+            targetId: doctorId,
+            targetType: 'Doctor',
+            changes: { schedules }
+        });
+
         revalidatePath('/hospital-admin/schedule');
         return { success: true, message: 'Schedule updated successfully.' };
 
@@ -265,6 +275,15 @@ export async function updateHospitalSettings(hospitalId: number, prevState: Hosp
         const updated = await prisma.hospital.update({
             where: { id: hospitalId },
             data: validatedFields.data,
+        });
+
+        await createAuditLog({
+            actorId: session.user.id || 'unknown',
+            actorType: 'User',
+            action: 'UPDATE_HOSPITAL_SCHEDULE_SETTINGS',
+            targetId: hospitalId,
+            targetType: 'Hospital',
+            changes: validatedFields.data
         });
 
         revalidatePath('/hospital-admin/schedule');

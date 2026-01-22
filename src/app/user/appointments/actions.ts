@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
+import { createAndStoreOtp, verifyAndConsumeOtp } from '@/lib/otp';
 
 // Normalize incoming phone to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
@@ -161,23 +162,18 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
     return { success: false, message: 'Invalid phone number.' };
   }
   const fullPhone = normalizePhoneNumber(phone);
-    try {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = addMinutes(new Date(), 2);
-
-    // Upsert OTP record so repeated sends update existing record
-    await prisma.otp.upsert({
-      where: { phone: fullPhone },
-      update: { code, expiresAt },
-      create: { phone: fullPhone, code, expiresAt },
-    });
-
-        console.log(`OTP for ${fullPhone} is: ${code}`); // For testing purposes.
-        return { success: true, message: `An OTP has been sent.`, otp: code };
-    } catch (error) {
-        console.error("OTP generation failed:", error);
-        return { success: false, message: "Could not send OTP. Please try again." };
+  try {
+    const code = await createAndStoreOtp(fullPhone);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`OTP for ${fullPhone} is: ${code}`);
+    } else {
+      console.log(`OTP generated for ${fullPhone}`);
     }
+    return { success: true, message: `An OTP has been sent.`, otp: code };
+  } catch (error) {
+    console.error('OTP generation failed:', error);
+    return { success: false, message: 'Could not send OTP. Please try again.' };
+  }
 }
 
 export async function verifyOtpAndGetPatient(phone: string, code: string): Promise<{ success: boolean; message: string; patient?: Patient | null;}> {
@@ -185,48 +181,24 @@ export async function verifyOtpAndGetPatient(phone: string, code: string): Promi
     return { success: false, message: 'Invalid phone number format for verification.' };
   }
   const fullPhone = normalizePhoneNumber(phone);
-    try {
-        const otpRecord = await prisma.otp.findFirst({
-            where: {
-                phone: fullPhone,
-                code,
-                expiresAt: {
-                    gt: new Date(),
-                },
-            },
-        });
-
-        if (!otpRecord) {
-            return { success: false, message: 'Invalid or expired OTP.' };
-        }
-
-        await prisma.otp.delete({ where: { id: otpRecord.id } });
-        
-        let patient = await prisma.patient.findUnique({
-            where: { phone: fullPhone }
-        });
-        
-        if (!patient) {
-            patient = await prisma.patient.create({
-                data: {
-                    phone: fullPhone,
-                    name: `Patient ${phone.substring(5)}`, // Default name using last 4 digits
-                }
-            });
-        }
-        
-        // Map patient to the expected Patient type (normalize gender to typed union)
-        const mappedPatient = patient
-            ? ({
-                ...patient,
-                gender: patient.gender === 'male' ? 'male' : patient.gender === 'female' ? 'female' : null,
-              } as Patient)
-            : null;
-
-        return { success: true, message: "Verification successful.", patient: mappedPatient };
-
-    } catch (error) {
-        console.error("OTP verification failed:", error);
-        return { success: false, message: "An error occurred during verification." };
+  try {
+    const result = await verifyAndConsumeOtp(fullPhone, code);
+    if (!result.success) {
+      return { success: false, message: result.message };
     }
+
+    let patient = await prisma.patient.findUnique({ where: { phone: fullPhone } });
+    if (!patient) {
+      patient = await prisma.patient.create({ data: { phone: fullPhone, name: `Patient ${phone.substring(5)}` } });
+    }
+
+    const mappedPatient = patient
+      ? ({ ...patient, gender: patient.gender === 'male' ? 'male' : patient.gender === 'female' ? 'female' : null } as Patient)
+      : null;
+
+    return { success: true, message: 'Verification successful.', patient: mappedPatient };
+  } catch (error) {
+    console.error('OTP verification failed:', error);
+    return { success: false, message: 'An error occurred during verification.' };
+  }
 }

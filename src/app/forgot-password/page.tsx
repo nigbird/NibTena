@@ -18,12 +18,13 @@ import Link from 'next/link';
 import { requestPasswordReset } from './actions';
 import type { RequestResetState } from './actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { useFormStatus } from 'react-dom';
 
 function SubmitButton() {
-  const [isPending] = useTransition();
+  const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" variant="accent" disabled={isPending}>
-      {isPending ? (
+    <Button type="submit" className="w-full" variant="accent" disabled={pending}>
+      {pending ? (
         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
       ) : (
         'Send Reset Link'

@@ -86,9 +86,8 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
   const [doctorSelectionError, setDoctorSelectionError] = useState<string | null>(null);
-  );
   
-  const csrfToken = useCsrfToken(
+  const csrfToken = useCsrfToken();
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);

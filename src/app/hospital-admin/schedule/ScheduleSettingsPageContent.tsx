@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import DoctorScheduleDisplay from '@/components/hospital-admin/doctor-schedule-display';
 import { useActionState } from 'react';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 
 export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId: number }) {
@@ -23,6 +24,7 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   
+  const csrfToken = useCsrfToken();
   const [initialSettings, setInitialSettings] = useState({ bookingWindow: '30', startTime: '08:00', endTime: '18:30' });
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();

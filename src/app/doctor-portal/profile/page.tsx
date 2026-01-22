@@ -19,6 +19,7 @@ import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { signOut, useSession } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function ProfileSubmitButton() {
   const { pending } = useFormStatus();

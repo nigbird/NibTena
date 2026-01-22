@@ -14,13 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
 import { Switch } from '../ui/switch';
 import Image from 'next/image';
-import MapLocationPicker from './map-location-picker';
+import dynamic from 'next/dynamic';
+
+const MapLocationPicker = dynamic(() => import('./map-location-picker'), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full rounded-md border flex items-center justify-center bg-muted text-muted-foreground">Loading map...</div>
+});
 
 type HospitalFormDrawerProps = {
   isOpen: boolean;
@@ -37,6 +43,7 @@ export default function HospitalFormDrawer({
 }: HospitalFormDrawerProps) {
   const isEditing = !!hospitalToEdit;
   const { toast } = useToast();
+  const csrfToken = useCsrfToken();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);

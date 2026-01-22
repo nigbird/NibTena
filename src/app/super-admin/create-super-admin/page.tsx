@@ -35,6 +35,7 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 type SuperAdminRow = Awaited<ReturnType<typeof getSuperAdmins>>[number];
 

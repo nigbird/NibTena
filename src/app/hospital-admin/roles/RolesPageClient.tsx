@@ -395,6 +395,7 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
   const [selectedPerms, setSelectedPerms] = useState<number[]>(role?.permissions.map((p: any) => p.permission.id) || []);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const csrfToken = useCsrfToken();
 
   const groupedPermissions = useMemo(() => {
     return permissions.reduce((acc: any, p: Permission) => {
@@ -452,6 +453,7 @@ function RoleFormSheet({ open, onOpenChange, role, permissions, onSuccess, hospi
           </SheetDescription>
         </SheetHeader>
         <form id="role-form" onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <input type="hidden" name="_csrf" value={csrfToken} />
             <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="py-4 space-y-6">
                 <div className="space-y-2">
@@ -534,6 +536,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
   const isEditing = !!user;
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const csrfToken = useCsrfToken();
   const [showPassword, setShowPassword] = useState(false);
   const displayRoles = useMemo(() => roles.filter((r: Role) => r.name !== 'Owner'), [roles]);
 
@@ -569,6 +572,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} id="user-form" className="py-4 space-y-4">
+          <input type="hidden" name="_csrf" value={csrfToken} />
           
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>

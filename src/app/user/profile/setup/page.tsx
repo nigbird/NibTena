@@ -20,6 +20,7 @@ import { PatientContext } from '@/context/PatientContext';
 import { updatePatientProfile, type ProfileSetupState } from './actions';
 import { useFormStatus } from 'react-dom';
 import type { Patient } from '@/lib/definitions';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function SubmitButton() {
   const { pending } = useFormStatus();

@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PatientContext } from '@/context/PatientContext';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 
 function SubmitButton({ isMiniApp }: { isMiniApp: boolean }) {

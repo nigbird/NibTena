@@ -51,20 +51,36 @@ export function createMiniAppSessionCookieValue(session: MiniAppSession): string
     return jwt.sign(session, AUTH_SECRET, { expiresIn: '7d' });
 }
 
+export function verifyPatientSessionCookie(token: string): StandaloneSession | null {
+  if (!AUTH_SECRET) return null;
+  try {
+    return jwt.verify(token, AUTH_SECRET) as StandaloneSession;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function createPatientSessionToken(patient: Patient): string {
+    if (!AUTH_SECRET) {
+        throw new Error('AUTH_SECRET not set');
+    }
+    const session: StandaloneSession = {
+        patient,
+        expiry: Date.now() + 15 * 60 * 1000 // 15 mins
+    };
+    return jwt.sign(session, AUTH_SECRET, { expiresIn: '15m' });
+}
+
 export async function getPatientFromCookie(): Promise<Patient | null> {
   const cookieStore = cookies();
   
   // 1. Prioritize standalone patient session
   const standaloneSessionCookie = cookieStore.get('nib-tena-patient-session')?.value;
   if (standaloneSessionCookie) {
-    try {
-      const session: StandaloneSession = JSON.parse(standaloneSessionCookie);
-      if (Date.now() < session.expiry && session.patient) {
-        console.log('getPatientFromCookie: found valid standalone session for patient id:', session.patient.id);
-        return session.patient;
-      }
-    } catch (error) {
-      console.error('getPatientFromCookie: Failed to parse standalone session cookie:', error);
+    const verified = verifyPatientSessionCookie(standaloneSessionCookie);
+    if (verified && verified.patient) {
+        console.log('getPatientFromCookie: found valid standalone session for patient id:', verified.patient.id);
+        return verified.patient;
     }
   }
 

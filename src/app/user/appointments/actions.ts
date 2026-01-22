@@ -220,9 +220,27 @@ export async function verifyOtpAndGetPatient(phone: string, code: string): Promi
       ? ({ ...patient, gender: patient.gender === 'male' ? 'male' : patient.gender === 'female' ? 'female' : null } as Patient)
       : null;
 
+    if (mappedPatient) {
+        const sessionToken = createPatientSessionToken(mappedPatient);
+        const cookieStore = await cookies();
+        cookieStore.set('nib-tena-patient-session', sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 15 * 60 // 15 minutes
+        });
+    }
+
     return { success: true, message: 'Verification successful.', patient: mappedPatient };
   } catch (error) {
     console.error('OTP verification failed:', error);
     return { success: false, message: 'An error occurred during verification.' };
   }
+}
+
+export async function logoutPatient() {
+  const cookieStore = await cookies();
+  cookieStore.delete('nib-tena-patient-session');
+  return { success: true };
 }

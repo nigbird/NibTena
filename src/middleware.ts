@@ -2,10 +2,18 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
 import { COOKIE_NAME } from './lib/csrf';
+import { validateTokenStructure } from '@/lib/token-validation';
 
 export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token;
+    let token = req.nextauth.token;
+    
+    // Validate token structure - Fail-safe: treat invalid tokens as unauthenticated
+    if (token && !validateTokenStructure(token)) {
+      console.warn('[middleware] Invalid token structure, treating as unauthenticated');
+      token = null;
+    }
+
     // Generate a per-request CSP nonce and attach it to the request headers
     // so server components (e.g. layout) can consume it and render nonce'd inline
     // scripts/styles. We also apply the CSP on the response below.

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import ensureTokenVersionValid from '@/lib/auth-token-version';
+import { validateTokenStructure } from '@/lib/token-validation';
 
 // Rate limit configuration
 const MAX_ATTEMPTS = 5; // max failed attempts before lockout
@@ -297,10 +298,26 @@ const authOptions = {
       } catch (e) {
         console.error('[auth] jwt callback error', e);
       }
+
+      // Strict Token Structure Validation
+      const validToken = validateTokenStructure(token);
+      if (!validToken) {
+         if (token && Object.keys(token).length > 0) {
+             console.warn('[auth] JWT structure validation failed, invalidating token');
+         }
+         return {} as any;
+      }
       return token;
     },
     async session({ session, token }: SessionCallbackArgs) {
       if (!token) {
+        return null as any;
+      }
+
+      // Strict Token Structure Validation
+      const validToken = validateTokenStructure(token);
+      if (!validToken) {
+        console.warn('[auth] Session token structure validation failed');
         return null as any;
       }
 

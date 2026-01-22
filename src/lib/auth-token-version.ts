@@ -1,10 +1,13 @@
 import { prisma } from '@/lib/prisma';
+import { validateTokenStructure } from '@/lib/token-validation';
 
 export async function ensureTokenVersionValid(token: any) {
-  if (!token) return false;
-  const role = token.role;
-  const id = token.id || token.sub;
-  if (!role || !id) return false;
+  const validToken = validateTokenStructure(token);
+  if (!validToken) return false;
+
+  const role = validToken.role;
+  const id = validToken.id;
+
 
   try {
     const uid = Number(id);

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getVerifiedUser } from '@/lib/permissions';
 import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
+import { validateOrigin } from '@/lib/csrf';
 
 export async function POST(req: Request) {
   try {
+    // CSRF Protection: Validate Origin
+    if (!validateOrigin(req)) {
+      return NextResponse.json({ ok: false, message: 'Invalid Origin' }, { status: 403 });
+    }
+
     // Use getVerifiedUser to ensure we are revoking the actual user's token
     const user = await getVerifiedUser();
 

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireHospitalPermission } from '@/lib/permissions';
+import { validateOrigin } from '@/lib/csrf';
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
+    // CSRF Protection: Validate Origin
+    if (!validateOrigin(req)) {
+      return NextResponse.json({ error: 'Invalid Origin' }, { status: 403 });
+    }
+
     const id = Number(params.id);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
     const allowed = await requireHospitalPermission('Settings:Update', id);

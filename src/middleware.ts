@@ -1,11 +1,36 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
+import crypto from 'crypto';
+import { COOKIE_NAME } from './lib/csrf';
 
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
-    if (!token) return;
+
+    // Ensure a double-submit CSRF cookie is present for forms.
+    // We create a non-HttpOnly cookie so client-side form components can read it and include
+    // it in form submissions. This is a defense-in-depth double-submit token.
+    let responseToReturn;
+    try {
+      const existing = req.cookies.get(COOKIE_NAME);
+      if (!existing) {
+        const t = crypto.randomBytes(24).toString('hex');
+        const res = NextResponse.next();
+        res.cookies.set(COOKIE_NAME, t, {
+          httpOnly: false,
+          sameSite: 'lax',
+          path: '/',
+          secure: process.env.NODE_ENV === 'production',
+        });
+        responseToReturn = res;
+      }
+    } catch (e) {
+      // If cookie APIs are unavailable, continue without failing the request.
+    }
+
+    if (!token && !responseToReturn) return;
+    if (!token && responseToReturn) return responseToReturn;
 
     const pathname = req.nextUrl.pathname;
     const mustChangePassword = token.mustChangePassword === true;
@@ -21,12 +46,12 @@ export default withAuth(
       };
 
       const targetPath = forcedRoutes[role];
-      if (targetPath && !pathname.startsWith(targetPath)) {
-        const url = req.nextUrl.clone();
-        url.pathname = targetPath;
-        url.searchParams.set('from', pathname);
-        return NextResponse.redirect(url);
-      }
+        if (targetPath && !pathname.startsWith(targetPath)) {
+          const url = req.nextUrl.clone();
+          url.pathname = targetPath;
+          url.searchParams.set('from', pathname);
+          return NextResponse.redirect(url);
+        }
     }
 
     /* ===============================

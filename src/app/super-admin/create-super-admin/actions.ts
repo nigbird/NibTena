@@ -6,6 +6,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { revalidatePath } from 'next/cache';
+import { createAuditLog } from '@/lib/audit';
 
 const SuperAdminSchema = z.object({
   name: z.string().min(2),
@@ -58,9 +59,19 @@ export async function createSuperAdmin(formData: FormData) {
   const hashed = await bcrypt.hash(password, 10);
 
   try {
-    await prisma.superAdmin.create({
+    const newAdmin = await prisma.superAdmin.create({
       data: { name, email: email.toLowerCase(), password: hashed, role } as any,
     } as any);
+
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'SuperAdmin',
+      action: 'CREATE_SUPER_ADMIN',
+      targetId: newAdmin.id,
+      targetType: 'SuperAdmin',
+      changes: { name, email, role }
+    });
+
     revalidatePath('/super-admin/create-super-admin');
     return { success: true, message: 'Super admin created.' };
   } catch (error: any) {
@@ -110,6 +121,16 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
 
   try {
     await prisma.superAdmin.update({ where: { id }, data: dataToUpdate as any });
+
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'SuperAdmin',
+      action: 'UPDATE_SUPER_ADMIN',
+      targetId: id,
+      targetType: 'SuperAdmin',
+      changes: { ...dataToUpdate, password: dataToUpdate.password ? '***' : undefined }
+    });
+
     revalidatePath('/super-admin/create-super-admin');
     return { success: true, message: 'Super admin updated.' };
   } catch (error: any) {
@@ -133,6 +154,15 @@ export async function deleteSuperAdmin(id: number) {
 
   try {
     await prisma.superAdmin.delete({ where: { id } });
+
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'SuperAdmin',
+      action: 'DELETE_SUPER_ADMIN',
+      targetId: id,
+      targetType: 'SuperAdmin'
+    });
+
     revalidatePath('/super-admin/create-super-admin');
     return { success: true, message: 'Super admin deleted.' };
   } catch (error) {

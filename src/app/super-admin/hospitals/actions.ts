@@ -11,6 +11,7 @@ import jwt from 'jsonwebtoken';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import { auth } from '../../../../auth';
 import { Prisma } from '@prisma/client';
+import { createAuditLog } from '@/lib/audit';
 
 const HospitalFormSchema = z.object({
   name: z.string().min(2, { message: 'Hospital name must be at least 2 characters.' }),
@@ -190,6 +191,15 @@ export async function saveHospital(
         } as any,
       });
 
+      await createAuditLog({
+        actorId: actingSuperAdminId,
+        actorType: 'SuperAdmin',
+        action: 'CREATE_HOSPITAL_EDIT_REQUEST',
+        targetId: hospitalId,
+        targetType: 'Hospital',
+        changes: proposedChanges
+      });
+
       revalidatePath('/super-admin/hospitals');
       revalidatePath('/super-admin/hospital-approvals');
       return {
@@ -209,13 +219,32 @@ export async function saveHospital(
         
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
         const emailResult = await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
-        
+
         if (!emailResult.success) {
-            // Rollback
-            await prisma.hospital.delete({ where: { id: created.id } });
-            console.error('[saveHospital] Email failed, hospital deleted:', emailResult.error);
-            return { message: `Hospital creation failed: Could not send welcome email. ${emailResult.error}`, success: false };
+          // Do NOT delete the created hospital when a password was provided.
+          // Email is best-effort in this flow; log the failure and continue.
+          console.error('[saveHospital] Welcome email failed but hospital retained:', emailResult.error);
+          await createAuditLog({
+            actorId: actingSuperAdminId,
+            actorType: 'SuperAdmin',
+            action: 'CREATE_HOSPITAL',
+            targetId: created.id,
+            targetType: 'Hospital',
+            changes: { ...dataToSave, password: '***' }
+          });
+          revalidatePath('/super-admin/hospitals');
+          revalidatePath('/super-admin/hospital-approvals');
+          return { success: true, message: `Hospital created but welcome email failed: ${emailResult.error}` };
         }
+
+        await createAuditLog({
+          actorId: actingSuperAdminId,
+          actorType: 'SuperAdmin',
+          action: 'CREATE_HOSPITAL',
+          targetId: created.id,
+          targetType: 'Hospital',
+          changes: { ...dataToSave, password: '***' }
+        });
 
       } else {
         // If no password was provided, create with a temp hash and send a "set password" link.
@@ -237,6 +266,15 @@ export async function saveHospital(
             console.error('[saveHospital] Email failed, hospital deleted:', emailResult.error);
             return { message: `Hospital creation failed: Could not send activation email. ${emailResult.error}`, success: false };
         }
+
+        await createAuditLog({
+          actorId: actingSuperAdminId,
+          actorType: 'SuperAdmin',
+          action: 'CREATE_HOSPITAL',
+          targetId: created.id,
+          targetType: 'Hospital',
+          changes: { ...dataToSave, password: '***' }
+        });
       }
       
       // Create the Owner role for the new hospital regardless of password flow
@@ -279,6 +317,17 @@ export async function saveHospital(
 export async function updateHospitalStatus(hospitalId: number, status: 'active' | 'inactive') {
   try {
     await prisma.hospital.update({ where: { id: hospitalId }, data: { status } });
+    
+    const session = await auth();
+    await createAuditLog({
+      actorId: session?.user?.id || 'unknown',
+      actorType: 'SuperAdmin',
+      action: 'UPDATE_HOSPITAL_STATUS',
+      targetId: hospitalId,
+      targetType: 'Hospital',
+      changes: { status }
+    });
+
     revalidatePath('/super-admin/hospitals');
     revalidatePath('/super-admin/hospital-approvals');
     return { success: true, message: `Hospital has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
@@ -334,6 +383,14 @@ export async function deleteHospital(hospitalId: number): Promise<{ success: boo
         makerId: actingSuperAdminId,
         status: 'pending',
       } as any,
+    });
+
+    await createAuditLog({
+      actorId: actingSuperAdminId,
+      actorType: 'SuperAdmin',
+      action: 'CREATE_HOSPITAL_DELETE_REQUEST',
+      targetId: hospitalId,
+      targetType: 'Hospital'
     });
 
     revalidatePath('/super-admin/hospitals');
@@ -456,6 +513,15 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
     } as any,
   });
 
+  await createAuditLog({
+    actorId: actingSuperAdminId,
+    actorType: 'SuperAdmin',
+    action: 'REVIEW_HOSPITAL_CREATION',
+    targetId: hospitalId,
+    targetType: 'Hospital',
+    changes: { decision }
+  });
+
   revalidatePath('/super-admin/hospitals');
   revalidatePath('/super-admin/hospital-approvals');
   return { success: true, message: `Hospital ${decision}.` };
@@ -562,6 +628,15 @@ export async function reviewHospitalRequest(
         reviewedAt: new Date(),
         comments: comments || null,
       } as any,
+    });
+
+    await createAuditLog({
+      actorId: actingSuperAdminId,
+      actorType: 'SuperAdmin',
+      action: 'REVIEW_HOSPITAL_REQUEST',
+      targetId: request.hospitalId,
+      targetType: 'Hospital',
+      changes: { requestId, decision, actionType: request.actionType }
     });
 
     // If approved, apply the changes

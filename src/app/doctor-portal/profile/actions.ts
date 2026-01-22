@@ -8,6 +8,7 @@ import { saveImage } from '@/lib/image-upload';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/../../auth';
 import { validatePasswordAsync } from '@/lib/password-policy';
+import { createAuditLog } from '@/lib/audit';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -73,6 +74,15 @@ export async function updateDoctorProfile(
     });
     
     if (updatedDoctor) {
+      await createAuditLog({
+        actorId: doctorId,
+        actorType: 'Doctor',
+        action: 'UPDATE_OWN_PROFILE',
+        targetId: doctorId,
+        targetType: 'Doctor',
+        changes: dataToUpdate
+      });
+
       revalidatePath('/doctor-portal/profile');
       revalidatePath(`/user/doctors/${doctorId}`); // Revalidate public profile
       return {
@@ -182,6 +192,14 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
             mustChangePassword: false,
           },
           select: { id: true }
+        });
+
+        await createAuditLog({
+          actorId: doctorId,
+          actorType: 'Doctor',
+          action: 'UPDATE_OWN_PASSWORD',
+          targetId: doctorId,
+          targetType: 'Doctor'
         });
 
         // Sign out is handled on the client after success

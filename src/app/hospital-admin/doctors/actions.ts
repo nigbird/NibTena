@@ -1,13 +1,15 @@
 
 'use server';
 
-import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/../../auth';
 import { requireHospitalPermission } from '@/lib/permissions';
+import { createAuditLog } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
+import { verifyCsrfToken } from '@/lib/csrf';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import jwt from 'jsonwebtoken';
@@ -54,6 +56,11 @@ export async function saveDoctor(
   if (!allowed) return { message: 'Unauthorized', success: false };
 
   const rawData = Object.fromEntries(formData.entries());
+  // Validate CSRF double-submit token
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { message: 'Invalid or missing CSRF token.', success: false };
+  }
   
   if (doctorId && !rawData.password) {
     delete rawData.password;
@@ -91,6 +98,15 @@ export async function saveDoctor(
         dataToUpdate.mustChangePassword = true;
       }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
+
+      await createAuditLog({
+        actorId: session.user.id || 'unknown',
+        actorType: 'User',
+        action: 'UPDATE_DOCTOR_PROFILE',
+        targetId: doctorId,
+        targetType: 'Doctor',
+        changes: { ...dataToUpdate, password: dataToUpdate.password ? '***' : undefined }
+      });
     } else {
       const dataToCreate: any = {
         ...dataToUpdate,
@@ -106,6 +122,16 @@ export async function saveDoctor(
         }
         dataToCreate.password = await bcrypt.hash(password, 10);
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
+
+        await createAuditLog({
+          actorId: session.user.id || 'unknown',
+          actorType: 'User',
+          action: 'CREATE_DOCTOR',
+          targetId: newDoctor.id,
+          targetType: 'Doctor',
+          changes: { ...dataToCreate, password: '***' }
+        });
+
         const emailResult = await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
 
         if (!emailResult.success) {
@@ -120,6 +146,15 @@ export async function saveDoctor(
         dataToCreate.password = await bcrypt.hash(tempPassword, 10);
 
         const newDoctor = await prisma.doctor.create({ data: dataToCreate });
+
+        await createAuditLog({
+          actorId: session.user.id || 'unknown',
+          actorType: 'User',
+          action: 'CREATE_DOCTOR',
+          targetId: newDoctor.id,
+          targetType: 'Doctor',
+          changes: { ...dataToCreate, password: '***' }
+        });
 
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
@@ -162,6 +197,16 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
     if (!allowed) return { success: false, message: 'Unauthorized' };
 
     await prisma.doctor.update({ where: { id: doctorId }, data: { status } });
+    
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'UPDATE_DOCTOR_STATUS',
+      targetId: doctorId,
+      targetType: 'Doctor',
+      changes: { status }
+    });
+
     revalidatePath('/hospital-admin/doctors');
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
@@ -186,6 +231,14 @@ export async function deleteDoctor(doctorId: number): Promise<{ success: boolean
         await tx.doctorSchedule.deleteMany({ where: { doctorId } });
         await tx.doctorsOnHospitals.deleteMany({ where: { doctorId } });
         await tx.doctor.delete({ where: { id: doctorId } });
+    });
+
+    await createAuditLog({
+      actorId: session.user.id || 'unknown',
+      actorType: 'User',
+      action: 'DELETE_DOCTOR',
+      targetId: doctorId,
+      targetType: 'Doctor'
     });
 
     revalidatePath('/hospital-admin/doctors');

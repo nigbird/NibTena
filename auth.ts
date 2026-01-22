@@ -273,6 +273,7 @@ const authOptions = {
         if (user && typeof user === 'object') {
           // Initial login: merge user fields into the token
           token.id = (user as any).id ?? token.id;
+          token.email = (user as any).email ?? token.email;
           token.role = (user as any).role ?? token.role;
           if ((user as any).superAdminRole) {
             (token as any).superAdminRole = (user as any).superAdminRole;
@@ -338,6 +339,7 @@ const authOptions = {
 
       // Populate session from token
       session.user.id = token.id as string;
+      session.user.email = token.email as string;
       session.user.role = token.role as string;
       (session.user as any).superAdminRole = (token as any).superAdminRole;
       session.user.hospitalId = token.hospitalId as number | null;

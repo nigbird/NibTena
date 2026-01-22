@@ -94,7 +94,23 @@ export async function GET(request: Request) {
         phoneNumber: phoneNumber,
         authToken: token,
     };
-    const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+    
+    // Use JWT signing instead of base64 encoding to prevent tampering
+    // const encodedSession = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+    let encodedSession = '';
+    try {
+        const { createMiniAppSessionCookieValue } = await import('@/lib/session');
+        encodedSession = createMiniAppSessionCookieValue(sessionData);
+    } catch (e) {
+        console.error('Connect route - failed to sign session cookie:', e);
+         return NextResponse.json(
+            {
+                status: 'error',
+                message: 'Internal server error during session creation.',
+            },
+            { status: 500 }
+        );
+    }
 
     const cookieStore = await cookies();
     // Mask token for logs

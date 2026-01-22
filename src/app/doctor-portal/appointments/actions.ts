@@ -4,8 +4,26 @@
 import { prisma } from '@/lib/prisma';
 import type { Appointment } from '@/lib/definitions';
 import { format } from 'date-fns';
+import { getVerifiedUser } from '@/lib/permissions';
 
 export async function getAppointmentsByDoctorIdForDoctor(doctorId: number, hospitalId: number): Promise<Appointment[]> {
+  const user = await getVerifiedUser();
+  
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  // Ensure the user is a doctor and is requesting their own appointments
+  if (user.role === 'doctor') {
+    if (user.id !== doctorId) {
+       throw new Error('Unauthorized: You can only view your own appointments');
+    }
+  } else {
+    // If not a doctor (e.g. superadmin trying to use this action? or hospital admin?), deny for now as this is doctor-portal specific.
+    // If we need to support others, we can add logic here.
+    throw new Error('Unauthorized');
+  }
+
   const appointments = await prisma.appointment.findMany({
     where: {
       doctorId: doctorId,

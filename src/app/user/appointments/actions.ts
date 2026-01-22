@@ -7,6 +7,7 @@ import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
 import { createAndStoreOtp, verifyAndConsumeOtp } from '@/lib/otp';
+import { getVerifiedUser } from '@/lib/permissions';
 
 // Normalize incoming phone to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
@@ -20,6 +21,32 @@ function normalizePhoneNumber(input?: string | null) {
 
 export async function getMyAppointments(patientId: number) {
   if (!patientId) return [];
+
+  const user = await getVerifiedUser();
+  // If we have a logged-in user session, it must match the requested patientId
+  if (user) {
+    if (user.role === 'patient') {
+       if (user.id !== patientId) {
+          console.error('[getMyAppointments] Unauthorized access attempt', { userId: user.id, requestedId: patientId });
+          return [];
+       }
+    } else {
+        // If it's a doctor or admin calling this, they probably shouldn't be using "getMyAppointments"
+        // or we should decide if they can view patient appointments.
+        // For "getMyAppointments", it implies "My" (the user's) appointments.
+        // So we should enforce that user.id === patientId generally, or return empty.
+        // For now, strict check:
+        return [];
+    }
+  } else {
+     // No session? Maybe it's the MiniApp flow which doesn't use standard NextAuth session but cookies?
+     // If so, this function shouldn't be called directly without auth, or it should rely on the caller to verify?
+     // But wait, this is a server action. If called from client, we need verification.
+     // The "MiniApp" flow uses `getMyAppointmentsForMiniApp` which verifies cookie.
+     // The "Web" flow uses `getMyAppointments` and SHOULD have a session.
+     // If no session is found, we should probably deny access to protect data.
+     return [];
+  }
 
   try {
     const appointments = await prisma.appointment.findMany({
@@ -124,15 +151,12 @@ async function getPhoneNumberFromCookie() {
   }
 
   try {
-    console.log('appointments.getPhoneNumberFromCookie: raw cookie length:', sessionCookie.length);
-    // Decode base64 if it was encoded before storing
-    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    let session: any = null;
-    try {
-      session = JSON.parse(decoded);
-    } catch (err) {
-      console.error('appointments.getPhoneNumberFromCookie: failed to parse decoded cookie', err);
-      return null;
+    const { parseMiniAppSessionCookie } = await import('@/lib/session');
+    const session = parseMiniAppSessionCookie(sessionCookie);
+    
+    if (!session) {
+       console.log('appointments.getPhoneNumberFromCookie: invalid or unsigned cookie');
+       return null;
     }
 
     console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', session.phoneNumber || null);

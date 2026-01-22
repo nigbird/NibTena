@@ -2,8 +2,9 @@
 import { cookies } from 'next/headers';
 import { prisma } from './prisma';
 import type { Patient } from './definitions';
+import jwt from 'jsonwebtoken';
 
-type MiniAppSession = {
+export type MiniAppSession = {
   isAuthenticated: boolean;
   phoneNumber: string;
   authToken: string;
@@ -13,6 +14,42 @@ type StandaloneSession = {
   patient: Patient;
   expiry: number;
 };
+
+const AUTH_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+
+export function parseMiniAppSessionCookie(cookieValue?: string): MiniAppSession | null {
+  if (!cookieValue) return null;
+  if (!AUTH_SECRET) {
+      console.error('AUTH_SECRET not set, cannot verify mini-app session');
+      return null;
+  }
+
+  try {
+    // Attempt to verify as JWT first
+    const decoded = jwt.verify(cookieValue, AUTH_SECRET) as MiniAppSession;
+    return decoded;
+  } catch (jwtError) {
+    // If JWT verification fails, try legacy base64 for backward compatibility (during migration)
+    // OR decide to reject it. For security, we should reject it, but if we want to avoid breaking active sessions immediately:
+    // However, since we are mitigating a vulnerability, we should probably enforce JWT.
+    // Let's try legacy but log a warning, OR just reject.
+    // Given the user wants "100% mitigated", we should REJECT unsigned cookies.
+    // But if the previous code wrote base64, all current users will be logged out. That is acceptable for a security fix.
+    
+    // Fallback: check if it's the legacy base64 format just to be sure we don't crash on garbage
+    // But we won't return it as valid.
+    // Actually, let's just return null.
+    console.warn('parseMiniAppSessionCookie: JWT verification failed', jwtError);
+    return null;
+  }
+}
+
+export function createMiniAppSessionCookieValue(session: MiniAppSession): string {
+    if (!AUTH_SECRET) {
+        throw new Error('AUTH_SECRET not set');
+    }
+    return jwt.sign(session, AUTH_SECRET, { expiresIn: '7d' });
+}
 
 export async function getPatientFromCookie(): Promise<Patient | null> {
   const cookieStore = cookies();
@@ -38,16 +75,12 @@ export async function getPatientFromCookie(): Promise<Patient | null> {
     return null;
   }
 
-  try {
-    const decoded = Buffer.from(miniappSessionCookie, 'base64').toString('utf-8');
-    let sessionData: MiniAppSession | null = null;
-    try {
-      sessionData = JSON.parse(decoded) as MiniAppSession;
-    } catch (err) {
-      console.error('getPatientFromCookie: failed to JSON.parse decoded mini-app cookie', err);
+  const sessionData = parseMiniAppSessionCookie(miniappSessionCookie);
+  if (!sessionData) {
       return null;
-    }
+  }
 
+  try {
     if (sessionData && sessionData.phoneNumber) {
       const rawPhone = String(sessionData.phoneNumber).trim();
       const candidates = new Set<string>();

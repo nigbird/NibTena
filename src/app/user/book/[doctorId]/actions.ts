@@ -197,16 +197,9 @@ export async function completeBooking(bookingData: any) {
   }
 
   try {
-    // Decode base64 if it was encoded before storing
-    console.log('getAuthTokenFromCookie: raw cookie length:', sessionCookie.length);
-    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    let session: any = null;
-    try {
-      session = JSON.parse(decoded);
-    } catch (err) {
-      console.error('getAuthTokenFromCookie: failed to parse decoded cookie', err);
-      return null;
-    }
+    const { parseMiniAppSessionCookie } = await import('@/lib/session');
+    const session = parseMiniAppSessionCookie(sessionCookie);
+    if (!session) return null;
 
     const authToken = session.authToken || null;
     const masked = authToken ? (authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`) : null;
@@ -227,15 +220,9 @@ export async function getPhoneNumberFromCookie() {
   }
 
   try {
-    console.log('getPhoneNumberFromCookie: raw cookie length:', sessionCookie.length);
-    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-    let session: any = null;
-    try {
-      session = JSON.parse(decoded);
-    } catch (err) {
-      console.error('getPhoneNumberFromCookie: failed to parse decoded cookie', err);
-      return null;
-    }
+    const { parseMiniAppSessionCookie } = await import('@/lib/session');
+    const session = parseMiniAppSessionCookie(sessionCookie);
+    if (!session) return null;
 
     console.log('getPhoneNumberFromCookie: derived phoneNumber:', session.phoneNumber || null);
     return session.phoneNumber || null;

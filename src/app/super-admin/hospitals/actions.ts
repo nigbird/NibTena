@@ -28,7 +28,7 @@ const HospitalFormSchema = z.object({
   bankDistrict: z.string().optional(),
   bankBranch: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
-  accountNumber: z.string().min(1, 'Account number is required.'),
+  accountNumber: z.string().regex(/^[0-9]{6,20}$/, { message: 'Account number must be 6-20 digits.' }),
   imageUrl: z.string().optional(),
 });
 
@@ -257,7 +257,7 @@ export async function saveHospital(
         
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
-        const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '24h' });
+        const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '1h' });
         const emailResult = await sendSetPasswordEmail(created.contactEmail, token);
         
         if (!emailResult.success) {

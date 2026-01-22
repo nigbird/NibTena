@@ -159,7 +159,7 @@ export async function saveDoctor(
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         
-        const token = jwt.sign({ userId: newDoctor.id, userType: 'doctor', email: newDoctor.contact }, secret, { expiresIn: '24h' });
+        const token = jwt.sign({ userId: newDoctor.id, userType: 'doctor', email: newDoctor.contact }, secret, { expiresIn: '1h' });
         const emailResult = await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
         
         if (!emailResult.success) {

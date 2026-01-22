@@ -303,7 +303,7 @@ export async function createUser(hospitalId: number, formData: FormData) {
             const secret = process.env.AUTH_SECRET;
             if (!secret) throw new Error('AUTH_SECRET is not set.');
             
-            const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '24h' });
+            const token = jwt.sign({ userId: user.id, userType: 'user', email: user.email }, secret, { expiresIn: '1h' });
             const emailResult = await sendSetPasswordEmail(user.email, token, hospitalId);
 
             if (!emailResult.success) {

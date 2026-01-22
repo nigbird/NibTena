@@ -31,8 +31,9 @@ export async function getAppointmentsByHospitalId(hospitalId: number, page: numb
                     email: true,
                     phone: true,
                     gender: true,
-                    dateOfBirth: true,
-                    imageUrl: true,
+                    age: true,
+                    createdAt: true,
+                    updatedAt: true,
                 }
             },
         },

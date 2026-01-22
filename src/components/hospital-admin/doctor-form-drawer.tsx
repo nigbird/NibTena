@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
 import Image from 'next/image';
+import CsrfField from '@/components/CsrfField';
 
 type DoctorFormDrawerProps = {
   isOpen: boolean;
@@ -178,6 +179,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
             <form ref={formRef} onSubmit={handleSubmit} id="doctor-form" className="grid gap-4 py-4">
+              <CsrfField />
               {imagePreview && (
                 <div className="space-y-2">
                     <Label>Image Preview</Label>

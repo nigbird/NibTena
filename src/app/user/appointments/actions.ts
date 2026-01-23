@@ -161,7 +161,10 @@ async function getPhoneNumberFromCookie() {
     return null;
   }
 
-  // Iterate over all cookies to find a valid one
+  // Collect all valid sessions
+  const validSessions: any[] = [];
+
+  // Iterate over all cookies to find valid ones
   for (const cookie of sessionCookies) {
     if (!cookie.value) continue;
     try {
@@ -172,13 +175,24 @@ async function getPhoneNumberFromCookie() {
          continue;
       }
 
-      console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', session.phoneNumber || null);
-      return session.phoneNumber || null;
+      if (session.phoneNumber) {
+          validSessions.push(session);
+      }
     } catch (err) {
       console.warn("Failed to parse one of the miniapp_session cookies:", err);
     }
   }
-  return null;
+
+  if (validSessions.length === 0) {
+      return null;
+  }
+
+  // Sort by iat descending (newest first)
+  validSessions.sort((a, b) => (b.iat || 0) - (a.iat || 0));
+  const latestSession = validSessions[0];
+
+  console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', latestSession.phoneNumber, 'from session iat:', latestSession.iat);
+  return latestSession.phoneNumber;
 }
 
 export async function getMyAppointmentsForMiniApp() {

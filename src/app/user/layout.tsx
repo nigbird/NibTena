@@ -9,23 +9,31 @@ export default async function UserLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const miniappCookies = cookieStore.getAll('miniapp_session');
-  
-  // Verify the session cookie properly
-  let miniAppSession: ReturnType<typeof parseMiniAppSessionCookie> = null;
-  let miniappCookieValue: string | undefined = undefined;
+   const miniappCookies = cookieStore.getAll('miniapp_session');
+   
+   // Verify the session cookie properly
+   let miniAppSession: ReturnType<typeof parseMiniAppSessionCookie> = null;
+   let miniappCookieValue: string | undefined = undefined;
 
-  for (const cookie of miniappCookies) {
-      if (!cookie.value) continue;
-      const session = parseMiniAppSessionCookie(cookie.value);
-      if (session) {
-          miniAppSession = session;
-          miniappCookieValue = cookie.value;
-          break; // Found a valid one
-      }
-  }
+   const validSessions: { session: NonNullable<ReturnType<typeof parseMiniAppSessionCookie>>, value: string }[] = [];
 
-  const hasMiniAppSession = !!miniAppSession;
+   for (const cookie of miniappCookies) {
+       if (!cookie.value) continue;
+       const session = parseMiniAppSessionCookie(cookie.value);
+       if (session) {
+           validSessions.push({ session, value: cookie.value });
+       }
+   }
+
+   if (validSessions.length > 0) {
+       // Sort by iat descending (newest first)
+       validSessions.sort((a, b) => (b.session.iat || 0) - (a.session.iat || 0));
+       const latest = validSessions[0];
+       miniAppSession = latest.session;
+       miniappCookieValue = latest.value;
+   }
+
+   const hasMiniAppSession = !!miniAppSession;
 
   const patient = await getPatientFromCookie();
 

@@ -8,6 +8,8 @@ export type MiniAppSession = {
   isAuthenticated: boolean;
   phoneNumber: string;
   authToken: string;
+  iat?: number;
+  exp?: number;
 };
 
 type StandaloneSession = {
@@ -91,38 +93,47 @@ export async function getPatientFromCookie(): Promise<Patient | null> {
     return null;
   }
 
+  // Collect all valid sessions
+  const validSessions: MiniAppSession[] = [];
   for (const cookie of miniappSessionCookies) {
     if (!cookie.value) continue;
     const sessionData = parseMiniAppSessionCookie(cookie.value);
-    if (!sessionData) continue;
-
-    try {
-      if (sessionData && sessionData.phoneNumber) {
-        const rawPhone = String(sessionData.phoneNumber).trim();
-        const candidates = new Set<string>();
-        candidates.add(rawPhone);
-        if (!rawPhone.startsWith('+')) candidates.add(`+${rawPhone}`);
-        if (rawPhone.startsWith('+')) candidates.add(rawPhone.replace(/^\+/, ''));
-        if (rawPhone.startsWith('0')) candidates.add(rawPhone.replace(/^0+/, ''));
-        if (!rawPhone.startsWith('0')) candidates.add(`0${rawPhone}`);
-        if (rawPhone.startsWith('251')) candidates.add(`+${rawPhone}`);
-        if (rawPhone.startsWith('+251')) candidates.add(rawPhone.slice(1));
-        
-        const whereOr = Array.from(candidates).map(p => ({ phone: p }));
-
-        const patient = await prisma.patient.findFirst({
-          where: { OR: whereOr },
-        });
-
-        if (patient) {
-          console.log('getPatientFromCookie: mini-app patient lookup result:', `found id=${patient.id}`);
-          return patient;
-        }
-      }
-    } catch (error) {
-      console.error('getPatientFromCookie: Failed to parse mini-app session cookie:', error);
-      // Continue to next cookie
+    if (sessionData && sessionData.phoneNumber) {
+      validSessions.push(sessionData);
     }
+  }
+
+  if (validSessions.length === 0) {
+      return null;
+  }
+
+  // Sort by iat descending (newest first)
+  validSessions.sort((a, b) => (b.iat || 0) - (a.iat || 0));
+  const latestSession = validSessions[0];
+
+  try {
+    const rawPhone = String(latestSession.phoneNumber).trim();
+    const candidates = new Set<string>();
+    candidates.add(rawPhone);
+    if (!rawPhone.startsWith('+')) candidates.add(`+${rawPhone}`);
+    if (rawPhone.startsWith('+')) candidates.add(rawPhone.replace(/^\+/, ''));
+    if (rawPhone.startsWith('0')) candidates.add(rawPhone.replace(/^0+/, ''));
+    if (!rawPhone.startsWith('0')) candidates.add(`0${rawPhone}`);
+    if (rawPhone.startsWith('251')) candidates.add(`+${rawPhone}`);
+    if (rawPhone.startsWith('+251')) candidates.add(rawPhone.slice(1));
+    
+    const whereOr = Array.from(candidates).map(p => ({ phone: p }));
+
+    const patient = await prisma.patient.findFirst({
+      where: { OR: whereOr },
+    });
+
+    if (patient) {
+      console.log('getPatientFromCookie: mini-app patient lookup result:', `found id=${patient.id} using session from iat=${latestSession.iat}`);
+      return patient;
+    }
+  } catch (error) {
+    console.error('getPatientFromCookie: Failed to parse mini-app session cookie:', error);
   }
 
   console.log('getPatientFromCookie: mini-app patient lookup result: not found');

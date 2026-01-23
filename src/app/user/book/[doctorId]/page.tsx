@@ -57,6 +57,7 @@ export default function BookingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { patient, superAppToken } = useContext(PatientContext);
+  const csrfToken = useCsrfToken();
 
   const isMiniApp = !!superAppToken;
 

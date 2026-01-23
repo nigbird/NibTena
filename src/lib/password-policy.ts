@@ -74,7 +74,7 @@ export async function validatePasswordAsync(pw: string): Promise<PasswordCheckRe
   // Check if password appears in known breaches
   const count = await getPwnedCount(pw);
   if (count > 0) {
-    base.errors.push(`This password has appeared in data breaches ${count} times; choose a different password.`);
+    base.errors.push( `For your security, this password isn’t safe to use. Please choose a different one.`);
   }
   return { valid: base.errors.length === 0, errors: base.errors };
 }

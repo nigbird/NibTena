@@ -152,10 +152,14 @@ export async function completeBooking(bookingData: any) {
   let newAppointment;
   let patient;
   try {
-  const normalizedPhone = normalizePhoneNumber(bookingData.phone);
-  patient = await prisma.patient.findUnique({
-    where: { phone: normalizedPhone }
-  });
+  if (bookingData.patientId) {
+    patient = await prisma.patient.findUnique({ where: { id: Number(bookingData.patientId) } });
+  } else {
+    const normalizedPhone = normalizePhoneNumber(bookingData.phone);
+    patient = await prisma.patient.findUnique({
+      where: { phone: normalizedPhone }
+    });
+  }
     
     if (!patient) {
         return { success: false, message: 'Patient record not found.'};

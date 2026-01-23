@@ -113,12 +113,21 @@ function OtpForm() {
             // Set the patient in the global context, which also saves to localStorage
             setPatient(result.patient);
 
-            if (isBooking && bookingDataString) {
+                        if (isBooking && bookingDataString) {
                  toast({
                     title: "✅ Phone Verified",
                     description: "Finalizing your booking...",
                 });
-                await completeBooking(JSON.parse(bookingDataString));
+                                try {
+                                    const parsed = JSON.parse(bookingDataString);
+                                    // Prefer passing verified patient id to the server action so
+                                    // it can create the appointment reliably even if cookies
+                                    // haven't been applied to the next request yet.
+                                    parsed.patientId = result.patient.id;
+                                    await completeBooking(parsed);
+                                } catch (e) {
+                                    console.error('Failed to complete booking after verification:', e);
+                                }
                 // completeBooking will handle the final redirect
             } else {
                 toast({

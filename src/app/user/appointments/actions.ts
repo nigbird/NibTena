@@ -7,7 +7,7 @@ import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
 import { createAndStoreOtp, verifyAndConsumeOtp } from '@/lib/otp';
-import { createPatientSessionToken } from '@/lib/session';
+import { createPatientSessionToken, verifyPatientSessionCookie } from '@/lib/session';
 import { getVerifiedUser } from '@/lib/permissions';
 
 // Normalize incoming phone to canonical 251XXXXXXXXX format (no leading '+')

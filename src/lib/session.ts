@@ -29,6 +29,25 @@ export function parseMiniAppSessionCookie(cookieValue?: string): MiniAppSession 
   try {
     // Attempt to verify as JWT first
     const decoded = jwt.verify(cookieValue, AUTH_SECRET) as MiniAppSession;
+    
+    // Check if the inner authToken is expired
+    if (decoded.authToken) {
+        const innerToken = decoded.authToken;
+        try {
+            const innerDecoded = jwt.decode(innerToken);
+            if (innerDecoded && typeof innerDecoded === 'object' && innerDecoded.exp) {
+                const now = Math.floor(Date.now() / 1000);
+                if (innerDecoded.exp < now) {
+                    console.warn(`parseMiniAppSessionCookie: inner authToken expired. exp=${innerDecoded.exp}, now=${now}`);
+                    return null; // Treat session as invalid if the auth token is expired
+                }
+            }
+        } catch (e) {
+            console.warn('parseMiniAppSessionCookie: failed to decode inner authToken', e);
+            // Optionally return null here too if we require a valid JWT
+        }
+    }
+    
     return decoded;
   } catch (jwtError) {
     // If JWT verification fails, try legacy base64 for backward compatibility (during migration)

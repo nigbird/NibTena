@@ -302,6 +302,14 @@ export async function initiateBookingAndPayment(
   const phoneFromCookie = await getPhoneNumberFromCookie();
   const authToken = await getAuthTokenFromCookie();
     
+  if (!authToken) {
+    console.error('initiateBookingAndPayment: No valid auth token found (session expired or missing).');
+    return {
+      success: false,
+      message: 'Your session has expired. Please restart the application from the main menu.',
+    };
+  }
+
   const rawData = {
     bookingFor: formData.get('bookingFor'),
     fullName: formData.get('fullName'),

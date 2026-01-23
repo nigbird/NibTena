@@ -543,6 +543,7 @@ function UserFormSheet({ open, onOpenChange, user, roles, onSuccess, hospitalId 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    formData.append('_csrf', csrfToken);
     
     startTransition(async () => {
       let result;

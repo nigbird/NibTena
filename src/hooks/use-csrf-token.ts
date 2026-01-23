@@ -18,3 +18,5 @@ export function useCsrfToken() {
 
   return csrfToken;
 }
+
+export default useCsrfToken;

@@ -87,7 +87,15 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(doctor?.id.toString());
   const [doctorSelectionError, setDoctorSelectionError] = useState<string | null>(null);
   
-  const csrfToken = useCsrfToken();
+  // Local cookie read fallback to avoid runtime errors if hook isn't available
+  const getCookie = (name: string) => {
+    if (typeof document === 'undefined') return '';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || '';
+    return '';
+  };
+  const csrfToken = (typeof window !== 'undefined') ? (getCookie('csrfToken') || '') : '';
   const initialState: ScheduleSaveState = { message: null, errors: {} };
   const saveScheduleWithId = saveDoctorSchedule.bind(null, hospitalId);
   const [state, formAction] = useActionState(saveScheduleWithId, initialState);

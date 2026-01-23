@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import DoctorScheduleDisplay from '@/components/hospital-admin/doctor-schedule-display';
 import { useActionState } from 'react';
-import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 
 export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId: number }) {
@@ -24,7 +23,15 @@ export default function ScheduleSettingsPageContent({ hospitalId }: { hospitalId
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   
-  const csrfToken = useCsrfToken();
+  // Read CSRF token from cookie with fallback in case the hook is unavailable at runtime
+  const getCookie = (name: string) => {
+    if (typeof document === 'undefined') return '';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || '';
+    return '';
+  };
+  const csrfToken = (typeof window !== 'undefined') ? (getCookie('csrfToken') || '') : '';
   const [initialSettings, setInitialSettings] = useState({ bookingWindow: '30', startTime: '08:00', endTime: '18:30' });
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();

@@ -23,23 +23,33 @@ function normalizePhoneNumber(input?: string | null) {
 export async function getMyAppointments(patientId: number) {
   if (!patientId) return [];
 
+  let isAuthorized = false;
+
+  // 1. Check NextAuth session
   const user = await getVerifiedUser();
-  // If we have a logged-in user session, it must match the requested patientId
   if (user) {
     if (user.role === 'patient') {
-       if (user.id !== patientId) {
+       if (user.id === patientId) {
+          isAuthorized = true;
+       } else {
           console.error('[getMyAppointments] Unauthorized access attempt', { userId: user.id, requestedId: patientId });
-          return [];
        }
-    } else {
-        // If it's a doctor or admin calling this, they probably shouldn't be using "getMyAppointments"
-        // or we should decide if they can view patient appointments.
-        // For "getMyAppointments", it implies "My" (the user's) appointments.
-        // So we should enforce that user.id === patientId generally, or return empty.
-        // For now, strict check:
-        return [];
     }
-  } else {
+  } 
+  
+  // 2. Check Standalone Patient Session (nib-tena-patient-session)
+  if (!isAuthorized) {
+     const cookieStore = await cookies();
+     const patientSession = cookieStore.get('nib-tena-patient-session')?.value;
+     if (patientSession) {
+         const verified = verifyPatientSessionCookie(patientSession);
+         if (verified && verified.patient && verified.patient.id === patientId) {
+             isAuthorized = true;
+         }
+     }
+  }
+
+  if (!isAuthorized) {
      // No session? Maybe it's the MiniApp flow which doesn't use standard NextAuth session but cookies?
      // If so, this function shouldn't be called directly without auth, or it should rely on the caller to verify?
      // But wait, this is a server action. If called from client, we need verification.

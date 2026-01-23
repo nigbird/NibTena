@@ -224,24 +224,13 @@ export async function saveHospital(
         dataToSave.status = 'inactive'; // keep inactive until approved
         
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
-        const emailResult = await sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail });
-
-        if (!emailResult.success) {
-          // Do NOT delete the created hospital when a password was provided.
-          // Email is best-effort in this flow; log the failure and continue.
-          console.error('[saveHospital] Welcome email failed but hospital retained:', emailResult.error);
-          await createAuditLog({
-            actorId: actingSuperAdminId,
-            actorType: 'SuperAdmin',
-            action: 'CREATE_HOSPITAL',
-            targetId: created.id,
-            targetType: 'Hospital',
-            changes: { ...dataToSave, password: '***' }
-          });
-          revalidatePath('/super-admin/hospitals');
-          revalidatePath('/super-admin/hospital-approvals');
-          return { success: true, message: `Hospital created but welcome email failed: ${emailResult.error}` };
-        }
+        
+        // Send email asynchronously
+        sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail })
+          .then(result => {
+             if (!result.success) console.error('[saveHospital] Welcome email failed:', result.error);
+          })
+          .catch(err => console.error('[saveHospital] Welcome email error:', err));
 
         await createAuditLog({
           actorId: actingSuperAdminId,
@@ -264,14 +253,13 @@ export async function saveHospital(
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '1h' });
-        const emailResult = await sendSetPasswordEmail(created.contactEmail, token);
         
-        if (!emailResult.success) {
-            // Rollback
-            await prisma.hospital.delete({ where: { id: created.id } });
-            console.error('[saveHospital] Email failed, hospital deleted:', emailResult.error);
-            return { message: `Hospital creation failed: Could not send activation email. ${emailResult.error}`, success: false };
-        }
+        // Send email asynchronously
+        sendSetPasswordEmail(created.contactEmail, token)
+            .then(result => {
+                if (!result.success) console.error('[saveHospital] Set password email failed:', result.error);
+            })
+            .catch(err => console.error('[saveHospital] Set password email error:', err));
 
         await createAuditLog({
           actorId: actingSuperAdminId,

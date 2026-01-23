@@ -132,15 +132,12 @@ export async function saveDoctor(
           changes: { ...dataToCreate, password: '***' }
         });
 
-        const emailResult = await sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId);
-
-        if (!emailResult.success) {
-          // Do NOT delete the created doctor when a password was provided.
-          // Email is best-effort in this flow; return success but notify caller about the email failure.
-          console.error('[saveDoctor] Welcome email failed but doctor retained:', emailResult.error);
-          revalidatePath('/hospital-admin/doctors');
-          return { success: true, message: `Doctor added but welcome email failed: ${emailResult.error}` };
-        }
+        // Send email asynchronously
+        sendWelcomeEmail('doctor', { name: newDoctor.name, email: newDoctor.contact! }, hospitalId)
+          .then(result => {
+             if (!result.success) console.error('[saveDoctor] Welcome email failed:', result.error);
+          })
+          .catch(err => console.error('[saveDoctor] Welcome email error:', err));
       } else {
         const tempPassword = crypto.randomBytes(16).toString('hex');
         dataToCreate.password = await bcrypt.hash(tempPassword, 10);
@@ -160,15 +157,13 @@ export async function saveDoctor(
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         
         const token = jwt.sign({ userId: newDoctor.id, userType: 'doctor', email: newDoctor.contact }, secret, { expiresIn: '1h' });
-        const emailResult = await sendSetPasswordEmail(newDoctor.contact, token, hospitalId);
         
-        if (!emailResult.success) {
-           // Rollback: remove hospital associations before deleting doctor to satisfy FK constraints
-          await prisma.doctorsOnHospitals.deleteMany({ where: { doctorId: newDoctor.id } });
-          await prisma.doctor.delete({ where: { id: newDoctor.id } });
-          console.error('[saveDoctor] Email failed, doctor deleted:', emailResult.error);
-          return { message: `Doctor creation failed: Could not send activation email. ${emailResult.error}`, success: false };
-        }
+        // Send email asynchronously
+        sendSetPasswordEmail(newDoctor.contact, token, hospitalId)
+          .then(result => {
+             if (!result.success) console.error('[saveDoctor] Set password email failed:', result.error);
+          })
+          .catch(err => console.error('[saveDoctor] Set password email error:', err));
       }
     }
     revalidatePath('/hospital-admin/doctors');

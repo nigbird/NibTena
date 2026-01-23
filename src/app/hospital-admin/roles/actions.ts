@@ -302,23 +302,13 @@ export async function createUser(hospitalId: number, formData: FormData) {
       
       try {
         const role = roleId ? await prisma.role.findUnique({ where: {id: roleId}}) : null;
-        const emailResult = await sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId);
         
-        if (!emailResult.success) {
-            // Do NOT delete the created user when a password was provided.
-            // Email is best-effort in this flow; return success but notify caller about the email failure.
-            console.error('[createUser] Welcome email failed but user retained:', emailResult.error);
-            await createAuditLog({
-              actorId: user.id,
-              actorType: 'User',
-              action: 'CREATE_USER',
-              targetId: userRec.id,
-              targetType: 'User',
-              changes: { name, email, roleId }
-            });
-            revalidatePath('/hospital-admin/roles');
-            return { success: true, user: userRec, message: `User created but welcome email failed: ${emailResult.error}` };
-        }
+        // Send email asynchronously
+        sendWelcomeEmail('staff', { name, email, role: role?.name }, hospitalId)
+            .then(result => {
+                if (!result.success) console.error('[createUser] Welcome email failed:', result.error);
+            })
+            .catch(err => console.error('[createUser] Welcome email error:', err));
       } catch (emailError: any) {
         // If sendWelcomeEmail threw an unexpected error, log and continue as best-effort
         console.error('[createUser] Welcome email error (non-fatal):', emailError);
@@ -349,16 +339,18 @@ export async function createUser(hospitalId: number, formData: FormData) {
             if (!secret) throw new Error('AUTH_SECRET is not set.');
             
             const token = jwt.sign({ userId: userRec.id, userType: 'user', email: userRec.email }, secret, { expiresIn: '1h' });
-            const emailResult = await sendSetPasswordEmail(userRec.email, token, hospitalId);
-
-            if (!emailResult.success) {
-                throw new Error(emailResult.error || 'Failed to send set-password email');
-            }
+            
+            // Send email asynchronously
+            sendSetPasswordEmail(userRec.email, token, hospitalId)
+                .then(result => {
+                    if (!result.success) console.error('[createUser] Set password email failed:', result.error);
+                })
+                .catch(err => console.error('[createUser] Set password email error:', err));
         } catch (emailError: any) {
-            // Rollback: Delete the user if email fails
+            // Rollback: Delete the user if JWT/Setup fails (Email failure is async and won't trigger this)
             await prisma.user.delete({ where: { id: userRec.id } });
-            console.error('[createUser] Email failed, user deleted:', emailError);
-            return { success: false, message: `User creation failed: Could not send activation email. ${emailError.message}` };
+            console.error('[createUser] Setup failed, user deleted:', emailError);
+            return { success: false, message: `User creation failed: ${emailError.message}` };
         }
 
         await createAuditLog({

@@ -145,27 +145,30 @@ export async function getMyAppointmentsByPhone(phone: string) {
 
 async function getPhoneNumberFromCookie() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+  const sessionCookies = cookieStore.getAll('miniapp_session');
 
-  if (!sessionCookie) {
+  if (sessionCookies.length === 0) {
     return null;
   }
 
-  try {
-    const { parseMiniAppSessionCookie } = await import('@/lib/session');
-    const session = parseMiniAppSessionCookie(sessionCookie);
-    
-    if (!session) {
-       console.log('appointments.getPhoneNumberFromCookie: invalid or unsigned cookie');
-       return null;
+  // Iterate over all cookies to find a valid one
+  for (const cookie of sessionCookies) {
+    if (!cookie.value) continue;
+    try {
+      const { parseMiniAppSessionCookie } = await import('@/lib/session');
+      const session = parseMiniAppSessionCookie(cookie.value);
+      
+      if (!session) {
+         continue;
+      }
+
+      console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', session.phoneNumber || null);
+      return session.phoneNumber || null;
+    } catch (err) {
+      console.warn("Failed to parse one of the miniapp_session cookies:", err);
     }
-
-    console.log('appointments.getPhoneNumberFromCookie: phoneNumber:', session.phoneNumber || null);
-    return session.phoneNumber || null;
-  } catch (err) {
-    console.error("Failed to parse miniapp_session cookie:", err);
-    return null;
   }
+  return null;
 }
 
 export async function getMyAppointmentsForMiniApp() {

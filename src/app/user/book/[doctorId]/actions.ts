@@ -199,47 +199,58 @@ export async function completeBooking(bookingData: any) {
 }
 
  async function getAuthTokenFromCookie() {
-  const cookieStore = await  cookies();
-  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+  const cookieStore = await cookies();
+  const sessionCookies = cookieStore.getAll('miniapp_session');
 
-  if (!sessionCookie) {
+  if (sessionCookies.length === 0) {
     return null;
   }
 
-  try {
-    const { parseMiniAppSessionCookie } = await import('@/lib/session');
-    const session = parseMiniAppSessionCookie(sessionCookie);
-    if (!session) return null;
-
-    const authToken = session.authToken || null;
-    const masked = authToken ? (authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`) : null;
-    console.log('getAuthTokenFromCookie: returning masked authToken:', masked);
-    return authToken || null;
-  } catch (err) {
-    console.error("Failed to parse miniapp_session cookie:", err);
-    return null;
+  // Iterate over all cookies to find a valid one
+  for (const cookie of sessionCookies) {
+    if (!cookie.value) continue;
+    try {
+      const { parseMiniAppSessionCookie } = await import('@/lib/session');
+      const session = parseMiniAppSessionCookie(cookie.value);
+      if (session && session.authToken) {
+        const authToken = session.authToken;
+        const masked = authToken.length <= 8 ? '****' : `${authToken.slice(0,4)}...${authToken.slice(-4)}`;
+        console.log('getAuthTokenFromCookie: returning valid masked authToken:', masked);
+        return authToken;
+      }
+    } catch (err) {
+      console.warn("Failed to parse one of the miniapp_session cookies:", err);
+    }
   }
+  
+  console.log('getAuthTokenFromCookie: no valid auth token found in any cookie');
+  return null;
 }
 
 export async function getPhoneNumberFromCookie() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('miniapp_session')?.value;
+  const sessionCookies = cookieStore.getAll('miniapp_session');
 
-  if (!sessionCookie) {
+  if (sessionCookies.length === 0) {
     return null;
   }
 
-  try {
-    const { parseMiniAppSessionCookie } = await import('@/lib/session');
-    const session = parseMiniAppSessionCookie(sessionCookie);
-    if (!session) return null;
-
-    console.log('getPhoneNumberFromCookie: derived phoneNumber:', session.phoneNumber || null);
-    return session.phoneNumber || null;
-  } catch (err) {
-    console.error("Failed to parse miniapp_session cookie:", err);
-    return null;
+  // Iterate over all cookies to find a valid one
+  for (const cookie of sessionCookies) {
+    if (!cookie.value) continue;
+    try {
+      const { parseMiniAppSessionCookie } = await import('@/lib/session');
+      const session = parseMiniAppSessionCookie(cookie.value);
+      if (session && session.phoneNumber) {
+        console.log('getPhoneNumberFromCookie: derived phoneNumber:', session.phoneNumber);
+        return session.phoneNumber;
+      }
+    } catch (err) {
+      console.warn("Failed to parse one of the miniapp_session cookies:", err);
+    }
   }
+
+  return null;
 }
 
 export async function initiateBookingAndPayment(

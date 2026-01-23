@@ -46,18 +46,21 @@ async function getDoctorsWithHospitals() {
 
 async function getSpecialties() {
     const distinctSpecialties = await prisma.doctor.findMany({
-      where: {
-        status: 'active',
-        specialty: {
-          not: '',
+        where: {
+            status: 'active',
+            specialty: {
+                not: null,
+            },
         },
-      },
         select: {
             specialty: true,
         },
         distinct: ['specialty'],
     });
-    return distinctSpecialties.map(d => d.specialty).filter((s): s is string => s !== null && s !== '');
+    return distinctSpecialties
+        .map(d => d.specialty)
+        .filter((s): s is string => !!s && s.trim().length > 0)
+        .sort();
 }
 
 function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {

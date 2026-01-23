@@ -8,11 +8,23 @@ export default async function UserLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const miniappCookie = (await cookieStore).get('miniapp_session');
+  const cookieStore = await cookies();
+  const miniappCookies = cookieStore.getAll('miniapp_session');
   
   // Verify the session cookie properly
-  const miniAppSession = parseMiniAppSessionCookie(miniappCookie?.value);
+  let miniAppSession: ReturnType<typeof parseMiniAppSessionCookie> = null;
+  let miniappCookieValue: string | undefined = undefined;
+
+  for (const cookie of miniappCookies) {
+      if (!cookie.value) continue;
+      const session = parseMiniAppSessionCookie(cookie.value);
+      if (session) {
+          miniAppSession = session;
+          miniappCookieValue = cookie.value;
+          break; // Found a valid one
+      }
+  }
+
   const hasMiniAppSession = !!miniAppSession;
 
   const patient = await getPatientFromCookie();
@@ -26,7 +38,7 @@ export default async function UserLayout({
   }
 
   const masked = (t?: string) => (t ? (t.length <= 8 ? '****' : `${t.slice(0,4)}...${t.slice(-4)}`) : null);
-  console.log('UserLayout: hasMiniAppSession:', hasMiniAppSession, 'cookieLength:', miniappCookie?.value?.length ?? 0);
+  console.log('UserLayout: hasMiniAppSession:', hasMiniAppSession, 'cookieLength:', miniappCookieValue?.length ?? 0);
   console.log('UserLayout: patient present:', !!patient, patient ? `id=${patient.id}` : null);
   console.log('UserLayout: initialSuperAppToken (masked):', masked(initialSuperAppToken));
 

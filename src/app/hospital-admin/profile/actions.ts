@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { signOut } from '@/../../auth';
 import { getVerifiedUser, VerifiedUser } from '@/lib/permissions';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const UserProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -38,6 +39,11 @@ export async function updateUserProfile(
   // Hospital entities manage their details in Settings.
   if (user.entityType !== 'user') {
       return { success: false, message: 'This action is only for staff users.' };
+  }
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
   const validatedFields = UserProfileSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -107,8 +113,12 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
     if (!user || user.id !== userId) {
         return { success: false, message: 'Unauthorized.' };
     }
-    
-    const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
+  const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validatedFields.success) {
         return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };

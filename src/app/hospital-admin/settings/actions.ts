@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { saveImage } from '@/lib/image-upload';
 import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
+import { verifyCsrfToken } from '@/lib/csrf';
 import { createAuditLog } from '@/lib/audit';
 
 const AddSpecialtySchema = z.object({
@@ -35,6 +36,11 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
   if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const raw = Object.fromEntries(formData.entries()) as any;
   const parsed = AddSpecialtySchema.safeParse(raw);
@@ -69,6 +75,11 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
   if (!user) return { success: false, message: 'Unauthorized' };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const raw = Object.fromEntries(formData.entries()) as any;
   const parsed = AddSpecialtySchema.safeParse(raw);
@@ -151,6 +162,10 @@ export async function updateHospitalGeneralSettings(
   if (!user) return { success: false, message: "Unauthorized." };
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: "Unauthorized." };
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
 
   const rawData = {
     name: formData.get('name'),

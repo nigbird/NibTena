@@ -171,7 +171,12 @@ export async function updateDoctorPassword(doctorId: number, prevState: Password
         return { success: false, message: 'Unauthorized.' };
     }
 
-    const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
+  const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validatedFields.success) {
         return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };

@@ -8,6 +8,7 @@ import type { Appointment } from '@/lib/definitions';
 import { format, parseISO, getDay, parse as parseTime, isToday, isPast } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
+import { verifyCsrfToken } from '@/lib/csrf';
 import { isTimeInRanges, isBefore, isEqual, isAfter } from '@/lib/time-utils';
 
 const AppointmentFormSchema = z.object({
@@ -58,6 +59,11 @@ export async function saveAppointment(
   const requiredPerm = isUpdate ? 'Appointments:Update' : 'Appointments:Create';
   const allowed = await requireHospitalPermission(requiredPerm, hospitalId);
   if (!allowed) return { success: false, message: 'Unauthorized' };
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
   const validatedFields = AppointmentFormSchema.safeParse(Object.fromEntries(formData));
 
   if (!validatedFields.success) {

@@ -7,6 +7,7 @@ import { validatePasswordAsync } from '@/lib/password-policy';
 import { revalidatePath } from 'next/cache';
 import { createAuditLog } from '@/lib/audit';
 import { getVerifiedUser } from '@/lib/permissions';
+import { verifyCsrfToken } from '@/lib/csrf';
 
 const SuperAdminSchema = z.object({
   name: z.string().min(2),
@@ -26,6 +27,11 @@ export async function createSuperAdmin(formData: FormData) {
   const user = await getVerifiedUser();
   if (!user || user.role !== 'superadmin') {
     return { success: false, message: 'Unauthorized' };
+  }
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
   const parsed = SuperAdminSchema.safeParse({

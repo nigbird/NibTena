@@ -52,6 +52,7 @@ export default function HospitalMapClient({ latitude, longitude }: HospitalMapCl
       {hasLocation ? (
         isMapReady ? (
           <MapContainer
+            id={mapContainerIdRef.current}
             key={mapContainerIdRef.current}
             center={mapCenter}
             zoom={15}

@@ -225,12 +225,7 @@ export async function saveHospital(
         
         const created = await prisma.hospital.create({ data: { ...dataToSave, startTime: '08:00', endTime: '18:00', bookingWindow: 30 } });
         
-        // Send email asynchronously
-        sendWelcomeEmail('hospital', { name: created.name, email: created.contactEmail })
-          .then(result => {
-             if (!result.success) console.error('[saveHospital] Welcome email failed:', result.error);
-          })
-          .catch(err => console.error('[saveHospital] Welcome email error:', err));
+          // NOTE: sending welcome emails is deferred until a hospital is approved
 
         await createAuditLog({
           actorId: actingSuperAdminId,
@@ -254,12 +249,7 @@ export async function saveHospital(
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '1h' });
         
-        // Send email asynchronously
-        sendSetPasswordEmail(created.contactEmail, token)
-            .then(result => {
-                if (!result.success) console.error('[saveHospital] Set password email failed:', result.error);
-            })
-            .catch(err => console.error('[saveHospital] Set password email error:', err));
+        // NOTE: sending set-password emails is deferred until a hospital is approved
 
         await createAuditLog({
           actorId: actingSuperAdminId,
@@ -528,6 +518,27 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
       status: decision === 'approved' ? 'active' : 'inactive',
     } as any,
   });
+
+  // If approved, send set-password / welcome email to hospital contact.
+  if (decision === 'approved') {
+    try {
+      const hosp = await prisma.hospital.findUnique({ where: { id: hospitalId }, select: { contactEmail: true, name: true, mustChangePassword: true } });
+      if (hosp?.contactEmail) {
+        const secret = process.env.AUTH_SECRET;
+        if (secret) {
+          const token = jwt.sign({ userId: hospitalId, userType: 'hospital', email: hosp.contactEmail }, secret, { expiresIn: '1h' });
+          // Send set-password email asynchronously (non-blocking)
+          sendSetPasswordEmail(hosp.contactEmail, token).then(res => {
+            if (!res.success) console.error('[reviewHospital] Set password email failed:', res.error);
+          }).catch(err => console.error('[reviewHospital] Set password email error:', err));
+        } else {
+          console.warn('[reviewHospital] AUTH_SECRET not set; skipping set-password email.');
+        }
+      }
+    } catch (err) {
+      console.error('[reviewHospital] failed to send approval email:', err);
+    }
+  }
 
   await createAuditLog({
     actorId: actingSuperAdminId,

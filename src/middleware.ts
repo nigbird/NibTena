@@ -68,7 +68,7 @@ export default withAuth(
     }
     if (!token && responseToReturn) {
       // attach CSP header and x-nonce header on the response and return
-      const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
       responseToReturn.headers.set('Content-Security-Policy', csp);
       responseToReturn.headers.set('x-nonce', nonce);
       return responseToReturn;
@@ -98,7 +98,7 @@ export default withAuth(
         url.searchParams.set('from', pathname);
         const redirectRes = NextResponse.redirect(url);
         // attach CSP and nonce to redirects too
-        const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+          const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
         redirectRes.headers.set('Content-Security-Policy', csp);
         redirectRes.headers.set('x-nonce', nonce);
         return redirectRes;
@@ -152,7 +152,7 @@ export default withAuth(
     // the `x-nonce` value). We build a NextResponse.next with the forwarded
     // headers and attach the CSP header on that response so that all proxied
     // responses include the CSP.
-    const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+      const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
     const nextRes = NextResponse.next({ request: { headers: forwarded } });
     nextRes.headers.set('Content-Security-Policy', csp);
     nextRes.headers.set('x-nonce', nonce);

@@ -12,9 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useSession, signOut } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
 import { updateDoctorPassword, type PasswordChangeState } from '../profile/actions';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function PasswordSubmitButton() {
   const { pending } = useFormStatus();
+  const csrfToken = useCsrfToken();
+
   return (
     <Button variant="accent" type="submit" className="w-full sm:w-auto" disabled={pending}>
       {pending ? (
@@ -76,6 +79,7 @@ export default function DoctorChangePasswordPage() {
         </CardHeader>
         <CardContent>
           <form action={dispatchPassword} key={formKey} className="space-y-6">
+            <input type="hidden" name="_csrf" value={csrfToken} />
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Current Password</Label>
               <div className="relative">

@@ -83,6 +83,8 @@ function SuperAdminForm({
         fd.set('password', formState.password);
       }
       fd.set('role', formState.role);
+      // attach double-submit CSRF token from cookie
+      fd.set('_csrf', csrfToken);
 
       const action = isEditing ? updateSuperAdmin.bind(null, adminToEdit.id) : createSuperAdmin;
       const result = await action(fd);

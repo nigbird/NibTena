@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveAppointment, getDoctorScheduleForDate, type AppointmentFormState } from "@/app/hospital-admin/appointments/actions";
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, Loader2, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -62,6 +63,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
   const [doctorSchedule, setDoctorSchedule] = useState<DoctorSchedule | null>(null);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
+  const csrfToken = useCsrfToken();
 
 
   useEffect(() => {
@@ -154,6 +156,7 @@ export default function AppointmentFormDrawer({ isOpen, setIsOpen, onAppointment
         </SheetHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
             <form key={formKey} ref={formRef} onSubmit={handleSubmit} id="appointment-form" className="space-y-4 py-4">
+              <input type="hidden" name="_csrf" value={csrfToken} />
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="patientName">Patient Name</Label>

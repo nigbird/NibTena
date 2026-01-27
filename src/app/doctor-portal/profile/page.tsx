@@ -143,6 +143,7 @@ export default function DoctorProfilePage() {
                 </CardHeader>
                 <CardContent>
                     <form action={dispatchProfile} className="space-y-8">
+                      <input type="hidden" name="_csrf" value={csrfToken} />
                         <div className="flex items-center gap-6">
                             <Avatar className="h-24 w-24 border-4 border-primary/20">
                                 {imagePreview && <AvatarImage src={imagePreview} alt={doctor.name} />}

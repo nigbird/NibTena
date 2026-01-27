@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState } from './actions';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { getEmailSettings } from '@/lib/email-actions';
 import { useActionState } from 'react';
 import type { Hospital } from '@/lib/definitions';
@@ -42,6 +43,7 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
   const [imagePreview, setImagePreview] = useState<string | null>(hospital.imageUrl);
   
   const formRef = useRef<HTMLFormElement>(null);
+  const csrfToken = useCsrfToken();
 
   useEffect(() => {
     if (state.success) {
@@ -73,6 +75,8 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
     event.preventDefault();
     setIsPending(true);
     const formData = new FormData(event.currentTarget);
+    // attach CSRF double-submit token
+    formData.set('_csrf', csrfToken);
     formAction(formData);
   }
 
@@ -184,6 +188,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
     if (!newSpecialty) return;
     const fd = new FormData();
     fd.set('name', newSpecialty);
+    fd.set('_csrf', csrfToken);
     addAction(fd);
   };
 
@@ -216,6 +221,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const saveEdit = async (id: number) => {
     const fd = new FormData();
     fd.set('name', editingName);
+    fd.set('_csrf', csrfToken);
     const res = await updateSpecialty(hospitalId, id, {} as any, fd);
     if (res?.success) {
       toast({ title: 'Saved', description: res.message });

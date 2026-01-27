@@ -63,7 +63,19 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
         imapPass: currentSettings.smtpPass,
     };
 
-    const data = await testEmailConnection(settingsToTest);
+        // Basic client-side validation
+        if (!settingsToTest.name || String(settingsToTest.name).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Configuration name is required.' });
+            setIsTesting(false);
+            return;
+        }
+        if (!settingsToTest.smtpUser || String(settingsToTest.smtpUser).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Gmail address is required.' });
+            setIsTesting(false);
+            return;
+        }
+
+        const data = await testEmailConnection(settingsToTest);
     setTestResult(data);
 
     if (data.smtp.success && data.imap.success) {
@@ -85,6 +97,18 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
             imapUser: currentSettings.smtpUser,
             imapPass: currentSettings.smtpPass,
         };
+        // Client-side validation to avoid server Zod errors
+        if (!settingsToSave.name || String(settingsToSave.name).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Configuration name is required.' });
+            setIsSaving(false);
+            return;
+        }
+        if (!settingsToSave.smtpUser || String(settingsToSave.smtpUser).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Gmail address is required.' });
+            setIsSaving(false);
+            return;
+        }
+
         await saveGlobalEmailSettings(settingsToSave);
         toast({ title: "Settings Saved", description: "Global email configuration has been saved." });
         onSave();

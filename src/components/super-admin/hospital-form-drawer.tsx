@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import React, { useActionState, useEffect, useRef, useState, useTransition, useMemo } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -35,6 +35,23 @@ type HospitalFormDrawerProps = {
   hospitalToEdit?: Hospital | null;
 };
 
+class ErrorBoundary extends React.Component<{ fallback?: React.ReactNode; children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { fallback?: React.ReactNode; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch() {}
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null;
+    }
+    return this.props.children;
+  }
+}
+
 export default function HospitalFormDrawer({
   isOpen,
   setIsOpen,
@@ -49,12 +66,13 @@ export default function HospitalFormDrawer({
   const [showPassword, setShowPassword] = useState(false);
   
   const initialState: HospitalFormState = { message: null, errors: {} };
-  const action = saveHospital.bind(null, hospitalToEdit?.id ?? null);
+  const action = useMemo(() => saveHospital.bind(null, hospitalToEdit?.id ?? null), [hospitalToEdit?.id]);
   const [state, formAction] = useActionState(action, initialState);
 
   const [imagePreview, setImagePreview] = useState<string | null>(hospitalToEdit?.imageUrl || null);
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
   const [phoneErrors, setPhoneErrors] = useState<{ contactPhone?: string; ownerPhone?: string }>({});
+  const lastBlobUrlRef = useRef<string | null>(null);
   const [locationData, setLocationData] = useState<{
     latitude: number | null;
     longitude: number | null;
@@ -120,9 +138,32 @@ export default function HospitalFormDrawer({
         return;
       }
       setImageValidationErrors([]);
-      setImagePreview(URL.createObjectURL(file));
+      try {
+        const url = URL.createObjectURL(file);
+        if (lastBlobUrlRef.current) {
+          try {
+            URL.revokeObjectURL(lastBlobUrlRef.current);
+          } catch {}
+        }
+        lastBlobUrlRef.current = url;
+        setImagePreview(url);
+      } catch (e) {
+        setImageValidationErrors(['Preview unavailable']);
+        setImagePreview(null);
+      }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (lastBlobUrlRef.current) {
+        try {
+          URL.revokeObjectURL(lastBlobUrlRef.current);
+        } catch {}
+        lastBlobUrlRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -247,14 +288,14 @@ export default function HospitalFormDrawer({
             className="grid gap-6 py-4"
           >
             {imagePreview && (
-                <div className="space-y-2">
+                <div key="preview" className="space-y-2">
                     <Label>Image Preview</Label>
                     <div className="w-full h-48 relative rounded-md overflow-hidden border">
                         <Image src={imagePreview} alt="Hospital preview" fill style={{ objectFit: 'cover' }} />
                     </div>
                 </div>
             )}
-            <div className="space-y-2">
+            <div key="image-input" className="space-y-2">
               <Label htmlFor="image">Hospital Photo</Label>
               <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
               {imageValidationErrors.map((msg, i) => (
@@ -262,19 +303,19 @@ export default function HospitalFormDrawer({
               ))}
             </div>
 
-            <div className="space-y-2">
+            <div key="name" className="space-y-2">
               <Label htmlFor="name">Hospital Name</Label>
               <Input id="name" name="name" defaultValue={hospitalToEdit?.name} required />
               {state.errors?.name && <p className="text-destructive text-sm">{state.errors.name[0]}</p>}
             </div>
 
-            <div className="space-y-2">
+            <div key="description" className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" name="description" defaultValue={hospitalToEdit?.description} required />
               {state.errors?.description && <p className="text-destructive text-sm">{state.errors.description[0]}</p>}
             </div>
             
-             <div className="grid sm:grid-cols-2 gap-4">
+             <div key="location-text" className="grid sm:grid-cols-2 gap-4">
                <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" defaultValue={hospitalToEdit?.city} required />
@@ -287,22 +328,31 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
-            <MapLocationPicker
-              latitude={locationData.latitude}
-              longitude={locationData.longitude}
-              mapDisplayAddress={locationData.mapDisplayAddress}
-              city={hospitalToEdit?.city}
-              address={(hospitalToEdit as any)?.address}
-              onLocationChange={(data) => {
-                setLocationData({
-                  latitude: data.latitude,
-                  longitude: data.longitude,
-                  mapDisplayAddress: data.mapDisplayAddress,
-                });
-              }}
-            />
+            <ErrorBoundary
+              fallback={
+                <div className="h-64 w-full rounded-md overflow-hidden border flex items-center justify-center bg-muted text-muted-foreground">
+                  Map unavailable. You can still submit the form.
+                </div>
+              }
+            >
+              <MapLocationPicker
+                key="map-picker"
+                latitude={locationData.latitude}
+                longitude={locationData.longitude}
+                mapDisplayAddress={locationData.mapDisplayAddress}
+                city={hospitalToEdit?.city}
+                address={(hospitalToEdit as any)?.address}
+                onLocationChange={(data) => {
+                  setLocationData({
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    mapDisplayAddress: data.mapDisplayAddress,
+                  });
+                }}
+              />
+            </ErrorBoundary>
 
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div key="contact" className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contactEmail">Contact Email</Label>
                 <Input id="contactEmail" name="contactEmail" type="email" defaultValue={hospitalToEdit?.contactEmail} required />
@@ -319,7 +369,7 @@ export default function HospitalFormDrawer({
               </div>
             </div>
             
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div key="owner" className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="ownerName">Owner/Manager Name</Label>
                     <Input id="ownerName" name="ownerName" defaultValue={(hospitalToEdit as any)?.ownerName || ''} />
@@ -336,7 +386,7 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
-             <div className="grid sm:grid-cols-2 gap-4">
+             <div key="bank" className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="bankDistrict">Bank District</Label>
                     <Input id="bankDistrict" name="bankDistrict" defaultValue={(hospitalToEdit as any)?.bankDistrict || ''} />
@@ -349,7 +399,7 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div key="account" className="grid sm:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="accountNumber">Account Number</Label>
                     <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
@@ -367,7 +417,7 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div key="status" className="flex items-center space-x-2">
               <Switch id="status" name="status" defaultChecked={hospitalToEdit?.status === 'active' || !isEditing} />
               <Label htmlFor="status">Active</Label>
             </div>

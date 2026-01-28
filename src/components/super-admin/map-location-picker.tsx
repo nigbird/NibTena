@@ -387,14 +387,8 @@ function MapLifecycle() {
 
   useEffect(() => {
     return () => {
-      try {
-        if (map && typeof map.remove === 'function') {
-          map.remove();
-        }
-      } catch (err) {
-        // ignore errors during cleanup
-        // console.warn('Error removing leaflet map during cleanup', err);
-      }
+      // React-leaflet v4 handles map cleanup automatically.
+      // Manual removal can cause issues with strict mode or re-renders.
     };
   }, [map]);
 

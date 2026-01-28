@@ -1,4 +1,3 @@
-
 import { Suspense } from 'react';
 import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
@@ -23,4 +22,3 @@ export default async function SettingsPage() {
   );
 }
 
-    

@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { headers } from 'next/headers';
 
 export interface AuditLogParams {
   actorId: string | number;
@@ -24,6 +25,27 @@ export async function createAuditLog(params: AuditLogParams) {
       return;
     }
 
+    // Automatically capture IP and User Agent if not provided
+    let ipAddress = params.ipAddress;
+    let userAgent = params.userAgent;
+
+    if (!ipAddress || !userAgent) {
+      try {
+        const headersList = await headers();
+        if (!ipAddress) {
+          const forwarded = headersList.get('x-forwarded-for');
+          ipAddress = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
+        }
+        if (!userAgent) {
+          userAgent = headersList.get('user-agent') || 'unknown';
+        }
+      } catch (err) {
+        // Fallback if headers() is not available (e.g. background job)
+        if (!ipAddress) ipAddress = 'system';
+        if (!userAgent) userAgent = 'system';
+      }
+    }
+
     await prisma.auditLog.create({
       data: {
         actorId: String(params.actorId),
@@ -32,8 +54,8 @@ export async function createAuditLog(params: AuditLogParams) {
         targetId: params.targetId ? String(params.targetId) : null,
         targetType: params.targetType,
         changes: params.changes ? params.changes : undefined,
-        ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
+        ipAddress: ipAddress,
+        userAgent: userAgent,
       },
     });
   } catch (error) {

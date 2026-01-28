@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { validateOrigin } from '@/lib/csrf';
+import { createAuditLog } from '@/lib/audit';
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -23,6 +24,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       data: { dataRetentionDays },
       select: { id: true, dataRetentionDays: true }
     });
+
+    try {
+      const actor = await getVerifiedUser();
+      await createAuditLog({
+        actorId: actor?.id ?? 'system',
+        actorType: actor?.role === 'superadmin' ? 'SuperAdmin' : 'User',
+        action: 'UPDATE_DATA_RETENTION_DAYS',
+        targetId: hospital.id,
+        targetType: 'Hospital',
+        changes: { dataRetentionDays }
+      });
+    } catch (err) {
+      console.error('[audit] failed to log data retention change', err);
+    }
     return NextResponse.json(hospital);
   } catch (err) {
     console.error('PATCH /api/hospitals/[id]/data-management error', err);

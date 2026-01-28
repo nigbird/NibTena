@@ -107,7 +107,7 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                   <TableCell className="hidden sm:table-cell">
                     <Avatar className="h-12 w-12 rounded-md">
                         {hospital.imageUrl && <AvatarImage src={hospital.imageUrl} alt={hospital.name} />}
-                        <AvatarFallback className="rounded-md">{hospital.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="rounded-md">{(hospital.name || '').charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{hospital.name}</TableCell>

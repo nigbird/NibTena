@@ -2,11 +2,12 @@
 "use server";
 
 import { prisma } from '@/lib/prisma';
-import { requireHospitalPermission } from '@/lib/permissions';
+import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import type { EmailSettings } from '@prisma/client';
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
+import { createAuditLog } from '@/lib/audit';
 import { ImapFlow } from 'imapflow';
 
 const EmailSettingsSchema = z.object({
@@ -100,16 +101,37 @@ export async function updateEmailSettings(hospitalId: number, data: Partial<Emai
   
   const existingSettings = await prisma.emailSettings.findFirst({ where: { hospitalId } });
 
+  let result: EmailSettings | null = null;
   if (existingSettings) {
-    return await prisma.emailSettings.update({
+    result = await prisma.emailSettings.update({
       where: { id: existingSettings.id },
       data: settingsData,
     });
   } else {
-    return await prisma.emailSettings.create({
+    result = await prisma.emailSettings.create({
       data: settingsData,
     });
   }
+
+  try {
+    const actor = await getVerifiedUser();
+    await createAuditLog({
+      actorId: actor?.id ?? 'system',
+      actorType: actor?.role === 'superadmin' ? 'SuperAdmin' : 'User',
+      action: existingSettings ? 'UPDATE_EMAIL_SETTINGS' : 'CREATE_EMAIL_SETTINGS',
+      targetId: result.id,
+      targetType: 'EmailSettings',
+      changes: {
+        name: result.name,
+        isGlobal: result.isGlobal,
+        hospitalId: result.hospitalId,
+      },
+    });
+  } catch (err) {
+    console.error('[audit] failed to log email settings change', err);
+  }
+
+  return result;
 }
 
 export async function testEmailConnection(settings: EmailSettingsType) {
@@ -392,22 +414,52 @@ export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hos
         hospitalId: null,
     };
   
+    let result: EmailSettings | null = null;
     if(data.id) {
-        return await prisma.emailSettings.update({
-            where: { id: data.id },
-            data: settingsData,
-        });
+      result = await prisma.emailSettings.update({
+        where: { id: data.id },
+        data: settingsData,
+      });
     } else {
-        const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
-        if (existing) {
-            throw new Error("A global email configuration with this name already exists.");
-        }
-        return await prisma.emailSettings.create({ data: settingsData });
+      const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
+      if (existing) {
+        throw new Error("A global email configuration with this name already exists.");
+      }
+      result = await prisma.emailSettings.create({ data: settingsData });
     }
+
+    try {
+      const actor = await getVerifiedUser();
+      await createAuditLog({
+      actorId: actor?.id ?? 'system',
+      actorType: actor?.role === 'superadmin' ? 'SuperAdmin' : 'User',
+      action: data.id ? 'UPDATE_GLOBAL_EMAIL_SETTINGS' : 'CREATE_GLOBAL_EMAIL_SETTINGS',
+      targetId: result.id,
+      targetType: 'EmailSettings',
+      changes: { name: result.name },
+      });
+    } catch (err) {
+      console.error('[audit] failed to log global email settings change', err);
+    }
+
+    return result;
 }
 
 export async function deleteGlobalEmailSetting(id: number) {
-   return await prisma.emailSettings.delete({ where: { id }});
+   const deleted = await prisma.emailSettings.delete({ where: { id }});
+   try {
+     const actor = await getVerifiedUser();
+     await createAuditLog({
+       actorId: actor?.id ?? 'system',
+       actorType: actor?.role === 'superadmin' ? 'SuperAdmin' : 'User',
+       action: 'DELETE_GLOBAL_EMAIL_SETTING',
+       targetId: id,
+       targetType: 'EmailSettings',
+     });
+   } catch (err) {
+     console.error('[audit] failed to log delete global email setting', err);
+   }
+   return deleted;
 }
 
 export async function setHospitalEmailPreference(hospitalId: number, type: 'custom' | 'global', globalId: number | null) {
@@ -430,6 +482,20 @@ export async function setHospitalEmailPreference(hospitalId: number, type: 'cust
     });
   }
   revalidatePath('/hospital-admin/settings');
+
+  try {
+    const actor = await getVerifiedUser();
+    await createAuditLog({
+      actorId: actor?.id ?? 'system',
+      actorType: actor?.role === 'superadmin' ? 'SuperAdmin' : 'User',
+      action: 'SET_HOSPITAL_EMAIL_PREFERENCE',
+      targetId: hospitalId,
+      targetType: 'Hospital',
+      changes: { type, globalId }
+    });
+  } catch (err) {
+    console.error('[audit] failed to log hospital email preference change', err);
+  }
 }
 
 export async function sendPasswordResetEmail(email: string, token: string, hospitalId?: number) {

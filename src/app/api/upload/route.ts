@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { randomBytes } from 'crypto';
+
+export const runtime = 'nodejs';
 
 // Maximum file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -127,8 +129,20 @@ export async function POST(request: NextRequest) {
     // API key protection
     const providedKey = request.headers.get('x-upload-api-key') || request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
     const configuredKey = process.env.UPLOAD_API_KEY || '';
+    let user: any = null;
+    try {
+      const perms = await import('../../../lib/permissions');
+      if (perms && typeof perms.getVerifiedUser === 'function') {
+        user = await perms.getVerifiedUser().catch(() => null);
+      }
+    } catch (e) {
+      console.error('[upload] failed to import permissions/getVerifiedUser', e);
+      user = null;
+    }
+    const isSessionAuthorized = !!user && (user.role === 'superadmin' || user.role === 'hospital' || user.role === 'doctor');
+    const hasValidKey = !!configuredKey && providedKey === configuredKey;
 
-    if (configuredKey && providedKey !== configuredKey) {
+    if (configuredKey && !hasValidKey && !isSessionAuthorized) {
       logUploadAttempt({
         timestamp: new Date().toISOString(),
         ip: clientIp,
@@ -271,10 +285,49 @@ export async function POST(request: NextRequest) {
     const randomString = randomBytes(12).toString('hex');
     const filename = `${Date.now()}_${randomString}.${detected.ext}`;
 
-    // Ensure uploads directory exists
+    // Ensure uploads directory exists and is writable. On IIS the app
+    // process must have write permissions to this folder; if it doesn't
+    // the creation or test-write will fail and we return a clear error.
     const uploadsDir = join(process.cwd(), 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
+    try {
+      if (!existsSync(uploadsDir)) {
+        await mkdir(uploadsDir, { recursive: true });
+      }
+
+      // Test write permission by creating and removing a small temp file.
+      const testFile = join(uploadsDir, '.upload_write_test');
+      try {
+        await writeFile(testFile, 'ok');
+        await unlink(testFile);
+      } catch (e) {
+        console.error('[upload] uploads directory not writable:', e);
+        logUploadAttempt({
+          timestamp: new Date().toISOString(),
+          ip: clientIp,
+          userAgent,
+          filename: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          context: uploadContext,
+          success: false,
+          reason: 'FS_PERMISSION_DENIED'
+        });
+        return NextResponse.json({ error: 'Server cannot write uploads folder. Grant write permission to the app process.' }, { status: 500 });
+      }
+    } catch (e) {
+      console.error('[upload] failed to ensure uploads dir:', e);
+      logUploadAttempt({
+        timestamp: new Date().toISOString(),
+        ip: clientIp,
+        userAgent,
+        filename: file.name || 'unknown',
+        fileSize: file.size || 0,
+        fileType: file.type || null,
+        context: uploadContext,
+        success: false,
+        reason: 'UPLOAD_DIR_CREATE_FAILED'
+      });
+      return NextResponse.json({ error: 'Failed to prepare uploads directory' }, { status: 500 });
     }
 
     // Save the file

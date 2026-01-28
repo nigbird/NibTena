@@ -231,7 +231,10 @@ export default function HospitalFormDrawer({
         const uploadFd = new FormData();
         uploadFd.append('file', file);
         try {
-          const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd, headers: { 'x-upload-context': 'hospital' }, signal: controller.signal });
+          clearTimeout(timeout);
           const json = await resp.json().catch(() => ({}));
           const returnedUrl = json?.path || json?.url || json?.publicPath || json?.location;
           if (resp.ok && returnedUrl) {
@@ -239,11 +242,11 @@ export default function HospitalFormDrawer({
           } else {
             const errMsg = json?.error || json?.message || 'Upload failed';
             setImageValidationErrors([errMsg]);
-            return;
+            imageUrl = null; // proceed without image
           }
         } catch (e) {
-          setImageValidationErrors(['Upload failed']);
-          return;
+          setImageValidationErrors(['Upload timed out or failed']);
+          imageUrl = null; // proceed without image
         }
       }
 
@@ -286,6 +289,7 @@ export default function HospitalFormDrawer({
             onSubmit={handleSubmit}
             id="hospital-form"
             className="grid gap-6 py-4"
+            encType="multipart/form-data"
           >
             {imagePreview && (
                 <div key="preview" className="space-y-2">

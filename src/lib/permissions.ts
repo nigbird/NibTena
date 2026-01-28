@@ -182,10 +182,18 @@ export async function requireHospitalPermission(key: string, hospitalId: number)
     if (!user) return false;
 
     // Superadmins and global admins have access
-    if (user.isAdmin) return true;
+    // Note: We check role === 'superadmin' explicitly to distinguish from hospital admins
+    if (user.role === 'superadmin') return true;
 
     // Hospital-scoped users must belong to the hospital
-    if (user.role === 'hospital' && user.hospitalId === hospitalId) {
+    if (user.role === 'hospital') {
+      // CRITICAL: Prevent IDOR by verifying the user belongs to the requested hospital
+      if (user.hospitalId !== hospitalId) {
+        return false;
+      }
+
+      // If they belong to the hospital, check if they are admin OR have the specific permission
+      if (user.isAdmin) return true;
       return user.permissions.includes(key);
     }
 

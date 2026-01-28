@@ -1,10 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getVerifiedUser } from '@/lib/permissions';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const id = Number(params.id);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+
+    // Secure this endpoint to prevent IDOR / Context Switching
+    const user = await getVerifiedUser();
+    
+    // If not authenticated, or if authenticated as hospital staff but requesting a different hospital
+    if (!user) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (user.role === 'hospital' && user.hospitalId !== id) {
+       return NextResponse.json({ error: 'Forbidden: Access denied to this hospital context' }, { status: 403 });
+    }
+
+    // Superadmins can access any hospital, Hospital admins/staff can only access their own.
 
     const hospital = await prisma.hospital.findUnique({
       where: { id },

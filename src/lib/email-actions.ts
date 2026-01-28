@@ -324,7 +324,7 @@ export async function sendSetPasswordEmail(email: string, token: string, hospita
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
             <h2>Activate Your NibAppointment Account</h2>
             <p>An account has been created for you. To get started, you need to set your password by clicking the link below.</p>
-            <p>This link is valid for 24 hours.</p>
+            <p>This link is valid for 1 hour.</p>
             <p style="margin: 20px 0;">
                 <a href="${setPasswordUrl}" style="background-color: #F7D488; color: #2E2E2E; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                     Set Your Password

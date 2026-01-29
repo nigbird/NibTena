@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateOrigin } from "@/lib/csrf";
 
 // Step 5: Callback endpoint for successful payments
 export async function POST(request: NextRequest) {
+  // CSRF Protection: Validate Origin
+  if (!validateOrigin(request)) {
+    return NextResponse.json({ message: 'Invalid Origin' }, { status: 403 });
+  }
+
   try {
     // ✅ Read Authorization header
     const authHeader = request.headers.get("Authorization");

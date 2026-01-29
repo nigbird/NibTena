@@ -3,6 +3,7 @@ import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { randomBytes } from 'crypto';
+import { validateOrigin } from '../../../lib/csrf';
 
 export const runtime = 'nodejs';
 
@@ -119,6 +120,11 @@ function logUploadAttempt(log: UploadLog) {
 }
 
 export async function POST(request: NextRequest) {
+  // CSRF Protection: Validate Origin
+  if (!validateOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid Origin' }, { status: 403 });
+  }
+
   const clientIp = request.headers.get('x-forwarded-for') || 
                    request.headers.get('x-real-ip') || 
                    'unknown';

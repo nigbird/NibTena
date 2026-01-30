@@ -42,8 +42,8 @@ const safeHospitalSelect = {
 
 
 export default async function Home() {
-    const cookieStore = cookies();
-    const hasMiniAppSession = !!(await cookieStore).get('miniapp_session');
+    const cookieStore = await cookies();
+    const hasMiniAppSession = !!cookieStore.get('miniapp_session');
 
     console.log('User home page: hasMiniAppSession:', hasMiniAppSession);
 

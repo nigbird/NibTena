@@ -6,16 +6,17 @@ export function createCsrfToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
-export function getCookieToken(): string | undefined {
+export async function getCookieToken(): Promise<string | undefined> {
   try {
-    return cookies().get(COOKIE_NAME)?.value;
+    const cookieStore = await cookies();
+    return cookieStore.get(COOKIE_NAME)?.value;
   } catch (err) {
     return undefined;
   }
 }
 
-export function verifyCsrfToken(formToken?: string | null) {
-  const cookieToken = getCookieToken();
+export async function verifyCsrfToken(formToken?: string | null) {
+  const cookieToken = await getCookieToken();
   if (!cookieToken || !formToken) return false;
   const a = Buffer.from(String(cookieToken));
   const b = Buffer.from(String(formToken));

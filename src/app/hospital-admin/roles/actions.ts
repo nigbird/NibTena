@@ -89,7 +89,7 @@ export async function createRole(hospitalId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -148,7 +148,7 @@ export async function updateRole(formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -267,7 +267,7 @@ export async function createUser(hospitalId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
   
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -385,7 +385,7 @@ export async function updateUser(userId: number, formData: FormData) {
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 

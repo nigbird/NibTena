@@ -58,7 +58,7 @@ export async function saveDoctor(
   const rawData = Object.fromEntries(formData.entries());
   // Validate CSRF double-submit token
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { message: 'Invalid or missing CSRF token.', success: false };
   }
   

@@ -38,7 +38,7 @@ export async function addSpecialty(hospitalId: number, prevState: SpecialtyActio
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -77,7 +77,7 @@ export async function updateSpecialty(hospitalId: number, specialtyId: number, p
   if (!allowed) return { success: false, message: 'Unauthorized' };
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -163,7 +163,7 @@ export async function updateHospitalGeneralSettings(
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) return { success: false, message: "Unauthorized." };
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 

@@ -34,7 +34,7 @@ export async function createSuperAdmin(formData: FormData) {
   }
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -99,7 +99,7 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
   }
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 

@@ -79,7 +79,7 @@ export async function saveHospital(
   const actingSuperAdminId = user.id;
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 

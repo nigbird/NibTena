@@ -42,7 +42,7 @@ export async function updateUserProfile(
   }
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -110,7 +110,7 @@ export async function updateHospitalUserPasswordFirstLogin(
   }
 
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
@@ -202,7 +202,7 @@ export async function updateUserPassword(userId: number, prevState: PasswordChan
         return { success: false, message: 'Unauthorized.' };
     }
   const _csrf = formData.get('_csrf') as string | null;
-  if (!verifyCsrfToken(_csrf)) {
+  if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 

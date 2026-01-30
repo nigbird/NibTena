@@ -93,7 +93,7 @@ export function createPatientSessionToken(patient: Patient): string {
 }
 
 export async function getPatientFromCookie(): Promise<Patient | null> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   
   // 1. Prioritize standalone patient session
   const standaloneSessionCookie = cookieStore.get('nib-tena-patient-session')?.value;

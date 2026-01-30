@@ -9,18 +9,20 @@ export const metadata: Metadata = {
   description: 'Your health, simplified.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = headers().get('x-nonce') || '';
+  const headerList = await headers();
+  const nonce = headerList.get('x-nonce') || '';
   // Read the double-submit CSRF cookie (set by middleware) and expose it as
   // a safe global for Next's client runtime which expects `csrfToken` when
   // using server actions. The cookie is intentionally non-HttpOnly so client
   // code can read it. We render it into an inline script using the same
   // `nonce` value so CSP allows it.
-  const csrfCookie = cookies().get('csrfToken')?.value || '';
+  const cookieStore = await cookies();
+  const csrfCookie = cookieStore.get('csrfToken')?.value || '';
 
   return (
     <html lang="en" suppressHydrationWarning>

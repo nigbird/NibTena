@@ -120,11 +120,6 @@ function logUploadAttempt(log: UploadLog) {
 }
 
 export async function POST(request: NextRequest) {
-  // CSRF Protection: Validate Origin
-  if (!validateOrigin(request)) {
-    return NextResponse.json({ error: 'Invalid Origin' }, { status: 403 });
-  }
-
   const clientIp = request.headers.get('x-forwarded-for') || 
                    request.headers.get('x-real-ip') || 
                    'unknown';
@@ -147,6 +142,13 @@ export async function POST(request: NextRequest) {
     }
     const isSessionAuthorized = !!user && (user.role === 'superadmin' || user.role === 'hospital' || user.role === 'doctor');
     const hasValidKey = !!configuredKey && providedKey === configuredKey;
+
+    // Enforce CSRF protection for session-based requests (skip for valid API key requests)
+    if (!hasValidKey) {
+      if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid Origin' }, { status: 403 });
+      }
+    }
 
     if (configuredKey && !hasValidKey && !isSessionAuthorized) {
       logUploadAttempt({

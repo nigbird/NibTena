@@ -114,10 +114,17 @@ export async function updateHospitalUserPasswordFirstLogin(
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
-  const validatedFields = FirstLoginPasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+  const rawData = {
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const validatedFields = FirstLoginPasswordChangeSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };
+    const fieldErrors = validatedFields.error.flatten().fieldErrors;
+    const errorMessages = Object.values(fieldErrors).flat().join(', ');
+    return { errors: fieldErrors, message: errorMessages || 'Invalid data.' };
   }
 
   const { newPassword } = validatedFields.data;

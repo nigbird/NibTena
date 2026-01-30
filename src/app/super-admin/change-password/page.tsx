@@ -124,9 +124,16 @@ export default function SuperAdminChangePasswordPage() {
               )}
             </div>
 
-            <div className="flex justify-end">
-                      <PasswordSubmitButton />
-                    </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => revokeThenSignOut({ callbackUrl: '/super-admin/login' })}
+              >
+                Back to Login
+              </Button>
+              <PasswordSubmitButton />
+            </div>
                   </form>
                 </CardContent>
               </Card>

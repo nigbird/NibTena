@@ -11,7 +11,7 @@ import { Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signOut } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
-import { updateUserPassword, type PasswordChangeState } from '../profile/actions';
+import { updateHospitalUserPasswordFirstLogin, type PasswordChangeState } from '../profile/actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function PasswordSubmitButton() {
@@ -41,7 +41,7 @@ export default function HospitalChangePasswordPage() {
 
   const userId = session?.user?.id ? Number(session.user.id) : null;
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };
-  const updatePasswordAction = userId ? updateUserPassword.bind(null, userId) : null;
+  const updatePasswordAction = userId ? updateHospitalUserPasswordFirstLogin.bind(null, userId) : null;
   const [passwordState, dispatchPassword] = useActionState(
     updatePasswordAction || (async () => passwordInitialState),
     passwordInitialState
@@ -131,7 +131,14 @@ export default function HospitalChangePasswordPage() {
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => revokeThenSignOut({ callbackUrl: '/hospital-admin/login' })}
+              >
+                Back to Login
+              </Button>
               <PasswordSubmitButton />
             </div>
           </form>

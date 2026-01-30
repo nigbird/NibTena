@@ -38,10 +38,18 @@ export async function updateSuperAdminPassword(
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
-  const validatedFields = PasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+  const rawData = {
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const validatedFields = PasswordChangeSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };
+    const fieldErrors = validatedFields.error.flatten().fieldErrors;
+    // Construct a more descriptive error message from the field errors
+    const errorMessages = Object.values(fieldErrors).flat().join(', ');
+    return { errors: fieldErrors, message: errorMessages || 'Invalid data.' };
   }
     
   const { newPassword } = validatedFields.data;

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteHospital, updateHospitalStatus } from '@/app/super-admin/hospitals/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useSession } from 'next-auth/react';
 
 type HospitalListProps = {
   hospitals: Hospital[];
@@ -50,6 +51,9 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const saRole = (session?.user as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
+  const isReadOnly = saRole === 'checker';
 
   const handleDeleteClick = (hospital: Hospital) => {
     setSelectedHospital(hospital);
@@ -122,7 +126,7 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    {isReadOnly ? null : <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
                           <MoreHorizontal className="h-4 w-4" />
@@ -143,7 +147,7 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    </DropdownMenu>}
                   </TableCell>
                 </TableRow>
               );

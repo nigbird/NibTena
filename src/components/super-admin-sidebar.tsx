@@ -27,19 +27,31 @@ import {
 import { useSession } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
 
-const navLinks = [
+type NavLink = { href: string; label: string; icon: any };
+const ALL_LINKS: NavLink[] = [
   { href: '/super-admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/super-admin/hospitals', label: 'Hospitals', icon: Hospital },
   { href: '/super-admin/hospital-approvals', label: 'Approvals', icon: Bell },
   { href: '/super-admin/create-super-admin', label: 'Super Admins', icon: CircleUser },
   { href: '/super-admin/email', label: 'Email', icon: Mail },
   { href: '/super-admin/reports', label: 'Reports', icon: LineChart },
-  // { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function SuperAdminSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const saRole = (session?.user as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
+
+  const visibleLinks: NavLink[] = (() => {
+    if (saRole === 'both') return ALL_LINKS;
+    if (saRole === 'maker') {
+      return ALL_LINKS.filter(l => l.href === '/super-admin' || l.href === '/super-admin/hospitals');
+    }
+    if (saRole === 'checker') {
+      return ALL_LINKS.filter(l => l.href === '/super-admin' || l.href === '/super-admin/hospitals' || l.href === '/super-admin/hospital-approvals');
+    }
+    return ALL_LINKS.filter(l => l.href === '/super-admin');
+  })();
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] lg:w-[280px] bg-background border-r fixed top-0 left-0 h-full">
@@ -49,7 +61,7 @@ export default function SuperAdminSidebar() {
         </Link>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 lg:p-4">
-        {navLinks.map(({ href, label, icon: Icon }) => (
+        {visibleLinks.map(({ href, label, icon: Icon }) => (
           <Link
             key={label}
             href={href}
@@ -73,6 +85,16 @@ export default function SuperAdminSidebar() {
                     <div className="text-left overflow-hidden">
                         <p className="font-semibold text-sm leading-tight truncate">{session?.user?.name || 'Super Admin'}</p>
                         <p className="text-xs text-muted-foreground truncate">NibAppointment Platform</p>
+                        {saRole && (
+                          <span className={cn(
+                            'inline-block mt-1 text-[11px] px-2 py-0.5 rounded',
+                            saRole === 'maker' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                            saRole === 'checker' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
+                            'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          )}>
+                            {saRole === 'both' ? 'Super Admin (Maker+Checker)' : saRole.charAt(0).toUpperCase() + saRole.slice(1)}
+                          </span>
+                        )}
                     </div>
                 </Button>
             </DropdownMenuTrigger>

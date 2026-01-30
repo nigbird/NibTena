@@ -157,6 +157,94 @@ export type PasswordChangeState = {
   success?: boolean;
 };
 
+const FirstLoginPasswordChangeSchema = z.object({
+  newPassword: z.string().min(8, 'New password must be at least 8 characters.'),
+  confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: 'New passwords do not match.',
+  path: ['confirmPassword'],
+});
+
+export async function updateDoctorPasswordFirstLogin(
+  doctorId: number,
+  prevState: PasswordChangeState,
+  formData: FormData
+): Promise<PasswordChangeState> {
+  const user = await getVerifiedUser();
+  if (!user || user.id !== doctorId || user.role !== 'doctor') {
+    return { success: false, message: 'Unauthorized: You can only update your own password.' };
+  }
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
+  const rawData = {
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const validatedFields = FirstLoginPasswordChangeSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    const fieldErrors = validatedFields.error.flatten().fieldErrors;
+    const errorMessages = Object.values(fieldErrors).flat().join(', ');
+    return { errors: fieldErrors, message: errorMessages || 'Invalid data.' };
+  }
+    
+  const { newPassword } = validatedFields.data;
+
+  // Enforce strong password policy on the new password (including breach check)
+  const pwCheck = await validatePasswordAsync(newPassword);
+  if (!pwCheck.valid) {
+    return { errors: { newPassword: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' ') };
+  }
+
+  try {
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { mustChangePassword: true }
+    });
+    
+    if (!doctor) {
+        return { success: false, message: 'Doctor not found.' };
+    }
+
+    if (!doctor.mustChangePassword) {
+         return { success: false, message: 'Password change not required.' };
+    }
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await prisma.doctor.update({
+      where: { id: doctorId },
+      data: { 
+        password: newHashedPassword,
+        mustChangePassword: false,
+      },
+      select: { id: true }
+    });
+
+    // Revoke all sessions (including current one)
+    await incrementTokenVersionForRole('doctor', doctorId);
+
+    await createAuditLog({
+      actorId: doctorId,
+      actorType: 'Doctor',
+      action: 'UPDATE_OWN_PASSWORD',
+      targetId: doctorId,
+      targetType: 'Doctor'
+    });
+
+    // Sign out is handled on the client after success
+    return { success: true, message: 'Password updated successfully. You will be logged out shortly.' };
+
+  } catch (error) {
+      return { success: false, message: 'Failed to update password.' };
+  }
+}
+
 async function getHashedPasswordForDoctor(doctorId: number) {
     const doctor = await prisma.doctor.findUnique({
         where: { id: doctorId },
@@ -165,7 +253,11 @@ async function getHashedPasswordForDoctor(doctorId: number) {
     return doctor?.password;
 }
 
-export async function updateDoctorPassword(doctorId: number, prevState: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
+export async function updateDoctorPassword(
+  doctorId: number,
+  prevState: PasswordChangeState,
+  formData: FormData
+): Promise<PasswordChangeState> {
     const user = await getVerifiedUser();
     if (!user || user.id !== doctorId || user.role !== 'doctor') {
         return { success: false, message: 'Unauthorized.' };

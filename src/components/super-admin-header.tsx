@@ -31,6 +31,16 @@ import { signOut, useSession } from 'next-auth/react';
 
 export default function SuperAdminHeader() {
     const { data: session } = useSession();
+    const saRole = (session?.user as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
+    const visible = {
+      dashboard: true,
+      hospitals: true,
+      approvals: saRole === 'checker' || saRole === 'both',
+      superAdmins: saRole === 'both',
+      email: saRole === 'both',
+      reports: saRole === 'both',
+      settings: false,
+    };
     return (
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
@@ -51,60 +61,69 @@ export default function SuperAdminHeader() {
                 </Link>
               </div>
                 <nav className="grid gap-2 text-lg font-medium p-2">
-                    <Link
+                    {visible.dashboard && <Link
                         href="/super-admin"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <LayoutGrid className="h-5 w-5" />
                         Dashboard
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.hospitals && <Link
                         href="/super-admin/hospitals"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <Hospital className="h-5 w-5" />
                         Hospitals
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.approvals && <Link
                         href="/super-admin/hospital-approvals"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <Bell className="h-5 w-5" />
                         Approvals
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.superAdmins && <Link
                         href="/super-admin/create-super-admin"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <CircleUser className="h-5 w-5" />
                         Super Admins
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.email && <Link
                         href="/super-admin/email"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <Mail className="h-5 w-5" />
                         Email
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.reports && <Link
                         href="/super-admin/reports"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <LineChart className="h-5 w-5" />
                         Reports
-                    </Link>
-                    <Link
+                    </Link>}
+                    {visible.settings && <Link
                         href="/super-admin/settings"
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                         >
                         <Settings className="h-5 w-5" />
                         Settings
-                    </Link>
+                    </Link>}
                 </nav>
             </SheetContent>
           </Sheet>
 
           <div className="w-full flex-1" />
+          {saRole && (
+            <span className={
+              (saRole === 'maker' && 'bg-amber-100 text-amber-800 border border-amber-300') ||
+              (saRole === 'checker' && 'bg-sky-100 text-sky-800 border border-sky-300') ||
+              'bg-emerald-100 text-emerald-800 border border-emerald-300'
+            } style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6 }}>
+              {saRole === 'both' ? 'Super Admin (Maker+Checker)' : saRole.charAt(0).toUpperCase() + saRole.slice(1)}
+            </span>
+          )}
         </header>
     )
 }

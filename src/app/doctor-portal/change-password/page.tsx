@@ -11,12 +11,11 @@ import { Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signOut } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
-import { updateDoctorPassword, type PasswordChangeState } from '../profile/actions';
+import { updateDoctorPasswordFirstLogin, type PasswordChangeState } from '../profile/actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function PasswordSubmitButton() {
   const { pending } = useFormStatus();
-  const csrfToken = useCsrfToken();
 
   return (
     <Button variant="accent" type="submit" className="w-full sm:w-auto" disabled={pending}>
@@ -38,10 +37,11 @@ export default function DoctorChangePasswordPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const csrfToken = useCsrfToken();
 
   const doctorId = session?.user?.id ? Number(session.user.id) : null;
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };
-  const updatePasswordAction = doctorId ? updateDoctorPassword.bind(null, doctorId) : null;
+  const updatePasswordAction = doctorId ? updateDoctorPasswordFirstLogin.bind(null, doctorId) : null;
   const [passwordState, dispatchPassword] = useActionState(
     updatePasswordAction || (async () => passwordInitialState),
     passwordInitialState
@@ -78,31 +78,8 @@ export default function DoctorChangePasswordPage() {
           <CardDescription>We will sign you out after a successful change.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={dispatchPassword} key={formKey} className="space-y-6">
+          <form action={dispatchPassword} key={formKey} className="space-y-4">
             <input type="hidden" name="_csrf" value={csrfToken} />
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  onClick={() => setShowCurrentPassword((prev) => !prev)}
-                >
-                  {showCurrentPassword ? <EyeOff /> : <Eye />}
-                </Button>
-              </div>
-              {passwordState.errors?.currentPassword && (
-                <p className="text-sm font-medium text-destructive">{passwordState.errors.currentPassword[0]}</p>
-              )}
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
@@ -152,7 +129,14 @@ export default function DoctorChangePasswordPage() {
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => revokeThenSignOut({ callbackUrl: '/doctor-portal/login' })}
+              >
+                Back to Login
+              </Button>
               <PasswordSubmitButton />
             </div>
           </form>

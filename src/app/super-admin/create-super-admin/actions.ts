@@ -17,6 +17,10 @@ const SuperAdminSchema = z.object({
 });
 
 export async function getSuperAdmins() {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
+    return [];
+  }
   return prisma.superAdmin.findMany({
     orderBy: { createdAt: 'desc' },
     select: { id: true, name: true, email: true, role: true as any, createdAt: true } as any,
@@ -25,7 +29,7 @@ export async function getSuperAdmins() {
 
 export async function createSuperAdmin(formData: FormData) {
   const user = await getVerifiedUser();
-  if (!user || user.role !== 'superadmin') {
+  if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
     return { success: false, message: 'Unauthorized' };
   }
 
@@ -90,7 +94,7 @@ export async function createSuperAdmin(formData: FormData) {
 
 export async function updateSuperAdmin(id: number, formData: FormData) {
   const user = await getVerifiedUser();
-  if (!user || user.role !== 'superadmin') {
+  if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
     return { success: false, message: 'Unauthorized' };
   }
 
@@ -123,6 +127,11 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
   };
 
   if (password) {
+    // Security Fix: Only allow password change if the user is updating their own account
+    if (user.id !== id) {
+      return { success: false, message: 'You can only change your own password.' };
+    }
+
     const pwCheck = await validatePasswordAsync(password);
     if (!pwCheck.valid) {
       return { success: false, message: pwCheck.errors.join(' ') };
@@ -154,7 +163,7 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
 
 export async function deleteSuperAdmin(id: number) {
   const user = await getVerifiedUser();
-  if (!user || user.role !== 'superadmin') {
+  if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
     return { success: false, message: 'Unauthorized' };
   }
 

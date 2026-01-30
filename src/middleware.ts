@@ -87,12 +87,13 @@ export default withAuth(
       const forcedRoutes: Record<string, string> = {
         hospital: '/hospital-admin/change-password',
         doctor: '/doctor-portal/change-password',
+        superadmin: '/super-admin/change-password',
       };
 
       // If role is missing or not recognized, fall back to a generic change-password page.
       // This ensures forced password change cannot be bypassed by a missing/ malformed role.
       const targetPath = (role && forcedRoutes[role]) ? forcedRoutes[role] : '/change-password';
-      if (!pathname.startsWith(targetPath)) {
+      if (!pathname.startsWith(targetPath) && !pathname.startsWith('/api/')) {
         const url = req.nextUrl.clone();
         url.pathname = targetPath;
         url.searchParams.set('from', pathname);
@@ -108,6 +109,32 @@ export default withAuth(
     /* ===============================
        HOSPITAL STAFF LANDING
     =============================== */
+    // Super Admin maker/checker route gating
+    if (token?.role === 'superadmin') {
+      const saRole = (token as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
+      const bothOnlyPrefixes = ['/super-admin/create-super-admin', '/super-admin/email', '/super-admin/reports'];
+      const checkerOnlyPrefixes = ['/super-admin/hospital-approvals'];
+
+      if (saRole !== 'both' && bothOnlyPrefixes.some(p => pathname.startsWith(p))) {
+        const url = req.nextUrl.clone();
+        url.pathname = '/super-admin';
+        const redirectRes = NextResponse.redirect(url);
+        const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        redirectRes.headers.set('Content-Security-Policy', cspLocal);
+        redirectRes.headers.set('x-nonce', nonce);
+        return redirectRes;
+      }
+      if (!(saRole === 'checker' || saRole === 'both') && checkerOnlyPrefixes.some(p => pathname.startsWith(p))) {
+        const url = req.nextUrl.clone();
+        url.pathname = '/super-admin';
+        const redirectRes = NextResponse.redirect(url);
+        const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        redirectRes.headers.set('Content-Security-Policy', cspLocal);
+        redirectRes.headers.set('x-nonce', nonce);
+        return redirectRes;
+      }
+    }
+
     if (token?.role === 'hospital' && token?.isAdmin !== true) {
       if (pathname === '/hospital-admin' || pathname === '/hospital-admin/') {
         const permKeys: string[] = (token as any)?.permissionKeys || [];

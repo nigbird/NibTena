@@ -1,28 +1,26 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
-import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
-import { updateHospitalUserPasswordFirstLogin, type PasswordChangeState } from '../profile/actions';
+import { updateSuperAdminPassword, type PasswordChangeState } from './actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { useFormStatus } from 'react-dom';
 
 function PasswordSubmitButton() {
   const { pending } = useFormStatus();
-  const csrfToken = useCsrfToken();
-
   return (
-    <Button variant="accent" type="submit" className="w-full sm:w-auto" disabled={pending}>
+    <Button type="submit" disabled={pending}>
       {pending ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Updating...
         </>
       ) : (
         'Update Password'
@@ -31,17 +29,18 @@ function PasswordSubmitButton() {
   );
 }
 
-export default function HospitalChangePasswordPage() {
-  const { data: session, status } = useSession();
+export default function SuperAdminChangePasswordPage() {
+  const { data: session } = useSession();
   const { toast } = useToast();
   const [formKey, setFormKey] = useState(Date.now());
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const csrfToken = useCsrfToken();
 
   const userId = session?.user?.id ? Number(session.user.id) : null;
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };
-  const updatePasswordAction = userId ? updateHospitalUserPasswordFirstLogin.bind(null, userId) : null;
+  const updatePasswordAction = userId ? updateSuperAdminPassword.bind(null, userId) : null;
   const [passwordState, dispatchPassword] = useActionState(
     updatePasswordAction || (async () => passwordInitialState),
     passwordInitialState
@@ -51,7 +50,7 @@ export default function HospitalChangePasswordPage() {
     if (passwordState.success) {
       toast({ title: 'Password Updated', description: passwordState.message });
       setFormKey(Date.now());
-      setTimeout(() => revokeThenSignOut({ callbackUrl: '/hospital-admin/login' }), 1500);
+      setTimeout(() => revokeThenSignOut({ callbackUrl: '/super-admin/login' }), 1500);
     } else if (passwordState.message) {
       toast({ variant: 'destructive', title: 'Update Failed', description: passwordState.message });
     }
@@ -62,29 +61,23 @@ export default function HospitalChangePasswordPage() {
       <div className="mb-6 space-y-2">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Change Password</h1>
         <p className="text-muted-foreground">
-          For security reasons, you must set a new password before accessing the dashboard.
+          Update your password to keep your account secure.
         </p>
       </div>
 
-      <Alert className="mb-6 border-amber-500/50 bg-amber-50 text-amber-900">
-        <ShieldAlert className="h-5 w-5" />
-        <AlertTitle>Action required</AlertTitle>
-        <AlertDescription>
-          This account is using a temporary password. Update it now to continue.
-        </AlertDescription>
-      </Alert>
-
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl">Update your password</CardTitle>
-          <CardDescription>We will sign you out after a successful change.</CardDescription>
+          <CardTitle>Change Password</CardTitle>
+          <CardDescription>
+            Enter your current password and a new strong password.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={dispatchPassword} key={formKey} className="space-y-4">
-            <input type="hidden" name="_csrf" value={csrfToken} />
-
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <input type="hidden" name="_csrf" value={csrfToken} />
+              
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
               <div className="relative">
                 <Input
                   id="newPassword"
@@ -135,17 +128,15 @@ export default function HospitalChangePasswordPage() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => revokeThenSignOut({ callbackUrl: '/hospital-admin/login' })}
+                onClick={() => revokeThenSignOut({ callbackUrl: '/super-admin/login' })}
               >
                 Back to Login
               </Button>
               <PasswordSubmitButton />
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+                  </form>
+                </CardContent>
+              </Card>
+          </div>
   );
 }
-
-

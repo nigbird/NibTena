@@ -16,6 +16,7 @@ export default function SuperAdminLayout({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/super-admin/login';
+  const isChangePasswordPage = pathname === '/super-admin/change-password';
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -26,7 +27,7 @@ export default function SuperAdminLayout({
     }
   }, [isLoginPage, status, router]);
 
-  if (isLoginPage) {
+  if (isLoginPage || isChangePasswordPage) {
     return <>{children}</>;
   }
   

@@ -4,8 +4,13 @@
 import { prisma } from '@/lib/prisma';
 import { format, startOfDay, endOfDay, isBefore, isAfter } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { getVerifiedUser } from '@/lib/permissions';
 
 export async function getHospitalReportData(dateRange?: DateRange) {
+    const user = await getVerifiedUser();
+    if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
+        return [];
+    }
     // Define the date range for the database query.
     // If no date range is provided, it will not filter by date.
     const createdAtDateFilter = dateRange?.from && dateRange?.to 

@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedUser } from '@/lib/permissions';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = Number(params.id);
+    const { id: idStr } = await params;
+    const id = Number(idStr);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
     // Secure this endpoint to prevent IDOR / Context Switching

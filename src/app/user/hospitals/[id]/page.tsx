@@ -7,8 +7,9 @@ import { getHospitalData } from './actions';
 import HospitalDoctorsList from '@/components/patient-portal/hospital-doctors-list';
 import HospitalMapDisplay from '@/components/patient-portal/hospital-map-display';
 
-export default async function HospitalDetailsPage({ params }: { params: { id: string }}) {
-  const hospitalId = Number(params.id);
+export default async function HospitalDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const hospitalId = Number(id);
   const { hospital, doctors, specialties } = await getHospitalData(hospitalId);
 
   if (!hospital) {

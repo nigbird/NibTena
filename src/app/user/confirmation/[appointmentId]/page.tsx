@@ -40,19 +40,21 @@ async function getConfirmationData(appointmentId: string) {
 }
 
 
-export default async function ConfirmationPage({ params, searchParams }: { params: { appointmentId: string }, searchParams?: { success?: string } }) {
-  const appointmentId = params.appointmentId;
+export default async function ConfirmationPage({ params, searchParams }: { params: Promise<{ appointmentId: string }>, searchParams?: Promise<{ success?: string }> }) {
+  const { appointmentId } = await params;
   const { appointment, doctor } = await getConfirmationData(appointmentId);
 
   if (!appointment || !doctor) {
     notFound();
   }
 
+  const resolvedSearchParams = await searchParams;
+
   const confirmationImage = placeholderImages.find(p => p.id === 'confirmation-image');
 
   return (
     <div className="container py-12">
-      <ConfirmationClient success={searchParams?.success === 'true'} appointmentId={appointmentId}>
+      <ConfirmationClient success={resolvedSearchParams?.success === 'true'} appointmentId={appointmentId}>
         <div className="mx-auto max-w-3xl">
           <Card className="overflow-hidden shadow-xl">
             {confirmationImage && (

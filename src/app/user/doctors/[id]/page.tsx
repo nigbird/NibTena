@@ -58,10 +58,11 @@ export default async function DoctorProfilePage({
     params,
     searchParams,
 }: {
-    params: { id: string };
-    searchParams?: { [key: string]: string | string[] | undefined };
+    params: Promise<{ id: string }>;
+    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const doctorId = Number(params.id);
+  const { id } = await params;
+  const doctorId = Number(id);
   
   const { doctor, doctorHospitals } = await getDoctorData(doctorId);
 
@@ -69,7 +70,8 @@ export default async function DoctorProfilePage({
     notFound();
   }
   
-  const hospitalIdParam = searchParams?.hospitalId;
+  const resolvedSearchParams = await searchParams;
+  const hospitalIdParam = resolvedSearchParams?.hospitalId;
   const initialHospitalId = hospitalIdParam 
     ? Number(hospitalIdParam) 
     : (doctorHospitals[0]?.id || null);

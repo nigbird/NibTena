@@ -4,14 +4,15 @@ import { requireHospitalPermission, getVerifiedUser } from '@/lib/permissions';
 import { validateOrigin } from '@/lib/csrf';
 import { createAuditLog } from '@/lib/audit';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // CSRF Protection: Validate Origin
     if (!validateOrigin(req)) {
       return NextResponse.json({ error: 'Invalid Origin' }, { status: 403 });
     }
 
-    const id = Number(params.id);
+    const { id: idStr } = await params;
+    const id = Number(idStr);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
     const allowed = await requireHospitalPermission('Settings:Update', id);
     if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -45,9 +46,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = Number(params.id);
+    const { id: idStr } = await params;
+    const id = Number(idStr);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
     const allowed = await requireHospitalPermission('Settings:View', id);
     if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

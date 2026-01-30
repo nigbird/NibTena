@@ -29,6 +29,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 type SuperAdminRow = Awaited<ReturnType<typeof getSuperAdmins>>[number];
 
@@ -165,6 +166,14 @@ function SuperAdminForm({
 
 export default function SuperAdminManagementPage() {
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const saRole = (session?.user as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
+  useEffect(() => {
+    if (saRole && saRole !== 'both') {
+      router.push('/super-admin');
+    }
+  }, [saRole, router]);
   const [admins, setAdmins] = useState<SuperAdminRow[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [adminToEdit, setAdminToEdit] = useState<SuperAdminRow | null>(null);

@@ -384,6 +384,10 @@ export async function sendHospitalEmail(
 // ---- Super Admin Actions ----
 
 export async function getGlobalEmailSettings() {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
+    return [];
+  }
   return await prisma.emailSettings.findMany({
     where: { isGlobal: true },
     orderBy: { name: 'asc' },
@@ -391,6 +395,10 @@ export async function getGlobalEmailSettings() {
 }
 
 export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hospitalId'>) {
+    const user = await getVerifiedUser();
+    if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
+      throw new Error('Unauthorized');
+    }
     const isSimplified = !data.smtpHost && data.smtpUser && data.smtpPass;
 
     let validatedData;
@@ -446,6 +454,10 @@ export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hos
 }
 
 export async function deleteGlobalEmailSetting(id: number) {
+   const user = await getVerifiedUser();
+   if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
+     throw new Error('Unauthorized');
+   }
    const deleted = await prisma.emailSettings.delete({ where: { id }});
    try {
      const actor = await getVerifiedUser();

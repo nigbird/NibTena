@@ -12,10 +12,13 @@ import type { Hospital } from '@/lib/definitions';
 import HospitalList from '@/components/super-admin/hospital-list';
 import HospitalFormDrawer from '@/components/super-admin/hospital-form-drawer';
 import PaginationControls from '@/components/PaginationControls';
+import { useSession } from 'next-auth/react';
 
 function HospitalsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const saRole = (session?.user as any)?.superAdminRole as 'maker' | 'checker' | 'both' | undefined;
 
   const page = searchParams.get('page') ?? '1';
   const perPage = searchParams.get('per_page') ?? '10';
@@ -81,10 +84,12 @@ function HospitalsPageContent() {
           <h1 className="text-3xl font-bold tracking-tight font-headline">Hospital Management</h1>
           <p className="text-lg text-muted-foreground">Add, edit, and manage all hospitals on the platform.</p>
         </div>
-        <Button onClick={handleAddClick} variant="accent">
-          <PlusCircle className="mr-2" />
-          Add Hospital
-        </Button>
+        {saRole !== 'checker' && (
+          <Button onClick={handleAddClick} variant="accent">
+            <PlusCircle className="mr-2" />
+            Add Hospital
+          </Button>
+        )}
       </div>
 
       <HospitalFormDrawer

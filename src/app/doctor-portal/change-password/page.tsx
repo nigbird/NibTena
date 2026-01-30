@@ -16,7 +16,6 @@ import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function PasswordSubmitButton() {
   const { pending } = useFormStatus();
-  const csrfToken = useCsrfToken();
 
   return (
     <Button variant="accent" type="submit" className="w-full sm:w-auto" disabled={pending}>
@@ -38,6 +37,7 @@ export default function DoctorChangePasswordPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const csrfToken = useCsrfToken();
 
   const doctorId = session?.user?.id ? Number(session.user.id) : null;
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };

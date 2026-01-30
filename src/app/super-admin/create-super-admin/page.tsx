@@ -26,16 +26,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-  SheetClose,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { useSession } from 'next-auth/react';
 
 type SuperAdminRow = Awaited<ReturnType<typeof getSuperAdmins>>[number];
 
@@ -50,6 +43,7 @@ function SuperAdminForm({
   onSuccess: () => void;
   adminToEdit: SuperAdminRow | null;
 }) {
+  const { data: session } = useSession();
   const isEditing = !!adminToEdit;
   const { toast } = useToast();
   const [formState, setFormState] = useState({
@@ -61,6 +55,9 @@ function SuperAdminForm({
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const csrfToken = useCsrfToken();
+  
+  const currentUserId = session?.user?.id ? Number(session.user.id) : null;
+  const canEditPassword = !isEditing || (adminToEdit && currentUserId === adminToEdit.id);
 
   useEffect(() => {
     if (isOpen) {
@@ -125,8 +122,13 @@ function SuperAdminForm({
                 type={showPassword ? 'text' : 'password'}
                 value={formState.password}
                 onChange={(e) => setFormState({ ...formState, password: e.target.value })}
-                placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Required'}
+                placeholder={
+                  !canEditPassword 
+                    ? 'Only the owner can change this password' 
+                    : (isEditing ? 'Leave blank to keep unchanged' : 'Required')
+                }
                 required={!isEditing}
+                disabled={!canEditPassword}
               />
               <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff /> : <Eye />}

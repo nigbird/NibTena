@@ -91,6 +91,87 @@ export type PasswordChangeState = {
   success?: boolean;
 };
 
+const FirstLoginPasswordChangeSchema = z.object({
+  newPassword: z.string().min(8, 'New password must be at least 8 characters.'),
+  confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: 'New passwords do not match.',
+  path: ['confirmPassword'],
+});
+
+export async function updateHospitalUserPasswordFirstLogin(
+  userId: number,
+  prevState: PasswordChangeState,
+  formData: FormData
+): Promise<PasswordChangeState> {
+  const user = await getVerifiedUser();
+  if (!user || user.id !== userId) {
+    return { success: false, message: 'Unauthorized' };
+  }
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!verifyCsrfToken(_csrf)) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
+  const validatedFields = FirstLoginPasswordChangeSchema.safeParse(Object.fromEntries(formData.entries()));
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors, message: 'Invalid data.' };
+  }
+
+  const { newPassword } = validatedFields.data;
+
+  // Enforce strong password policy on the new password (including breach check)
+  const pwCheck = await validatePasswordAsync(newPassword);
+  if (!pwCheck.valid) {
+    return { errors: { newPassword: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' ') };
+  }
+
+  try {
+     // Check if user actually requires a password change
+     if (user.entityType === 'hospital') {
+         const hospital = await prisma.hospital.findUnique({ where: { id: userId }, select: { mustChangePassword: true } });
+         if (!hospital?.mustChangePassword) {
+             return { success: false, message: 'Password change not required.' };
+         }
+     } else {
+         const u = await prisma.user.findUnique({ where: { id: userId }, select: { mustChangePassword: true } });
+         if (!u?.mustChangePassword) {
+             return { success: false, message: 'Password change not required.' };
+         }
+     }
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update the correct table based on entityType
+    if (user.entityType === 'hospital') {
+        await prisma.hospital.update({
+            where: { id: userId },
+            data: { 
+                password: newHashedPassword,
+                mustChangePassword: false,
+            },
+        });
+    } else {
+         await prisma.user.update({
+            where: { id: userId },
+            data: { 
+                password: newHashedPassword,
+                mustChangePassword: false,
+            },
+        });
+    }
+
+    // Sign out is handled on the client after success
+    return { success: true, message: 'Password updated successfully. You will be logged out shortly.' };
+
+  } catch (error) {
+    console.error('Password update failed:', error);
+    return { success: false, message: 'Failed to update password.' };
+  }
+}
+
 async function getHashedPasswordForUser(user: VerifiedUser) {
     if (user.entityType === 'hospital') {
          const hospital = await prisma.hospital.findUnique({

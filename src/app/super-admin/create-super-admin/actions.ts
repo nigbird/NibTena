@@ -123,6 +123,11 @@ export async function updateSuperAdmin(id: number, formData: FormData) {
   };
 
   if (password) {
+    // Security Fix: Only allow password change if the user is updating their own account
+    if (user.id !== id) {
+      return { success: false, message: 'You can only change your own password.' };
+    }
+
     const pwCheck = await validatePasswordAsync(password);
     if (!pwCheck.valid) {
       return { success: false, message: pwCheck.errors.join(' ') };

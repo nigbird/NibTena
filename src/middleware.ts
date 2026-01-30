@@ -87,12 +87,13 @@ export default withAuth(
       const forcedRoutes: Record<string, string> = {
         hospital: '/hospital-admin/change-password',
         doctor: '/doctor-portal/change-password',
+        superadmin: '/super-admin/change-password',
       };
 
       // If role is missing or not recognized, fall back to a generic change-password page.
       // This ensures forced password change cannot be bypassed by a missing/ malformed role.
       const targetPath = (role && forcedRoutes[role]) ? forcedRoutes[role] : '/change-password';
-      if (!pathname.startsWith(targetPath)) {
+      if (!pathname.startsWith(targetPath) && !pathname.startsWith('/api/')) {
         const url = req.nextUrl.clone();
         url.pathname = targetPath;
         url.searchParams.set('from', pathname);

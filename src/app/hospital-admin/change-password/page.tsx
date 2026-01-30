@@ -80,31 +80,8 @@ export default function HospitalChangePasswordPage() {
           <CardDescription>We will sign you out after a successful change.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={dispatchPassword} key={formKey} className="space-y-6">
+          <form action={dispatchPassword} key={formKey} className="space-y-4">
             <input type="hidden" name="_csrf" value={csrfToken} />
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  onClick={() => setShowCurrentPassword((prev) => !prev)}
-                >
-                  {showCurrentPassword ? <EyeOff /> : <Eye />}
-                </Button>
-              </div>
-              {passwordState.errors?.currentPassword && (
-                <p className="text-sm font-medium text-destructive">{passwordState.errors.currentPassword[0]}</p>
-              )}
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>

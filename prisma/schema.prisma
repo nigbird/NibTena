@@ -12,6 +12,7 @@ model SuperAdmin {
   email     String   @unique
   name      String
   password  String
+  mustChangePassword Boolean @default(true)
   tokenVersion Int    @default(0)
   role      String   @default("maker") // "maker" or "checker"
   createdAt DateTime @default(now())

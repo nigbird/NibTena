@@ -71,6 +71,7 @@ export default withAuth(
         const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
       responseToReturn.headers.set('Content-Security-Policy', csp);
       responseToReturn.headers.set('x-nonce', nonce);
+      responseToReturn.headers.set('Referrer-Policy', 'same-origin');
       return responseToReturn;
     }
 
@@ -102,6 +103,7 @@ export default withAuth(
           const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
         redirectRes.headers.set('Content-Security-Policy', csp);
         redirectRes.headers.set('x-nonce', nonce);
+        redirectRes.headers.set('Referrer-Policy', 'same-origin');
         return redirectRes;
       }
     }
@@ -122,6 +124,7 @@ export default withAuth(
         const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
         redirectRes.headers.set('Content-Security-Policy', cspLocal);
         redirectRes.headers.set('x-nonce', nonce);
+        redirectRes.headers.set('Referrer-Policy', 'same-origin');
         return redirectRes;
       }
       if (!(saRole === 'checker' || saRole === 'both') && checkerOnlyPrefixes.some(p => pathname.startsWith(p))) {
@@ -131,6 +134,7 @@ export default withAuth(
         const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
         redirectRes.headers.set('Content-Security-Policy', cspLocal);
         redirectRes.headers.set('x-nonce', nonce);
+        redirectRes.headers.set('Referrer-Policy', 'same-origin');
         return redirectRes;
       }
     }
@@ -170,6 +174,7 @@ export default withAuth(
           const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
           redirectRes.headers.set('Content-Security-Policy', cspLocal);
           redirectRes.headers.set('x-nonce', nonce);
+          redirectRes.headers.set('Referrer-Policy', 'same-origin');
           return redirectRes;
         }
       }
@@ -183,6 +188,7 @@ export default withAuth(
     const nextRes = NextResponse.next({ request: { headers: forwarded } });
     nextRes.headers.set('Content-Security-Policy', csp);
     nextRes.headers.set('x-nonce', nonce);
+    nextRes.headers.set('Referrer-Policy', 'same-origin');
     return nextRes;
   },
   {

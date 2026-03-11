@@ -37,10 +37,42 @@ function SubmitButton() {
 function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPasswordState) => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const [persistedToken, setPersistedToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 1. Try reading token from the URL search parameters or fragment
+    let token = searchParams.get('token');
+    if (!token && typeof window !== 'undefined') {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        token = sp.get('token') || token;
+        if (!token && window.location.hash) {
+          const h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+          token = h.get('token') || token;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    // 2. If token is found, save it in state AND sessionStorage so it survives refreshes
+    if (token) {
+      setPersistedToken(token);
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('reset_token', token);
+      }
+    } 
+    // 3. If token is NOT in URL, check if we have one saved in sessionStorage
+    else if (typeof window !== 'undefined') {
+      const savedToken = window.sessionStorage.getItem('reset_token');
+      if (savedToken) {
+        setPersistedToken(savedToken);
+      }
+    }
+  }, [searchParams]);
 
   const initialState: ResetPasswordState = { success: false, message: null };
-  const resetPasswordWithToken = resetPassword.bind(null, token || '');
+  const resetPasswordWithToken = resetPassword.bind(null, persistedToken || '');
   const [state, formAction] = useActionState(resetPasswordWithToken, initialState);
   const csrfToken = useCsrfToken();
   
@@ -56,6 +88,37 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
     setIsClient(true);
   }, []);
 
+  // remove token from URL and history to avoid leaking it in Referer or browser history
+  useEffect(() => {
+    if (isClient && persistedToken) {
+      try {
+        console.debug('[reset-password] token present (client) - removing from URL for safety', persistedToken?.slice?.(0,8));
+        const u = new URL(window.location.href);
+        if (u.searchParams.has('token')) {
+          u.searchParams.delete('token');
+          // Also clear token if present in hash
+          if (u.hash) {
+            const h = new URLSearchParams(u.hash.replace(/^#/, ''));
+            if (h.has('token')) {
+              h.delete('token');
+              u.hash = h.toString() ? `#${h.toString()}` : '';
+            }
+          }
+          window.history.replaceState(null, '', u.pathname + (u.search || '') + (u.hash || ''));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [isClient, persistedToken]);
+
+  // Clean up sessionStorage after successful reset
+  useEffect(() => {
+    if (state.success && typeof window !== 'undefined') {
+      window.sessionStorage.removeItem('reset_token');
+    }
+  }, [state.success]);
+
   if (!isClient) {
     return (
        <div className="flex justify-center items-center h-24">
@@ -64,7 +127,7 @@ function ResetPasswordForm({ onStateChange }: { onStateChange: (state: ResetPass
     );
   }
   
-  if (!token) {
+  if (!persistedToken) {
     return (
         <div className="text-center space-y-4">
             <Alert variant="destructive">

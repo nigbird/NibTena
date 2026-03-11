@@ -286,3 +286,17 @@ model AuditLog {
   userAgent   String?  // Optional: capture User Agent
   createdAt   DateTime @default(now())
 }
+
+// Stores single-use, hashed password/set-password tokens
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  userType   String   // 'superadmin' | 'hospital' | 'user' | 'doctor'
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, userType])
+}

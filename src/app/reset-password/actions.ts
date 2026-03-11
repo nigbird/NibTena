@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { verifyAndConsumeResetToken, invalidateAllResetTokensFor } from '@/lib/reset-token';
 
 const ResetPasswordSchema = z
   .object({
@@ -73,6 +74,12 @@ export async function resetPassword(
     const decoded = jwt.verify(token, secret) as DecodedToken;
 
     const { userId, userType } = decoded;
+
+    // Ensure token was stored and not used/expired, then mark as used
+    const ok = await verifyAndConsumeResetToken(token, userId, userType);
+    if (!ok) {
+      return { success: false, message: 'Invalid or already used reset link. Please request a new one.' };
+    }
     const { newPassword } = validatedFields.data;
 
     // Enforce password policy including breach check
@@ -115,6 +122,12 @@ export async function resetPassword(
         break;
       default:
         throw new Error('Invalid user type in token.');
+    }
+    // Invalidate any other outstanding reset tokens for this user (defense-in-depth)
+    try {
+      await invalidateAllResetTokensFor(userId, userType);
+    } catch (e) {
+      console.error('Failed to invalidate other reset tokens:', e);
     }
 
     return {

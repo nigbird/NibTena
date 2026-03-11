@@ -339,7 +339,13 @@ export async function createUser(hospitalId: number, formData: FormData) {
             if (!secret) throw new Error('AUTH_SECRET is not set.');
             
             const token = jwt.sign({ userId: userRec.id, userType: 'user', email: userRec.email }, secret, { expiresIn: '1h' });
-            
+            try {
+              const { createResetTokenRecord } = await import('@/lib/reset-token');
+              await createResetTokenRecord(token, userRec.id, 'user', 60 * 60);
+            } catch (e) {
+              console.error('Failed to persist set-password token for user', e);
+            }
+
             // Send email asynchronously
             sendSetPasswordEmail(userRec.email, token, hospitalId)
                 .then(result => {

@@ -248,6 +248,13 @@ export async function saveHospital(
         const secret = process.env.AUTH_SECRET;
         if (!secret) throw new Error('AUTH_SECRET is not set.');
         const token = jwt.sign({ userId: created.id, userType: 'hospital', email: created.contactEmail }, secret, { expiresIn: '1h' });
+        // store hashed one-time token
+        try {
+          const { createResetTokenRecord } = await import('@/lib/reset-token');
+          await createResetTokenRecord(token, created.id, 'hospital', 60 * 60);
+        } catch (e) {
+          console.error('Failed to persist set-password token record', e);
+        }
         
         // NOTE: sending set-password emails is deferred until a hospital is approved
 

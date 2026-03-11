@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { sendPasswordResetEmail } from '@/lib/email-actions';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { createResetTokenRecord } from '@/lib/reset-token';
 
 const RequestResetSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -91,7 +92,8 @@ export async function requestPasswordReset(
       { expiresIn: '15m' } // Token is valid for 15 minutes
     );
 
-    // Send email with reset link
+    // Persist hashed token for single-use verification, then send email with reset link
+    await createResetTokenRecord(token, user.id, user.type, 15 * 60);
     const emailResult = await sendPasswordResetEmail(user.email, token, user.hospitalId ?? undefined);
 
     if (emailResult.success) {

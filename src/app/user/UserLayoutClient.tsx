@@ -57,17 +57,8 @@ export default function UserLayoutClient({
 
   if (!hasMiniAppSession) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-          <div className="flex h-16 items-center px-4">
-             <h1 className="font-headline text-xl font-bold text-foreground">
-                NibTena Portal
-             </h1>
-          </div>
-        </header>
-        <main className="flex-1">
-          <RestrictedAccess />
-        </main>
+      <div className="min-h-screen">
+        <RestrictedAccess />
       </div>
     );
   }

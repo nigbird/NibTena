@@ -95,20 +95,10 @@ export function createPatientSessionToken(patient: Patient): string {
 export async function getPatientFromCookie(): Promise<Patient | null> {
   const cookieStore = await cookies();
   
-  // 1. Prioritize standalone patient session
-  const standaloneSessionCookie = cookieStore.get('nib-tena-patient-session')?.value;
-  if (standaloneSessionCookie) {
-    const verified = verifyPatientSessionCookie(standaloneSessionCookie);
-    if (verified && verified.patient) {
-        console.log('getPatientFromCookie: found valid standalone session for patient id:', verified.patient.id);
-        return verified.patient;
-    }
-  }
-
-  // 2. Fallback to mini-app session
+  // 1. Fallback to mini-app session (Prioritize this now)
   const miniappSessionCookies = cookieStore.getAll('miniapp_session');
   if (miniappSessionCookies.length === 0) {
-    console.log('getPatientFromCookie: no session cookie found.');
+    console.log('getPatientFromCookie: no miniapp session cookie found. Web version restricted.');
     return null;
   }
 

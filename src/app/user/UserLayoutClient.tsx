@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useContext } from 'react';
 import { PatientContext } from '@/context/PatientContext';
 import Link from 'next/link';
+import { RestrictedAccess } from '@/components/patient-portal/RestrictedAccess';
 
 const pageTitles: { [key: string]: string } = {
   '/user': 'Home',
@@ -53,6 +54,23 @@ export default function UserLayoutClient({
   // The login button should only show for standalone web users who are not logged in.
   const showLoginButton = !hasMiniAppSession && !isAuthenticated && isHomePage;
 
+
+  if (!hasMiniAppSession) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
+          <div className="flex h-16 items-center px-4">
+             <h1 className="font-headline text-xl font-bold text-foreground">
+                NibTena Portal
+             </h1>
+          </div>
+        </header>
+        <main className="flex-1">
+          <RestrictedAccess />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

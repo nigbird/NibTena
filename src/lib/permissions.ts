@@ -108,6 +108,14 @@ export const getVerifiedUser = cache(async (): Promise<VerifiedUser | null> => {
     }
 
     if (role === 'patient') {
+        // Patient portal restricted to miniapp only
+        const { cookies } = await import('next/headers');
+        const cookieStore = await cookies();
+        if (!cookieStore.get('miniapp_session')) {
+            console.log('[getVerifiedUser] Patient access restricted to Mini App only (no miniapp_session)');
+            return null;
+        }
+
         const patient = await prisma.patient.findUnique({
             where: { id }
         });

@@ -78,6 +78,31 @@ export default withAuth(
     // Use forwarded headers for downstream rendering
     // Note: when returning NextResponse.next below, we pass `request: { headers: forwarded }`.
     const pathname = req.nextUrl.pathname;
+
+    /* ===============================
+       MINI-APP ONLY ACCESS FOR USER PORTAL
+    =============================== */
+    if (pathname.startsWith('/user') || pathname.startsWith('/confirmation')) {
+      const miniappSession = req.cookies.get('miniapp_session');
+      if (!miniappSession) {
+        // Redirect non-miniapp users from outside pages to /user to show the restriction message
+        if (pathname.startsWith('/confirmation') && req.method === 'GET') {
+          const url = req.nextUrl.clone();
+          url.pathname = '/user';
+          return NextResponse.redirect(url);
+        }
+
+        // If it's a direct page access, we let it through so the layout can show the beautiful message.
+        // BUT if it's a POST request (Server Action), we block it.
+        if (req.method === 'POST') {
+          return new NextResponse(
+            JSON.stringify({ error: 'This portal is only accessible via the Mini App.' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     const mustChangePassword = token?.mustChangePassword === true;
     const role = token?.role as string | undefined;
 

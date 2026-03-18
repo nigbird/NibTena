@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     if (user.entityType === 'user') isStaff = true;
     if (user.entityType === 'hospital') isStaff = false;
 
+    // Revokes all sessions by incrementing tokenVersion AND clearing activeSessionId.
     await incrementTokenVersionForRole(user.role, user.id, isStaff);
 
     return NextResponse.json({ ok: true });

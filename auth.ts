@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import ensureTokenVersionValid from '@/lib/auth-token-version';
+import { setActiveSessionIdForRole } from '@/lib/auth-token-version';
 import { validateTokenStructure } from '@/lib/token-validation';
 
 // Rate limit configuration
@@ -87,6 +88,8 @@ const authOptions = {
     strategy: 'jwt',
     // absolute session lifetime (e.g., 30 minutes)
     maxAge: 10 * 60,
+    // rotate the session cookie periodically while active
+    updateAge: 60,
   },
   jwt: {
     // align JWT expiry with session lifetime
@@ -182,6 +185,19 @@ const authOptions = {
             if (passwordsMatch) {
               // Successful login: reset any recorded failed attempts
               await resetAttempts(identKey);
+
+              // Strict session concurrency: new login becomes the only active session.
+              // This invalidates any previously issued JWTs for this account.
+              const sessionId = globalThis.crypto?.randomUUID
+                ? globalThis.crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+              try {
+                await setActiveSessionIdForRole(role, Number(user.id), sessionId, isStaff);
+              } catch (e) {
+                console.error('[auth] failed to set activeSessionId', e);
+                throw new Error('Login failed. Please try again.');
+              }
+
               const userEmail = isStaff ? user.email : (role === 'hospital' ? (user as any).contactEmail : (role === 'doctor' ? (user as any).contact : user.email));
               const userName = user.name;
               const userImage = role === 'hospital' ? (user as any).imageUrl ?? null : (role === 'doctor' ? (user as any).imageUrl : null);
@@ -250,6 +266,7 @@ const authOptions = {
                 staffRoleName: roleName,
                 isStaff: isStaff, // Explicitly pass isStaff flag
                 tokenVersion: (user as any).tokenVersion ?? 0,
+                sessionId,
                 permissionKeys,
                 isAdmin,
                 mustChangePassword,
@@ -294,6 +311,7 @@ const authOptions = {
           token.isAdmin = (user as any).isAdmin === true || token.isAdmin === true;
           token.mustChangePassword = (user as any).mustChangePassword === true || token.mustChangePassword === true;
           token.tokenVersion = (user as any).tokenVersion ?? token.tokenVersion ?? 0;
+          token.sessionId = (user as any).sessionId ?? token.sessionId ?? null;
         }
       } catch (e) {
         console.error('[auth] jwt callback error', e);

@@ -20,6 +20,9 @@ export const tokenSchema = z.object({
     invalid_type_error: "Token 'tokenVersion' must be a number"
   }).nonnegative().default(0),
 
+  // Session concurrency control (server-side validated)
+  sessionId: z.string().min(8).optional().nullable(),
+
   // Context fields (optional but typed if present)
   email: z.string().email().optional().nullable(),
   name: z.string().optional().nullable(),

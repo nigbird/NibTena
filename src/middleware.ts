@@ -107,6 +107,42 @@ export default withAuth(
     const role = token?.role as string | undefined;
 
     /* ===============================
+       CROSS-PORTAL PROTECTION
+    =============================== */
+    if (role) {
+      const portalRedirects: Record<string, string> = {
+        superadmin: '/super-admin',
+        hospital: '/hospital-admin',
+        doctor: '/doctor-portal',
+      };
+
+      const isSuperAdminRoute = pathname.startsWith('/super-admin');
+      const isHospitalAdminRoute = pathname.startsWith('/hospital-admin');
+      const isDoctorPortalRoute = pathname.startsWith('/doctor-portal');
+
+      // If user has a role, but is trying to access another portal, redirect to their own dashboard
+      if (
+        (isSuperAdminRoute && role !== 'superadmin') ||
+        (isHospitalAdminRoute && role !== 'hospital') ||
+        (isDoctorPortalRoute && role !== 'doctor')
+      ) {
+        // Exclude login routes so users can still log out and switch accounts if they want
+        const isLoginRoute = pathname.endsWith('/login');
+        if (!isLoginRoute && !pathname.startsWith('/api/')) {
+            const url = req.nextUrl.clone();
+            url.pathname = portalRedirects[role] || '/user';
+            const redirectRes = NextResponse.redirect(url);
+            // attach CSP and nonce to redirects
+            const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+            redirectRes.headers.set('Content-Security-Policy', cspLocal);
+            redirectRes.headers.set('x-nonce', nonce);
+            redirectRes.headers.set('Referrer-Policy', 'same-origin');
+            return redirectRes;
+        }
+      }
+    }
+
+    /* ===============================
        FORCE PASSWORD CHANGE
     =============================== */
     if (mustChangePassword) {

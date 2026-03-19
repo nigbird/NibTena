@@ -106,6 +106,27 @@ export async function createRole(hospitalId: number, formData: FormData) {
 
   const { name, permissions, isAdmin } = parsed.data;
 
+  // Security Fix: Only admins can create admin roles
+  if (isAdmin && !user.isAdmin) {
+    return { success: false, message: 'Unauthorized: only admins can create admin roles.' };
+  }
+
+  // Security Fix: Non-admins cannot grant permissions they don't have
+  if (!user.isAdmin && permissions && permissions.length > 0) {
+    const requestedPermissions = await prisma.permission.findMany({
+      where: { id: { in: permissions } },
+      select: { key: true }
+    });
+    
+    const unauthorizedPermissions = requestedPermissions.filter(p => !user.permissions.includes(p.key));
+    if (unauthorizedPermissions.length > 0) {
+      return { 
+        success: false, 
+        message: `Unauthorized: You cannot grant permissions you do not possess (${unauthorizedPermissions.map(p => p.key).join(', ')}).` 
+      };
+    }
+  }
+
   try {
     const existing = await prisma.role.findFirst({ where: { hospitalId, name } });
     if (existing) {
@@ -164,6 +185,27 @@ export async function updateRole(formData: FormData) {
   }
 
   const { id, name, permissions, isAdmin } = parsed.data;
+
+  // Security Fix: Only admins can update admin roles or escalate to admin role
+  if (isAdmin && !user.isAdmin) {
+    return { success: false, message: 'Unauthorized: only admins can manage admin roles.' };
+  }
+
+  // Security Fix: Non-admins cannot grant permissions they don't have
+  if (!user.isAdmin && permissions && permissions.length > 0) {
+    const requestedPermissions = await prisma.permission.findMany({
+      where: { id: { in: permissions } },
+      select: { key: true }
+    });
+    
+    const unauthorizedPermissions = requestedPermissions.filter(p => !user.permissions.includes(p.key));
+    if (unauthorizedPermissions.length > 0) {
+      return { 
+        success: false, 
+        message: `Unauthorized: You cannot grant permissions you do not possess (${unauthorizedPermissions.map(p => p.key).join(', ')}).` 
+      };
+    }
+  }
 
   try {
     await prisma.role.update({ where: { id }, data: { name, isAdmin: !!isAdmin } });
@@ -281,6 +323,33 @@ export async function createUser(hospitalId: number, formData: FormData) {
 
   const { name, email, password, phone, roleId } = parsed.data;
 
+  //  Verify that the roleId belongs to the same hospital
+  if (roleId) {
+    const roleRec = await prisma.role.findUnique({ 
+      where: { id: roleId }, 
+      include: { permissions: { include: { permission: true } } } 
+    });
+    if (!roleRec || roleRec.hospitalId !== hospitalId) {
+        return { success: false, message: 'Unauthorized: Invalid role assignment.' };
+    }
+    //  Only admins can assign admin roles
+    if (roleRec.isAdmin && !user.isAdmin) {
+        return { success: false, message: 'Unauthorized: only admins can assign admin roles.' };
+    }
+
+    //  Non-admins cannot assign roles with permissions they don't have
+    if (!user.isAdmin) {
+      const rolePermissionKeys = roleRec.permissions.map(rp => rp.permission.key);
+      const unauthorizedKeys = rolePermissionKeys.filter(key => !user.permissions.includes(key));
+      if (unauthorizedKeys.length > 0) {
+        return { 
+          success: false, 
+          message: `Unauthorized: You cannot assign a role with permissions you do not possess (${unauthorizedKeys.join(', ')}).` 
+        };
+      }
+    }
+  }
+
   try {
     const dataToCreate: any = {
       name,
@@ -385,6 +454,11 @@ export async function updateUser(userId: number, formData: FormData) {
   const user = await getVerifiedUser();
   if (!user) return { success: false, message: 'Unauthorized' };
 
+  // Security Fix: Prevent users from updating their own account (self-escalation)
+  if (user.id === userId) {
+    return { success: false, message: 'Unauthorized: You cannot update your own account roles or permissions.' };
+  }
+
   // Ensure user belongs to same hospital
   const target = await prisma.user.findUnique({ where: { id: userId }, select: { hospitalId: true } });
   const allowed = target ? await requireHospitalPermission('Users:Update', target.hospitalId) : false;
@@ -407,6 +481,33 @@ export async function updateUser(userId: number, formData: FormData) {
   }
 
   const { id, name, email, password, roleId } = parsed.data;
+
+  // Security Fix: Verify that the roleId belongs to the same hospital
+  if (roleId) {
+    const roleRec = await prisma.role.findUnique({ 
+      where: { id: roleId }, 
+      include: { permissions: { include: { permission: true } } } 
+    });
+    if (!roleRec || roleRec.hospitalId !== target.hospitalId) {
+        return { success: false, message: 'Unauthorized: Invalid role assignment.' };
+    }
+    // Security Fix: Only admins can assign admin roles
+    if (roleRec.isAdmin && !user.isAdmin) {
+        return { success: false, message: 'Unauthorized: only admins can assign admin roles.' };
+    }
+
+    // Security Fix: Non-admins cannot assign roles with permissions they don't have
+    if (!user.isAdmin) {
+      const rolePermissionKeys = roleRec.permissions.map(rp => rp.permission.key);
+      const unauthorizedKeys = rolePermissionKeys.filter(key => !user.permissions.includes(key));
+      if (unauthorizedKeys.length > 0) {
+        return { 
+          success: false, 
+          message: `Unauthorized: You cannot assign a role with permissions you do not possess (${unauthorizedKeys.join(', ')}).` 
+        };
+      }
+    }
+  }
 
   try {
     const dataToUpdate: any = {

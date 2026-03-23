@@ -162,16 +162,40 @@ const authOptions = {
           } else if (role === 'hospital') {
             const hospitalAccount = await prisma.hospital.findUnique({ where: { contactEmail: email } });
             if (hospitalAccount) {
+              // Ensure hospital is approved and active
+              if (hospitalAccount.approvalStatus !== 'approved' || hospitalAccount.status !== 'active') {
+                throw new Error("Your hospital account is either pending approval or has been deactivated.");
+              }
               user = hospitalAccount;
             } else {
-              const staffUser = await prisma.user.findUnique({ where: { email } });
+              const staffUser = await prisma.user.findUnique({ 
+                where: { email },
+                include: { hospital: true }
+              });
               if (staffUser) {
+                // Security Check: Ensure staff's hospital is approved and active
+                if (!staffUser.hospital || staffUser.hospital.approvalStatus !== 'approved' || staffUser.hospital.status !== 'active') {
+                   throw new Error("Your hospital's account is not active.");
+                }
                 user = staffUser;
                 isStaff = true;
               }
             }
           } else if (role === 'doctor') {
-            user = await prisma.doctor.findUnique({ where: { contact: email } });
+            user = await prisma.doctor.findUnique({ 
+              where: { contact: email },
+              include: { hospitals: { include: { hospital: true } } }
+            });
+            if (user) {
+              // Security Check: Ensure doctor is active and associated with at least one active hospital
+              if (user.status !== 'active') {
+                throw new Error("Your doctor account has been deactivated.");
+              }
+              const hasActiveHospital = user.hospitals.some((h: any) => h.hospital.approvalStatus === 'approved' && h.hospital.status === 'active');
+              if (!hasActiveHospital) {
+                throw new Error("Your associated hospital is not active.");
+              }
+            }
           }
 
           if (!user || !user.password) {

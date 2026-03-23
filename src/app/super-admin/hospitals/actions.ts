@@ -317,12 +317,37 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
       return { success: false, message: 'Only maker super admins can update hospital status.' };
     }
 
-    await prisma.hospital.update({ where: { id: hospitalId }, data: { status } });
-    
+    // Convert direct status update to a request-based flow for Maker/Checker
+    // Check if there's already a pending request for this hospital
+    const existingPendingRequest = await prisma.hospitalRequest.findFirst({
+      where: {
+        hospitalId: hospitalId,
+        status: 'pending',
+      } as any,
+    });
+
+    if (existingPendingRequest) {
+      return {
+        success: false,
+        message: 'A pending request already exists for this hospital. Please wait for it to be reviewed.',
+      };
+    }
+
+    // Create pending status change request
+    await prisma.hospitalRequest.create({
+      data: {
+        actionType: 'edit', // We reuse 'edit' for status changes
+        hospitalId: hospitalId,
+        proposedChanges: { status } as any,
+        makerId: user.id,
+        status: 'pending',
+      } as any,
+    });
+
     await createAuditLog({
       actorId: user.id,
       actorType: 'SuperAdmin',
-      action: 'UPDATE_HOSPITAL_STATUS',
+      action: 'CREATE_HOSPITAL_STATUS_REQUEST',
       targetId: hospitalId,
       targetType: 'Hospital',
       changes: { status }
@@ -330,9 +355,10 @@ export async function updateHospitalStatus(hospitalId: number, status: 'active' 
 
     revalidatePath('/super-admin/hospitals');
     revalidatePath('/super-admin/hospital-approvals');
-    return { success: true, message: `Hospital has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
+    return { success: true, message: `Status change request (${status}) submitted for approval.` };
   } catch (error) {
-    return { success: false, message: 'Database Error: Failed to update hospital status.' };
+    console.error('[updateHospitalStatus] error', error);
+    return { success: false, message: 'Database Error: Failed to create status update request.' };
   }
 }
 
@@ -692,6 +718,23 @@ export async function reviewHospitalRequest(
           where: { id: request.hospitalId },
           data: updateData as any,
         });
+
+        // If hospital status is changed to inactive, revoke all sessions
+        if (updateData.status === 'inactive') {
+            const { incrementTokenVersionForRole } = await import('@/lib/auth-token-version');
+            // Revoke main hospital account sessions
+            await incrementTokenVersionForRole('hospital', request.hospitalId);
+            // Revoke all staff user sessions for this hospital
+            const staffUsers = await prisma.user.findMany({ where: { hospitalId: request.hospitalId }, select: { id: true } });
+            for (const staff of staffUsers) {
+                await incrementTokenVersionForRole('hospital', staff.id, true);
+            }
+            // Revoke all doctor sessions for this hospital
+            const doctors = await prisma.doctor.findMany({ where: { hospitals: { some: { hospitalId: request.hospitalId } } }, select: { id: true } });
+            for (const doc of doctors) {
+                await incrementTokenVersionForRole('doctor', doc.id);
+            }
+        }
       } else if (request.actionType === 'delete') {
         // Perform soft delete (set status to inactive) or hard delete as per policy
         // Using soft delete by setting status to 'inactive' and adding a deleted flag

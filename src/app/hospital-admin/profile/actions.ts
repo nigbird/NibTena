@@ -9,6 +9,7 @@ import { validatePasswordAsync } from '@/lib/password-policy';
 import { signOut } from '@/../../auth';
 import { getVerifiedUser, VerifiedUser } from '@/lib/permissions';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { incrementTokenVersionForRole } from '@/lib/auth-token-version';
 
 const UserProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -53,11 +54,29 @@ export async function updateUserProfile(
   }
 
   try {
+    const currentStaff = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!currentStaff) return { success: false, message: 'User not found.' };
+
+    const emailChanged = currentStaff.email !== validatedFields.data.email;
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: validatedFields.data,
       select: { name: true, email: true }
     });
+
+    if (emailChanged) {
+      await incrementTokenVersionForRole('hospital', userId, true);
+      return { 
+        success: true, 
+        message: 'Profile updated. Since your email changed, you will be logged out to sign in again with your new email.',
+        updatedUser: {
+            name: updatedUser.name,
+            email: updatedUser.email
+        }
+      };
+    }
+
     revalidatePath('/hospital-admin/profile');
     return { 
         success: true, 

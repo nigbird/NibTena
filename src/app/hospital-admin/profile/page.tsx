@@ -15,6 +15,7 @@ import { revokeThenSignOut } from '@/lib/auth-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
+import { getCsrfToken } from '@/lib/csrf-common';
 
 function ProfileSubmitButton() {
   const { pending } = useFormStatus();
@@ -45,6 +46,15 @@ export default function HospitalUserProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [csrfToken, setCsrfToken] = useState('');
+
+  useEffect(() => {
+    async function fetchToken() {
+      const token = await getCsrfToken();
+      setCsrfToken(token);
+    }
+    fetchToken();
+  }, []);
 
   const profileInitialState: UserProfileState = { message: null, errors: {} };
   const updateUserAction = userId ? updateUserProfile.bind(null, userId) : null;
@@ -57,7 +67,11 @@ export default function HospitalUserProfilePage() {
   useEffect(() => {
     if (profileState.success) {
       toast({ title: 'Profile Updated', description: profileState.message });
-      if (profileState.updatedUser) {
+      if (profileState.message?.includes('logged out')) {
+        setTimeout(() => {
+          revokeThenSignOut({ callbackUrl: '/hospital-admin/login' });
+        }, 2000);
+      } else if (profileState.updatedUser) {
         update({ 
             name: profileState.updatedUser.name, 
             email: profileState.updatedUser.email 
@@ -110,6 +124,7 @@ export default function HospitalUserProfilePage() {
                 </CardHeader>
                 <CardContent>
                     <form action={dispatchProfile} className="space-y-6 max-w-md">
+                        <input type="hidden" name="_csrf" value={csrfToken} />
                         <div className="space-y-2">
                             <Label htmlFor="name">Full Name</Label>
                             <Input id="name" name="name" defaultValue={user.name} required />
@@ -136,6 +151,7 @@ export default function HospitalUserProfilePage() {
                 </CardHeader>
                 <CardContent>
                     <form action={dispatchPassword} key={passwordFormKey} className="space-y-6 max-w-md">
+                         <input type="hidden" name="_csrf" value={csrfToken} />
                          <div className="space-y-2">
                             <Label htmlFor="currentPassword">Current Password</Label>
                             <div className="relative">

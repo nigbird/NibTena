@@ -20,9 +20,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { signOut, useSession } from 'next-auth/react';
 import { revokeThenSignOut } from '@/lib/auth-client';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import React, { useRef } from 'react';
 
-function ProfileSubmitButton() {
-  const { pending } = useFormStatus();
+function ProfileSubmitButton({ pending }: { pending: boolean }) {
   return (
     <Button variant="accent" type="submit" className="w-full sm:w-auto" disabled={pending}>
       {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
@@ -69,6 +69,36 @@ export default function DoctorProfilePage() {
   const profileInitialState: DoctorProfileState = { message: null, errors: {} };
   const updateDoctorAction = doctor ? updateDoctorProfile.bind(null, doctor.id) : null;
   const [profileState, dispatchProfile] = useActionState(updateDoctorAction || (async () => profileInitialState), profileInitialState);
+
+  const [isProfilePending, startProfileTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleProfileSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    
+    startProfileTransition(async () => {
+      const imageFile = formData.get('image') as File | null;
+      
+      // If there is an image, upload it via the API first to stay under Server Action limits
+      if (imageFile && imageFile.size > 0) {
+        const uploadFd = new FormData();
+        uploadFd.append('file', imageFile);
+        try {
+          const resp = await fetch('/api/upload', { method: 'POST', body: uploadFd });
+          const json = await resp.json();
+          if (resp.ok && json.url) {
+            formData.set('imageUrl', json.url);
+            formData.delete('image'); // Remove binary to keep body size small
+          }
+        } catch (e) {
+          console.error('Image upload failed', e);
+        }
+      }
+      
+      dispatchProfile(formData);
+    });
+  };
   
   const passwordInitialState: PasswordChangeState = { message: null, errors: {} };
   const updatePasswordAction = doctor ? updateDoctorPassword.bind(null, doctor.id) : null;
@@ -77,7 +107,11 @@ export default function DoctorProfilePage() {
   useEffect(() => {
     if (profileState.success) {
       toast({ title: 'Profile Updated', description: profileState.message });
-      if (profileState.updatedDoctor) {
+      if (profileState.message?.includes('logged out')) {
+        setTimeout(() => {
+          revokeThenSignOut({ callbackUrl: '/doctor-portal/login' });
+        }, 2000);
+      } else if (profileState.updatedDoctor) {
         updateSession({ 
             name: profileState.updatedDoctor.name, 
             picture: profileState.updatedDoctor.imageUrl 
@@ -142,7 +176,7 @@ export default function DoctorProfilePage() {
                     <CardDescription>This information will be visible to patients.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form action={dispatchProfile} className="space-y-8">
+                    <form ref={formRef} onSubmit={handleProfileSubmit} className="space-y-8">
                       <input type="hidden" name="_csrf" value={csrfToken} />
                         <div className="flex items-center gap-6">
                             <Avatar className="h-24 w-24 border-4 border-primary/20">
@@ -162,6 +196,14 @@ export default function DoctorProfilePage() {
                                 <Input id="name" name="name" defaultValue={doctor.name} required />
                                 {profileState.errors?.name && <p className="text-sm font-medium text-destructive">{profileState.errors.name[0]}</p>}
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email Address</Label>
+                                <Input id="email" name="email" type="email" defaultValue={doctor.contact} required />
+                                {profileState.errors?.email && <p className="text-sm font-medium text-destructive">{profileState.errors.email[0]}</p>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div className="space-y-2">
                                 <Label htmlFor="specialty">Specialty</Label>
                                 <Select name="specialty" defaultValue={doctor.specialty} required>
@@ -194,7 +236,7 @@ export default function DoctorProfilePage() {
                         </div>
                         
                         <div className="flex justify-end">
-                            <ProfileSubmitButton />
+                            <ProfileSubmitButton pending={isProfilePending} />
                         </div>
                     </form>
                 </CardContent>

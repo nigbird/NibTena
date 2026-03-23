@@ -15,11 +15,13 @@ import { verifyCsrfToken } from '@/lib/csrf';
 
 const DoctorProfileSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email.' }),
   specialty: z.string().min(2, { message: 'Specialty is required.' }),
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
   image: z.instanceof(File).optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type DoctorProfileState = {
@@ -70,19 +72,26 @@ export async function updateDoctorProfile(
     };
   }
 
-  const { image, ...doctorData } = validatedFields.data;
+  const { image, imageUrl, email, ...doctorData } = validatedFields.data;
 
   try {
-    const dataToUpdate: any = doctorData;
+    const currentDoctor = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { contact: true } });
+    if (!currentDoctor) return { success: false, message: 'Doctor not found.' };
 
-    if (image) {
+    const emailChanged = currentDoctor.contact !== email;
+
+    const dataToUpdate: any = { ...doctorData, contact: email };
+
+    if (imageUrl) {
+      dataToUpdate.imageUrl = imageUrl;
+    } else if (image) {
       dataToUpdate.imageUrl = await saveImage(image);
     }
     
     const updatedDoctor = await prisma.doctor.update({
       where: { id: doctorId },
       data: dataToUpdate,
-      select: { name: true, imageUrl: true }
+      select: { name: true, imageUrl: true, contact: true }
     });
     
     if (updatedDoctor) {
@@ -94,6 +103,18 @@ export async function updateDoctorProfile(
         targetType: 'Doctor',
         changes: dataToUpdate
       });
+
+      if (emailChanged) {
+        await incrementTokenVersionForRole('doctor', doctorId);
+        return {
+          success: true,
+          message: 'Profile updated. Since your email changed, you will be logged out to sign in again with your new email.',
+          updatedDoctor: {
+            name: updatedDoctor.name,
+            imageUrl: updatedDoctor.imageUrl
+          }
+        };
+      }
 
       revalidatePath('/doctor-portal/profile');
       revalidatePath(`/user/doctors/${doctorId}`); // Revalidate public profile
@@ -121,13 +142,39 @@ export async function updateDoctorProfile(
 }
 
 export async function getSpecialties() {
-  const distinctSpecialties = await prisma.doctor.findMany({
-      select: {
-          specialty: true,
-      },
-      distinct: ['specialty'],
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'doctor') return [];
+
+  // Find all hospitals this doctor belongs to
+  const doctorWithHospitals = await prisma.doctor.findUnique({
+    where: { id: user.id },
+    select: {
+      hospitals: {
+        select: {
+          hospitalId: true
+        }
+      }
+    }
   });
-  return distinctSpecialties.map(d => d.specialty);
+
+  if (!doctorWithHospitals || doctorWithHospitals.hospitals.length === 0) {
+    return [];
+  }
+
+  const hospitalIds = doctorWithHospitals.hospitals.map(h => h.hospitalId);
+
+  // Get distinct specialties from roles or other sources linked to these hospitals
+  const specialties = await prisma.specialty.findMany({
+    where: {
+      hospitalId: { in: hospitalIds }
+    },
+    select: {
+      name: true
+    },
+    distinct: ['name']
+  });
+
+  return specialties.map(s => s.name);
 }
 
 export async function getDoctorById(id: number) {

@@ -101,9 +101,11 @@ export default function SuperAdminSidebar() {
             <DropdownMenuContent align="end" className="w-56 mb-2">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/super-admin/profile">
                     <CircleUser className="mr-2 h-4 w-4" />
                     <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
                  {/* <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />

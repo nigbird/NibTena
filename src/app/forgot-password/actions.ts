@@ -77,7 +77,13 @@ export async function requestPasswordReset(
     }
     
     if (!user) {
-      return { success: false, message: 'No account found with that email address.' };
+      // To prevent user enumeration, always return a generic success message.
+      // The email will only be sent if the user actually exists.
+      console.warn(`[requestPasswordReset] Non-existent user attempt for email: ${email}`);
+      return {
+        success: true,
+        message: `If an account exists for ${email}, a password reset link has been sent.`,
+      };
     }
 
     // User found, create JWT

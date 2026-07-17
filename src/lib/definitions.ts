@@ -33,6 +33,7 @@ export type Hospital = {
   startTime: string;
   endTime: string;
   accountNumber: string;
+  mustChangePassword?: boolean;
 };
 
 export type Doctor = {

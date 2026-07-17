@@ -228,8 +228,8 @@ export async function getEmailTransporter(hospitalId?: number) {
         });
     }
 
-    // Env-var fallback: EMAIL_ENABLED=true + SMTP_HOST + SMTP_EMAIL_USER in .env
-    if (!configToUse && process.env.EMAIL_ENABLED === 'true' && process.env.SMTP_HOST && process.env.SMTP_EMAIL_USER) {
+    // Env-var fallback: use if SMTP_HOST + SMTP_EMAIL_USER are set in .env
+    if (!configToUse && process.env.SMTP_HOST && process.env.SMTP_EMAIL_USER) {
         configToUse = {
             id: 0,
             name: process.env.COMPANY_NAME || 'NibAppointment',

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit, PowerOff, Power } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, PowerOff, Power, MailCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteHospital, updateHospitalStatus } from '@/app/super-admin/hospitals/actions';
+import { deleteHospital, updateHospitalStatus, resendActivationLink } from '@/app/super-admin/hospitals/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useSession } from 'next-auth/react';
 
@@ -81,6 +81,15 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
       onActionSuccess();
     } else {
       toast({ variant: "destructive", title: "Error", description: result.message });
+    }
+  };
+
+  const handleResendActivation = async (hospital: Hospital) => {
+    const result = await resendActivationLink(hospital.id);
+    if (result.success) {
+      toast({ title: "Activation Link Sent", description: result.message });
+    } else {
+      toast({ variant: "destructive", title: "Failed", description: result.message });
     }
   };
 
@@ -142,6 +151,12 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                           {hospital.status === 'active' ? <PowerOff className="mr-2 h-4 w-4 text-orange-500" /> : <Power className="mr-2 h-4 w-4 text-green-500" />}
                           <span>{hospital.status === 'active' ? 'Deactivate' : 'Activate'}</span>
                         </DropdownMenuItem>
+                        {hospital.approvalStatus === 'approved' && hospital.mustChangePassword && (
+                          <DropdownMenuItem onClick={() => handleResendActivation(hospital)}>
+                            <MailCheck className="mr-2 h-4 w-4 text-blue-500" />
+                            Resend Activation Link
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDeleteClick(hospital)} className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete

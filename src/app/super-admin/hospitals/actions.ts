@@ -478,6 +478,52 @@ export async function getHospitals(page: number, limit: number, query: string) {
   return results;
 }
 
+export async function resendActivationLink(hospitalId: number) {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'superadmin') {
+    return { success: false, message: 'Unauthorized.' };
+  }
+
+  const hosp = await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+    select: { contactEmail: true, name: true, mustChangePassword: true, approvalStatus: true as any },
+  }) as any;
+
+  if (!hosp) return { success: false, message: 'Hospital not found.' };
+  if (hosp.approvalStatus !== 'approved') return { success: false, message: 'Hospital is not yet approved.' };
+  if (!hosp.mustChangePassword) return { success: false, message: 'Hospital has already activated their account.' };
+  if (!hosp.contactEmail) return { success: false, message: 'Hospital has no contact email.' };
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return { success: false, message: 'Server configuration error.' };
+
+  try {
+    const token = jwt.sign({ userId: hospitalId, userType: 'hospital', email: hosp.contactEmail }, secret, { expiresIn: '1h' });
+    const { createResetTokenRecord } = await import('@/lib/reset-token');
+    await createResetTokenRecord(token, hospitalId, 'hospital', 60 * 60);
+    const result = await sendSetPasswordEmail(hosp.contactEmail, token);
+    if (!result.success) return { success: false, message: `Email could not be sent: ${result.error}` };
+
+    try {
+      await createAuditLog({
+        actorId: user.id,
+        actorType: 'SuperAdmin',
+        action: 'RESEND_ACTIVATION_LINK',
+        targetId: hospitalId,
+        targetType: 'Hospital',
+        changes: { email: hosp.contactEmail },
+      });
+    } catch (e) {
+      console.error('[audit] failed to log resend activation link', e);
+    }
+
+    return { success: true, message: `Activation link sent to ${hosp.contactEmail}.` };
+  } catch (err: any) {
+    console.error('[resendActivationLink] error:', err);
+    return { success: false, message: 'Failed to resend activation link.' };
+  }
+}
+
 export async function getHospitalsCount(query: string) {
   const user = await getVerifiedUser();
   if (!user || user.role !== 'superadmin') {
@@ -560,6 +606,13 @@ export async function reviewHospital(hospitalId: number, decision: 'approved' | 
         const secret = process.env.AUTH_SECRET;
         if (secret) {
           const token = jwt.sign({ userId: hospitalId, userType: 'hospital', email: hosp.contactEmail }, secret, { expiresIn: '1h' });
+          // Persist hashed token for single-use verification (same as hospital creation flow)
+          try {
+            const { createResetTokenRecord } = await import('@/lib/reset-token');
+            await createResetTokenRecord(token, hospitalId, 'hospital', 60 * 60);
+          } catch (e) {
+            console.error('[reviewHospital] Failed to persist set-password token record', e);
+          }
           // Send set-password email asynchronously (non-blocking)
           sendSetPasswordEmail(hosp.contactEmail, token).then(res => {
             if (!res.success) console.error('[reviewHospital] Set password email failed:', res.error);

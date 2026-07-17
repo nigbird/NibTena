@@ -7,17 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { EmailSettingsType } from '@/lib/email-actions';
-import { Eye, EyeOff, Loader2, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { saveGlobalEmailSettings, testEmailConnection } from '@/lib/email-actions';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from '../ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 
 const emptySettings: EmailSettingsType = {
     name: '',
-    smtpHost: 'smtp.gmail.com', smtpPort: 587, smtpUser: '', smtpPass: '', smtpEncryption: 'tls',
-    imapHost: 'imap.gmail.com', imapPort: 993, imapUser: '', imapPass: '', imapEncryption: 'ssl',
+    smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', smtpEncryption: 'tls',
     configured: false
 };
 
@@ -69,8 +67,13 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
             setIsTesting(false);
             return;
         }
+        if (!settingsToTest.smtpHost || String(settingsToTest.smtpHost).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'SMTP host is required.' });
+            setIsTesting(false);
+            return;
+        }
         if (!settingsToTest.smtpUser || String(settingsToTest.smtpUser).trim().length === 0) {
-            toast({ variant: 'destructive', title: 'Validation Error', description: 'Gmail address is required.' });
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Email address is required.' });
             setIsTesting(false);
             return;
         }
@@ -78,13 +81,10 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
         const data = await testEmailConnection(settingsToTest);
     setTestResult(data);
 
-    if (data.smtp.success && data.imap.success) {
-      toast({ title: "Connection Successful!", description: `✅ Connection successful! Emails can be sent using this Gmail account.`});
+    if (data.smtp.success) {
+      toast({ title: "Connection Successful!", description: "✅ SMTP connection verified. Emails can be sent using this account." });
     } else {
-      let errorParts = [];
-      if (!data.smtp.success) errorParts.push(`Sending (SMTP): ${data.smtp.error}`);
-      if (!data.imap.success) errorParts.push(`Receiving (IMAP): ${data.imap.error}`);
-      toast({ variant: "destructive", title: "Connection Failed", description: errorParts.join('\n'), duration: 9000 });
+      toast({ variant: "destructive", title: "Connection Failed", description: `SMTP: ${data.smtp.error}`, duration: 9000 });
     }
     setIsTesting(false);
   };
@@ -103,8 +103,13 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
             setIsSaving(false);
             return;
         }
+        if (!settingsToSave.smtpHost || String(settingsToSave.smtpHost).trim().length === 0) {
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'SMTP host is required.' });
+            setIsSaving(false);
+            return;
+        }
         if (!settingsToSave.smtpUser || String(settingsToSave.smtpUser).trim().length === 0) {
-            toast({ variant: 'destructive', title: 'Validation Error', description: 'Gmail address is required.' });
+            toast({ variant: 'destructive', title: 'Validation Error', description: 'Email address is required.' });
             setIsSaving(false);
             return;
         }
@@ -125,7 +130,7 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
             <SheetHeader>
                 <SheetTitle>{isEditing ? 'Edit Global Email' : 'Add New Global Email'}</SheetTitle>
                 <SheetDescription>
-                    Provide the details for a shared Gmail account.
+                    Configure a shared SMTP account for sending notifications.
                 </SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-1 -mx-6 px-6">
@@ -134,51 +139,44 @@ export default function EmailConfigDrawer({ isOpen, setIsOpen, onSave, initialSe
                         <Label htmlFor="configName">Configuration Name</Label>
                         <Input id="configName" placeholder="e.g., Main Notifications" value={currentSettings.name} onChange={e => handleFieldChange('name', e.target.value)} />
                     </div>
-                     <div>
-                        <Label htmlFor="gmailAddress">Gmail Address</Label>
-                        <Input id="gmailAddress" placeholder="your-account@gmail.com" value={currentSettings.smtpUser} onChange={e => handleFieldChange('smtpUser', e.target.value)} />
-                     </div>
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                             <Label htmlFor="appPassword">App Password</Label>
-                             <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <button type="button" className="text-muted-foreground"><Info className="h-4 w-4" /></button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                        <p className="font-bold mb-2">How to get a Google App Password:</p>
-                                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                                            <li>Go to <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-primary underline">myaccount.google.com/security</a>.</li>
-                                            <li>Under "Signing in to Google," select "App passwords".</li>
-                                            <li>Generate a 16-character password and paste it here.</li>
-                                        </ol>
-                                         <p className="text-xs mt-2 text-muted-foreground">Note: 2-Step Verification must be enabled on the Google account.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                             </TooltipProvider>
+                        <Label htmlFor="smtpHost">SMTP Host</Label>
+                        <Input id="smtpHost" placeholder="e.g., mail.nibbank.com.et or smtp.gmail.com" value={currentSettings.smtpHost} onChange={e => handleFieldChange('smtpHost', e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <Label htmlFor="smtpPort">Port</Label>
+                            <Input id="smtpPort" type="number" placeholder="587" value={currentSettings.smtpPort} onChange={e => handleFieldChange('smtpPort', Number(e.target.value))} />
                         </div>
+                        <div>
+                            <Label htmlFor="smtpEncryption">Encryption</Label>
+                            <select id="smtpEncryption" className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={currentSettings.smtpEncryption} onChange={e => handleFieldChange('smtpEncryption', e.target.value)}>
+                                <option value="tls">TLS (STARTTLS)</option>
+                                <option value="ssl">SSL</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="smtpUser">Email Address</Label>
+                        <Input id="smtpUser" placeholder="no-reply@nibbank.com.et" value={currentSettings.smtpUser} onChange={e => handleFieldChange('smtpUser', e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor="smtpPass">
+                            Password{isEditing && <span className="text-muted-foreground text-xs ml-1">(leave blank to keep existing)</span>}
+                        </Label>
                         <div className="relative">
-                            <Input id="appPassword" type={showSmtpPass ? 'text' : 'password'} value={currentSettings.smtpPass} onChange={e => handleFieldChange('smtpPass', e.target.value)} />
+                            <Input id="smtpPass" type={showSmtpPass ? 'text' : 'password'} value={currentSettings.smtpPass} onChange={e => handleFieldChange('smtpPass', e.target.value)} />
                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowSmtpPass(!showSmtpPass)}>{showSmtpPass ? <EyeOff /> : <Eye />}</Button>
                         </div>
                     </div>
 
                     {testResult && (
-                        <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div className={`flex items-center gap-2 rounded-md border p-3 ${testResult.smtp.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-                                {testResult.smtp.success ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
-                                <div>
-                                    <p className="font-semibold">Sending Test</p>
-                                    <p className="text-xs">{testResult.smtp.success ? 'Success' : `Failed: ${testResult.smtp.error}`}</p>
-                                </div>
-                            </div>
-                            <div className={`flex items-center gap-2 rounded-md border p-3 ${testResult.imap.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-                                {testResult.imap.success ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
-                                <div>
-                                    <p className="font-semibold">Receiving Test</p>
-                                    <p className="text-xs">{testResult.imap.success ? 'Success' : `Failed: ${testResult.imap.error}`}</p>
-                                </div>
+                        <div className={`flex items-center gap-2 rounded-md border p-3 mt-2 ${testResult.smtp.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+                            {testResult.smtp.success ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
+                            <div>
+                                <p className="font-semibold">SMTP Connection Test</p>
+                                <p className="text-xs">{testResult.smtp.success ? 'Connection successful' : `Failed: ${testResult.smtp.error}`}</p>
                             </div>
                         </div>
                     )}

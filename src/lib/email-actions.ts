@@ -15,29 +15,20 @@ const EmailSettingsSchema = z.object({
   hospitalId: z.number().optional().nullable(),
   isGlobal: z.boolean().optional(),
   name: z.string().min(1, 'Configuration name is required.'),
-  
+
   smtpHost: z.string().min(1, 'SMTP Host is required.'),
   smtpPort: z.coerce.number().min(1, 'SMTP Port is required.'),
   smtpUser: z.string().min(1, 'SMTP User is required.'),
-  smtpPass: z.string().min(1, 'SMTP Password is required.'),
+  smtpPass: z.string().optional(),
   smtpEncryption: z.enum(['tls', 'ssl', 'none']),
 
-  imapHost: z.string().min(1, 'IMAP Host is required.'),
-  imapPort: z.coerce.number().min(1, 'IMAP Port is required.'),
-  imapUser: z.string().min(1, 'IMAP User is required.'),
-  imapPass: z.string().min(1, 'IMAP Password is required.'),
-  imapEncryption: z.enum(['tls', 'ssl']),
-  
-  configured: z.boolean().optional(),
-});
+  imapHost: z.string().optional().nullable(),
+  imapPort: z.coerce.number().optional().nullable(),
+  imapUser: z.string().optional().nullable(),
+  imapPass: z.string().optional().nullable(),
+  imapEncryption: z.enum(['tls', 'ssl']).optional().nullable(),
 
-// Schema for the simplified Gmail forms
-const SimplifiedEmailSettingsSchema = z.object({
-    id: z.number().optional(),
-    hospitalId: z.number().optional().nullable(),
-    name: z.string().min(1, 'Configuration name is required.'),
-    smtpUser: z.string().email('Please enter a valid Gmail address.'),
-    smtpPass: z.string().optional(),
+  configured: z.boolean().optional(),
 });
 
 
@@ -70,48 +61,40 @@ export async function getEmailSettings(hospitalId: number) {
 export async function updateEmailSettings(hospitalId: number, data: Partial<EmailSettingsType>) {
   const allowed = await requireHospitalPermission('Settings:Update', hospitalId);
   if (!allowed) throw new Error('Unauthorized');
-    // This action is now simplified for Gmail only for the hospital-facing UI
-    const parsed = SimplifiedEmailSettingsSchema.parse(data);
-    
-    const validatedData: any = {
+    const parsed = EmailSettingsSchema.parse(data);
+
+    const settingsData: any = {
         name: parsed.name,
+        smtpHost: parsed.smtpHost,
+        smtpPort: parsed.smtpPort,
         smtpUser: parsed.smtpUser,
-        // Set Gmail defaults
-        smtpHost: 'smtp.gmail.com',
-        smtpPort: 587,
-        smtpEncryption: 'tls',
-        imapHost: 'imap.gmail.com',
-        imapPort: 993,
-        imapUser: parsed.smtpUser, // Use same user for IMAP
-        imapEncryption: 'ssl',
+        smtpEncryption: parsed.smtpEncryption,
+        configured: true,
+        isGlobal: false,
+        hospitalId,
     };
 
-    // Only update password if provided
+    const existingSettings = await prisma.emailSettings.findFirst({ where: { hospitalId } });
+
     if (parsed.smtpPass && parsed.smtpPass.length > 0) {
-        validatedData.smtpPass = parsed.smtpPass;
-        validatedData.imapPass = parsed.smtpPass;
+        settingsData.smtpPass = parsed.smtpPass;
+    } else if (existingSettings) {
+        settingsData.smtpPass = existingSettings.smtpPass;
+    } else {
+        throw new Error('Password is required for a new email configuration.');
     }
 
-  const settingsData = {
-    ...validatedData,
-    configured: true,
-    isGlobal: false,
-    hospitalId,
-  };
-  
-  const existingSettings = await prisma.emailSettings.findFirst({ where: { hospitalId } });
-
-  let result: EmailSettings | null = null;
-  if (existingSettings) {
-    result = await prisma.emailSettings.update({
-      where: { id: existingSettings.id },
-      data: settingsData,
-    });
-  } else {
-    result = await prisma.emailSettings.create({
-      data: settingsData,
-    });
-  }
+    let result: EmailSettings | null = null;
+    if (existingSettings) {
+        result = await prisma.emailSettings.update({
+            where: { id: existingSettings.id },
+            data: settingsData,
+        });
+    } else {
+        result = await prisma.emailSettings.create({
+            data: settingsData,
+        });
+    }
 
   try {
     const actor = await getVerifiedUser();
@@ -178,8 +161,8 @@ export async function testEmailConnection(settings: EmailSettingsType) {
     }
   }
 
-  if (!settingsToTest.imapHost || !settingsToTest.imapPort || !settingsToTest.imapUser || !settingsToTest.imapPass) {
-    results.imap.error = 'IMAP settings are incomplete.';
+  if (!settingsToTest.imapHost || !settingsToTest.imapUser || !settingsToTest.imapPass) {
+    results.imap = { success: true, error: '' }; // IMAP not configured — SMTP-only, skip
   } else {
     let client: ImapFlow | null = null;
     try {
@@ -243,6 +226,25 @@ export async function getEmailTransporter(hospitalId?: number) {
         configToUse = await prisma.emailSettings.findFirst({
             where: { isGlobal: true }
         });
+    }
+
+    // Env-var fallback: EMAIL_ENABLED=true + SMTP_HOST + SMTP_EMAIL_USER in .env
+    if (!configToUse && process.env.EMAIL_ENABLED === 'true' && process.env.SMTP_HOST && process.env.SMTP_EMAIL_USER) {
+        configToUse = {
+            id: 0,
+            name: process.env.COMPANY_NAME || 'NibAppointment',
+            smtpHost: process.env.SMTP_HOST,
+            smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+            smtpUser: process.env.SMTP_EMAIL_USER,
+            smtpPass: process.env.SMTP_EMAIL_PASS || '',
+            smtpEncryption: process.env.SMTP_SECURE === 'true' ? 'ssl' : 'tls',
+            imapHost: null, imapPort: null, imapUser: null, imapPass: null, imapEncryption: null,
+            configured: true,
+            isGlobal: true,
+            hospitalId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        } as any;
     }
 
     if (!configToUse || !configToUse.configured) {
@@ -399,41 +401,39 @@ export async function saveGlobalEmailSettings(data: Omit<EmailSettingsType, 'hos
     if (!user || user.role !== 'superadmin' || (user.superAdminRole !== 'both')) {
       throw new Error('Unauthorized');
     }
-    const isSimplified = !data.smtpHost && data.smtpUser && data.smtpPass;
+    const validatedData = EmailSettingsSchema.parse(data);
 
-    let validatedData;
-    if (isSimplified) {
-        const parsed = SimplifiedEmailSettingsSchema.parse(data);
-        validatedData = {
-            name: parsed.name,
-            smtpUser: parsed.smtpUser,
-            smtpPass: parsed.smtpPass,
-            smtpHost: 'smtp.gmail.com', smtpPort: 587, smtpEncryption: 'tls',
-            imapHost: 'imap.gmail.com', imapPort: 993, imapUser: parsed.smtpUser, imapPass: parsed.smtpPass, imapEncryption: 'ssl',
-        };
-    } else {
-        validatedData = EmailSettingsSchema.parse(data);
-    }
-    
-    const settingsData = {
-        ...validatedData,
+    const settingsData: any = {
+        name: validatedData.name,
+        smtpHost: validatedData.smtpHost,
+        smtpPort: validatedData.smtpPort,
+        smtpUser: validatedData.smtpUser,
+        smtpEncryption: validatedData.smtpEncryption,
         configured: true,
         isGlobal: true,
         hospitalId: null,
     };
-  
+
     let result: EmailSettings | null = null;
-    if(data.id) {
-      result = await prisma.emailSettings.update({
-        where: { id: data.id },
-        data: settingsData,
-      });
+    if (data.id) {
+        if (validatedData.smtpPass && validatedData.smtpPass.length > 0) {
+            settingsData.smtpPass = validatedData.smtpPass;
+        } else {
+            const existing = await prisma.emailSettings.findUnique({ where: { id: data.id } });
+            if (!existing) throw new Error('Configuration not found.');
+            settingsData.smtpPass = existing.smtpPass;
+        }
+        result = await prisma.emailSettings.update({ where: { id: data.id }, data: settingsData });
     } else {
-      const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true }});
-      if (existing) {
-        throw new Error("A global email configuration with this name already exists.");
-      }
-      result = await prisma.emailSettings.create({ data: settingsData });
+        if (!validatedData.smtpPass || validatedData.smtpPass.length === 0) {
+            throw new Error('Password is required for a new email configuration.');
+        }
+        settingsData.smtpPass = validatedData.smtpPass;
+        const existing = await prisma.emailSettings.findFirst({ where: { name: data.name, isGlobal: true } });
+        if (existing) {
+            throw new Error('A global email configuration with this name already exists.');
+        }
+        result = await prisma.emailSettings.create({ data: settingsData });
     }
 
     try {

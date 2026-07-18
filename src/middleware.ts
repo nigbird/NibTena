@@ -4,6 +4,10 @@ import { routePermissions } from './route-permissions';
 import { COOKIE_NAME } from './lib/csrf-common';
 import { validateTokenStructure } from '@/lib/token-validation';
 
+function buildCsp(nonce: string) {
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://nominatim.openstreetmap.org; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+}
+
 export default withAuth(
   function middleware(req) {
     let token = req.nextauth.token;
@@ -68,7 +72,7 @@ export default withAuth(
     }
     if (!token && responseToReturn) {
       // attach CSP header and x-nonce header on the response and return
-        const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        const csp = buildCsp(nonce);
       responseToReturn.headers.set('Content-Security-Policy', csp);
       responseToReturn.headers.set('x-nonce', nonce);
       responseToReturn.headers.set('Referrer-Policy', 'same-origin');
@@ -133,7 +137,7 @@ export default withAuth(
             url.pathname = portalRedirects[role] || '/user';
             const redirectRes = NextResponse.redirect(url);
             // attach CSP and nonce to redirects
-            const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+            const cspLocal = buildCsp(nonce);
             redirectRes.headers.set('Content-Security-Policy', cspLocal);
             redirectRes.headers.set('x-nonce', nonce);
             redirectRes.headers.set('Referrer-Policy', 'same-origin');
@@ -161,7 +165,7 @@ export default withAuth(
         url.searchParams.set('from', pathname);
         const redirectRes = NextResponse.redirect(url);
         // attach CSP and nonce to redirects too
-          const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+          const csp = buildCsp(nonce);
         redirectRes.headers.set('Content-Security-Policy', csp);
         redirectRes.headers.set('x-nonce', nonce);
         redirectRes.headers.set('Referrer-Policy', 'same-origin');
@@ -182,7 +186,7 @@ export default withAuth(
         const url = req.nextUrl.clone();
         url.pathname = '/super-admin';
         const redirectRes = NextResponse.redirect(url);
-        const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        const cspLocal = buildCsp(nonce);
         redirectRes.headers.set('Content-Security-Policy', cspLocal);
         redirectRes.headers.set('x-nonce', nonce);
         redirectRes.headers.set('Referrer-Policy', 'same-origin');
@@ -192,7 +196,7 @@ export default withAuth(
         const url = req.nextUrl.clone();
         url.pathname = '/super-admin';
         const redirectRes = NextResponse.redirect(url);
-        const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+        const cspLocal = buildCsp(nonce);
         redirectRes.headers.set('Content-Security-Policy', cspLocal);
         redirectRes.headers.set('x-nonce', nonce);
         redirectRes.headers.set('Referrer-Policy', 'same-origin');
@@ -232,7 +236,7 @@ export default withAuth(
           const url = req.nextUrl.clone();
           url.pathname = finalTarget;
           const redirectRes = NextResponse.redirect(url);
-          const cspLocal = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+          const cspLocal = buildCsp(nonce);
           redirectRes.headers.set('Content-Security-Policy', cspLocal);
           redirectRes.headers.set('x-nonce', nonce);
           redirectRes.headers.set('Referrer-Policy', 'same-origin');
@@ -245,7 +249,7 @@ export default withAuth(
     // the `x-nonce` value). We build a NextResponse.next with the forwarded
     // headers and attach the CSP header on that response so that all proxied
     // responses include the CSP.
-      const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+      const csp = buildCsp(nonce);
     const nextRes = NextResponse.next({ request: { headers: forwarded } });
     nextRes.headers.set('Content-Security-Policy', csp);
     nextRes.headers.set('x-nonce', nonce);

@@ -84,7 +84,9 @@ export default function MapLocationPicker({
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const mapContainerIdRef = useRef(`map-container-${Math.random().toString(36).substr(2, 9)}`);
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [map, setMap] = useState<L.Map | null>(null);
 
   // Default center (Addis Ababa, Ethiopia)
   const defaultCenter: [number, number] = [9.145, 38.7667];
@@ -92,13 +94,33 @@ export default function MapLocationPicker({
     ? [selectedLocation.lat, selectedLocation.lng]
     : defaultCenter;
 
-  // Ensure map only renders after component is mounted
+  // Ensure map only renders after component is mounted.
+  // No unmount cleanup here: toggling isMapReady back to false on cleanup made the
+  // whole MapContainer subtree fully unmount/remount under React StrictMode's
+  // double-invoke, which left Leaflet's internal container marker behind and made
+  // the second init throw "Map container is already initialized".
   useEffect(() => {
     setIsMapReady(true);
-    return () => {
-      setIsMapReady(false);
-    };
   }, []);
+
+  // Leaflet measures its container at creation time. When this picker sits inside
+  // a sliding Sheet/drawer, the container is still 0-sized (mid-animation) at that
+  // point, so no tiles get requested. Re-measure once the container settles, and
+  // keep re-measuring whenever the wrapper resizes (e.g. sheet finishes animating).
+  useEffect(() => {
+    if (!map) return;
+    const timers = [50, 300, 600].map((delay) =>
+      setTimeout(() => map.invalidateSize(), delay)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [map]);
+
+  useEffect(() => {
+    if (!map || !mapWrapperRef.current) return;
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(mapWrapperRef.current);
+    return () => observer.disconnect();
+  }, [map]);
 
   // Geocoding function using Nominatim (OpenStreetMap)
   const searchLocation = async (query: string) => {
@@ -318,10 +340,11 @@ export default function MapLocationPicker({
         )}
       </div>
 
-      <div className="h-64 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current}>
+      <div className="h-64 w-full rounded-md overflow-hidden border" id={mapContainerIdRef.current} ref={mapWrapperRef}>
         {isMapReady ? (
           <MapContainer
             key={mapContainerIdRef.current}
+            ref={setMap}
             center={mapCenter}
             zoom={selectedLocation ? 15 : 10}
             style={{ height: '100%', width: '100%' }}

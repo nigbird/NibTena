@@ -2,6 +2,13 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // react-leaflet 4.2.1's map-creation ref callback is a stale closure (memoized
+  // with useCallback(fn, [])), so React 18.3+ StrictMode's dev-only ref
+  // double-invoke makes it try to build a second Leaflet map on the same DOM
+  // node and throw "Map container is already initialized" whenever the hospital
+  // location picker mounts. StrictMode never runs in production, so this only
+  // affects local dev. See https://github.com/PaulLeCam/react-leaflet/issues/1133
+  reactStrictMode: false,
   typescript: {
     ignoreBuildErrors: true,
   },

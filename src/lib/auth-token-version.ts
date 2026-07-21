@@ -57,8 +57,6 @@ export async function ensureTokenVersionValid(token: any) {
     if (!dbSessionId || !tokenSessionId) return false;
     if (String(dbSessionId) !== String(tokenSessionId)) return false;
 
-    // Debug log to help trace mismatches during development
-    console.log('[auth-token-version] compare', { role, id: uid, dbVersion: Number(dbVersion), tokenVersion: Number(tokenVersion) });
     return Number(dbVersion) === Number(tokenVersion);
   } catch (e) {
     console.error('[auth-token-version] check failed', e);

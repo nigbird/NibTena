@@ -2,10 +2,22 @@
 import { headers, cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+// Mask a sensitive token/string for logs, keeping only a few chars at each end.
+const maskSecret = (t: string) => (!t || t.length <= 8 ? '****' : `${t.slice(0, 4)}...${t.slice(-4)}`);
+
 export async function GET(request: Request) {
   try {
     const headerList = await headers();
-    console.log('Connect route - incoming headers:', Object.fromEntries(headerList.entries()));
+    const safeHeaders = Object.fromEntries(
+      Array.from(headerList.entries()).map(([key, value]) => {
+        const lower = key.toLowerCase();
+        if (lower === 'authorization' || lower === 'cookie') {
+          return [key, maskSecret(value)];
+        }
+        return [key, value];
+      })
+    );
+    console.log('Connect route - incoming headers:', safeHeaders);
     const authHeader = headerList.get('Authorization');
 
     if (!authHeader) {
@@ -32,7 +44,7 @@ export async function GET(request: Request) {
 
     const token = authHeader.substring(bearerPrefix.length);
 
-    console.log('Connect route - extracted token length:', token ? token.length : 0);
+    console.log('Connect route - extracted token:', token ? maskSecret(token) : 'none', 'length:', token ? token.length : 0);
 
     if (!token) {
         return NextResponse.json(
@@ -78,7 +90,6 @@ export async function GET(request: Request) {
     }
     
     const validationText = await externalResponse.text();
-    console.log('Connect route - token validation raw response:', validationText);
     let validationResult = null;
     try {
       validationResult = JSON.parse(validationText);
@@ -86,7 +97,7 @@ export async function GET(request: Request) {
       console.warn('Connect route - could not parse validation response as JSON', e);
     }
     const phoneNumber = validationResult?.phone || validationResult?.phoneNumber || validationResult?.phone_number || null;
-    console.log('Connect route - derived phoneNumber from validation:', phoneNumber);
+    console.log('Connect route - validation succeeded, phoneNumber present:', !!phoneNumber);
 
     // On successful validation, create an encoded session cookie and redirect.
     const sessionData = {
@@ -113,8 +124,6 @@ export async function GET(request: Request) {
     }
 
     const cookieStore = await cookies();
-    // Mask token for logs
-    const maskToken = (t: string) => (t.length <= 8 ? '****' : `${t.slice(0,4)}...${t.slice(-4)}`);
     // Use SameSite=None for embedded/cross-site contexts (Super App WebView).
     // Note: cookies with SameSite=None must also be Secure in browsers.
     const isProd = process.env.NODE_ENV === 'production';

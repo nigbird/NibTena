@@ -6,7 +6,17 @@ export async function POST(request: NextRequest) {
   try {
     // ✅ Read Authorization header
     const authHeader = request.headers.get("Authorization");
-    console.log('Payment callback - incoming headers:', Object.fromEntries(request.headers.entries()));
+    const maskHeader = (s: string) => (s.length <= 8 ? '****' : `${s.slice(0, 4)}...${s.slice(-4)}`);
+    const safeHeaders = Object.fromEntries(
+      Array.from(request.headers.entries()).map(([key, value]) => {
+        const lower = key.toLowerCase();
+        if (lower === 'authorization' || lower === 'cookie') {
+          return [key, maskHeader(value)];
+        }
+        return [key, value];
+      })
+    );
+    console.log('Payment callback - incoming headers:', safeHeaders);
 
     if (!authHeader) {
       console.error("❌ Missing Authorization header.");
@@ -18,7 +28,7 @@ export async function POST(request: NextRequest) {
     const fixedAuthHeader = match ? match[1].trim() : null;
 
     if (!fixedAuthHeader) {
-      console.error("❌ Could not extract token from Authorization header:", authHeader);
+      console.error("❌ Could not extract token from Authorization header:", maskHeader(authHeader));
       return NextResponse.json({ message: "Invalid Authorization header format" }, { status: 400 });
     }
 

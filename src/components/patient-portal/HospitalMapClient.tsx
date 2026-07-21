@@ -62,7 +62,7 @@ export default function HospitalMapClient({ latitude, longitude }: HospitalMapCl
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              url="/api/map-tile/{z}/{x}/{y}"
             />
             <Marker position={[latitude as number, longitude as number]} />
             <MapUpdater center={[latitude as number, longitude as number]} />

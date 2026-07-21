@@ -5,7 +5,8 @@ import { COOKIE_NAME } from './lib/csrf-common';
 import { validateTokenStructure } from '@/lib/token-validation';
 
 function buildCsp(nonce: string) {
-  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://nominatim.openstreetmap.org; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+  
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://nominatim.openstreetmap.org; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
 }
 
 export default withAuth(

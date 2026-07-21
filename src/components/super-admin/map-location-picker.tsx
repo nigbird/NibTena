@@ -182,19 +182,14 @@ export default function MapLocationPicker({
   const handleSelectSuggestion = (suggestion: GeocodeResult) => {
     const lat = parseFloat(suggestion.lat);
     const lng = parseFloat(suggestion.lon);
-    
-    // Create a shorter display address for the map
-    const addr = suggestion.address;
-    let displayAddress = suggestion.display_name;
-    if (addr) {
-      const parts: string[] = [];
-      if (addr.road) parts.push(addr.road);
-      if (addr.house_number) parts.push(addr.house_number);
-      if (addr.city) parts.push(addr.city);
-      if (parts.length > 0) {
-        displayAddress = parts.join(', ');
-      }
-    }
+
+    // Use exactly what the user saw and clicked in the suggestions list.
+    // Rebuilding a "shorter" address from road/house_number/city here used to
+    // silently drop the result's name (e.g. a hospital or POI name) whenever
+    // it had a road in its address breakdown - which is nearly always, since
+    // Nominatim includes the street a POI sits on. That made the field show a
+    // generic street address instead of the specific place selected.
+    const displayAddress = suggestion.display_name;
 
     const locationData = {
       lat,

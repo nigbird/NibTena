@@ -83,6 +83,7 @@ export default function MapLocationPicker({
   );
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const skipNextSearchRef = useRef(false);
   const mapContainerIdRef = useRef(`map-container-${Math.random().toString(36).substr(2, 9)}`);
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -156,6 +157,11 @@ export default function MapLocationPicker({
       clearTimeout(searchTimeoutRef.current);
     }
 
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
+
     searchTimeoutRef.current = setTimeout(() => {
       if (searchQuery.trim()) {
         searchLocation(searchQuery);
@@ -197,6 +203,7 @@ export default function MapLocationPicker({
     };
 
     setSelectedLocation(locationData);
+    skipNextSearchRef.current = true;
     setSearchQuery(displayAddress);
     setShowSuggestions(false);
     onLocationChange({
@@ -238,6 +245,7 @@ export default function MapLocationPicker({
       };
 
       setSelectedLocation(locationData);
+      skipNextSearchRef.current = true;
       setSearchQuery(displayAddress);
       onLocationChange({
         latitude: lat,
@@ -254,6 +262,7 @@ export default function MapLocationPicker({
         mapDisplayAddress: coordString,
       };
       setSelectedLocation(locationData);
+      skipNextSearchRef.current = true;
       setSearchQuery(coordString);
       onLocationChange({
         latitude: lat,

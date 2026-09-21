@@ -493,7 +493,10 @@ export async function resendActivationLink(hospitalId: number) {
     const { createResetTokenRecord } = await import('@/lib/reset-token');
     await createResetTokenRecord(token, hospitalId, 'hospital', 60 * 60);
     const result = await sendSetPasswordEmail(hosp.contactEmail, token);
-    if (!result.success) return { success: false, message: `Email could not be sent: ${result.error}` };
+    if (!result.success) {
+      console.error('[resendHospitalActivationLink] Set password email failed:', result.error);
+      return { success: false, message: 'Email could not be sent. Please check the email configuration and try again.' };
+    }
 
     try {
       await createAuditLog({

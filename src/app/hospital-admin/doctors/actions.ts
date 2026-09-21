@@ -238,7 +238,10 @@ export async function resendDoctorActivationLink(doctorId: number): Promise<{ su
     const { createResetTokenRecord } = await import('@/lib/reset-token');
     await createResetTokenRecord(token, doctorId, 'doctor', 60 * 60);
     const result = await sendSetPasswordEmail(doc.contact, token, hospitalId);
-    if (!result.success) return { success: false, message: `Email could not be sent: ${result.error}` };
+    if (!result.success) {
+      console.error('[resendDoctorActivationLink] Set password email failed:', result.error);
+      return { success: false, message: 'Email could not be sent. Please check the email configuration and try again.' };
+    }
 
     await createAuditLog({
       actorId: user.id,

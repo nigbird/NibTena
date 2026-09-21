@@ -254,7 +254,12 @@ export async function getEmailTransporter(hospitalId?: number) {
             smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
             smtpUser: process.env.SMTP_EMAIL_USER,
             smtpPass: process.env.SMTP_EMAIL_PASS || '',
-            smtpEncryption: process.env.SMTP_SECURE === 'true' ? 'ssl' : 'tls',
+            // Encryption must match the port's actual protocol (465 = implicit
+            // TLS/SSL, everything else = STARTTLS), not the SMTP_SECURE flag —
+            // a mismatch here (e.g. port 587 with SMTP_SECURE=true) makes
+            // nodemailer attempt a TLS handshake on a plaintext port, which
+            // fails with "wrong version number".
+            smtpEncryption: parseInt(process.env.SMTP_PORT || '587', 10) === 465 ? 'ssl' : 'tls',
             imapHost: null, imapPort: null, imapUser: null, imapPass: null, imapEncryption: null,
             configured: true,
             isGlobal: true,

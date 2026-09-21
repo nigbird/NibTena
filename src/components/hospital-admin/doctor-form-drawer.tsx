@@ -226,7 +226,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                   Password
                   </Label>
                   <div className="col-span-3 relative">
-                    <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Leave blank to auto-generate'} />
+                    <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Leave blank, an activation link will be sent'} />
                      <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                         {showPassword ? <EyeOff /> : <Eye />}
                     </Button>

@@ -409,7 +409,7 @@ export default function HospitalFormDrawer({
                 <div className="space-y-2">
                   <Label htmlFor="password">Admin Password</Label>
                    <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank to auto-generate'} autoComplete="new-password" />
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank, an activation link will be sent'} autoComplete="new-password" />
                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                             {showPassword ? <EyeOff /> : <Eye />}
                         </Button>

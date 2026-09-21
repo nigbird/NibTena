@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit, PowerOff, Power } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, PowerOff, Power, MailCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteDoctor, updateDoctorStatus } from '@/app/hospital-admin/doctors/actions';
+import { deleteDoctor, updateDoctorStatus, resendDoctorActivationLink } from '@/app/hospital-admin/doctors/actions';
 import { useToast } from '@/hooks/use-toast';
 
 type DoctorListProps = {
@@ -78,6 +78,15 @@ export default function DoctorList({ doctors, onEdit, onDelete, onStatusChange }
       onStatusChange();
     } else {
       toast({ variant: "destructive", title: "Error", description: result.message });
+    }
+  };
+
+  const handleResendActivation = async (doctor: Doctor) => {
+    const result = await resendDoctorActivationLink(doctor.id);
+    if (result.success) {
+      toast({ title: "Activation Link Sent", description: result.message });
+    } else {
+      toast({ variant: "destructive", title: "Failed", description: result.message });
     }
   };
 
@@ -132,6 +141,12 @@ export default function DoctorList({ doctors, onEdit, onDelete, onStatusChange }
                         {doctor.status === 'active' ? <PowerOff className="mr-2 h-4 w-4 text-orange-500" /> : <Power className="mr-2 h-4 w-4 text-green-500" />}
                         {doctor.status === 'active' ? 'Deactivate' : 'Activate'}
                       </DropdownMenuItem>
+                      {doctor.mustChangePassword && (
+                        <DropdownMenuItem onClick={() => handleResendActivation(doctor)}>
+                          <MailCheck className="mr-2 h-4 w-4 text-blue-500" />
+                          Resend Activation Link
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleDeleteClick(doctor)} className="text-destructive">
                          <Trash2 className="mr-2 h-4 w-4" /> Delete

@@ -400,23 +400,30 @@ export default function HospitalFormDrawer({
                 </div>
             </div>
 
-            <div key="account" className="grid sm:grid-cols-2 gap-4">
+            <div key="account" className={isEditing ? "grid gap-4" : "grid sm:grid-cols-2 gap-4"}>
                  <div className="space-y-2">
                     <Label htmlFor="accountNumber">Account Number</Label>
                     <Input id="accountNumber" name="accountNumber" defaultValue={hospitalToEdit?.accountNumber} required />
                     {state.errors?.accountNumber && <p className="text-destructive text-sm">{state.errors.accountNumber[0]}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Admin Password</Label>
-                   <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep current' : 'Leave blank, an activation link will be sent'} autoComplete="new-password" />
-                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <EyeOff /> : <Eye />}
-                        </Button>
-                   </div>
-                  {state.errors?.password && <p className="text-destructive text-sm">{state.errors.password[0]}</p>}
-                </div>
+                {!isEditing && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Admin Password</Label>
+                     <div className="relative">
+                          <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Leave blank, an activation link will be sent" autoComplete="new-password" />
+                          <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                              {showPassword ? <EyeOff /> : <Eye />}
+                          </Button>
+                     </div>
+                    {state.errors?.password && <p className="text-destructive text-sm">{state.errors.password[0]}</p>}
+                  </div>
+                )}
             </div>
+            {isEditing && (
+              <p className="text-sm text-muted-foreground -mt-2">
+                Password can't be edited here. Use "Resend Activation Link" from the hospital list if the account needs to (re)set its password.
+              </p>
+            )}
 
             <div key="status" className="flex items-center space-x-2">
               <Switch id="status" name="status" defaultChecked={hospitalToEdit?.status === 'active' || !isEditing} />

@@ -221,18 +221,20 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                   {state.errors?.contact && <p className="text-sm font-medium text-destructive">{state.errors.contact[0]}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password" className="text-right">
-                  Password
-                  </Label>
-                  <div className="col-span-3 relative">
-                    <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder={isEditing ? 'Leave blank to keep unchanged' : 'Leave blank, an activation link will be sent'} />
-                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
-                        {showPassword ? <EyeOff /> : <Eye />}
-                    </Button>
-                  </div>
-                   {state.errors?.password && <p className="text-sm font-medium text-destructive col-start-2 col-span-3">{state.errors.password[0]}</p>}
-              </div>
+              {!isEditing && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="password" className="text-right">
+                    Password
+                    </Label>
+                    <div className="col-span-3 relative">
+                      <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Leave blank, an activation link will be sent" />
+                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff /> : <Eye />}
+                      </Button>
+                    </div>
+                     {state.errors?.password && <p className="text-sm font-medium text-destructive col-start-2 col-span-3">{state.errors.password[0]}</p>}
+                </div>
+              )}
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="specialty" className="text-right">
                 Specialty

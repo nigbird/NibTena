@@ -61,11 +61,13 @@ export async function saveDoctor(
   if (!(await verifyCsrfToken(_csrf))) {
     return { message: 'Invalid or missing CSRF token.', success: false };
   }
-  
-  if (doctorId && !rawData.password) {
+
+  // Password can only be set at creation time (via activation link or an explicit
+  // temporary password). Edits never touch the password field.
+  if (doctorId) {
     delete rawData.password;
   }
-  
+
   const imageUrl = (formData.get('imageUrl') as string) || undefined;
   if (!imageUrl) delete rawData.imageUrl;
 
@@ -89,14 +91,6 @@ export async function saveDoctor(
     }
     
     if (doctorId) {
-      if (password) {
-        const pwCheck = await validatePasswordAsync(password);
-        if (!pwCheck.valid) {
-          return { message: pwCheck.errors.join(' '), success: false };
-        }
-        dataToUpdate.password = await bcrypt.hash(password, 10);
-        dataToUpdate.mustChangePassword = true;
-      }
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
 
       await createAuditLog({
@@ -105,7 +99,7 @@ export async function saveDoctor(
         action: 'UPDATE_DOCTOR_PROFILE',
         targetId: doctorId,
         targetType: 'Doctor',
-        changes: { ...dataToUpdate, password: dataToUpdate.password ? '***' : undefined }
+        changes: dataToUpdate
       });
     } else {
       const dataToCreate: any = {
@@ -217,6 +211,48 @@ export async function updateDoctorStatus(doctorId: number, status: 'active' | 'i
     return { success: true, message: `Doctor has been ${status === 'active' ? 'activated' : 'deactivated'}.` };
   } catch (error) {
     return { success: false, message: 'Database Error: Failed to update doctor status.' };
+  }
+}
+
+export async function resendDoctorActivationLink(doctorId: number): Promise<{ success: boolean; message: string }> {
+  const doc = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+    select: { name: true, contact: true, mustChangePassword: true, hospitals: { select: { hospitalId: true } } },
+  });
+  const hospitalId = doc?.hospitals?.[0]?.hospitalId;
+  if (!doc || !hospitalId) return { success: false, message: 'Doctor not found.' };
+
+  const user = await getVerifiedUser();
+  if (!user) return { success: false, message: 'Unauthorized' };
+  const allowed = await requireHospitalPermission('Doctors:Update', hospitalId);
+  if (!allowed) return { success: false, message: 'Unauthorized' };
+
+  if (!doc.mustChangePassword) return { success: false, message: 'Doctor has already activated their account.' };
+  if (!doc.contact) return { success: false, message: 'Doctor has no contact email.' };
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return { success: false, message: 'Server configuration error.' };
+
+  try {
+    const token = jwt.sign({ userId: doctorId, userType: 'doctor', email: doc.contact }, secret, { expiresIn: '1h' });
+    const { createResetTokenRecord } = await import('@/lib/reset-token');
+    await createResetTokenRecord(token, doctorId, 'doctor', 60 * 60);
+    const result = await sendSetPasswordEmail(doc.contact, token, hospitalId);
+    if (!result.success) return { success: false, message: `Email could not be sent: ${result.error}` };
+
+    await createAuditLog({
+      actorId: user.id,
+      actorType: 'User',
+      action: 'RESEND_DOCTOR_ACTIVATION_LINK',
+      targetId: doctorId,
+      targetType: 'Doctor',
+      changes: { email: doc.contact },
+    });
+
+    return { success: true, message: `Activation link sent to ${doc.contact}.` };
+  } catch (err) {
+    console.error('[resendDoctorActivationLink] error:', err);
+    return { success: false, message: 'Failed to resend activation link.' };
   }
 }
 

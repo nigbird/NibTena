@@ -48,6 +48,7 @@ export type Doctor = {
   contact?: string;
   password?: string;
   status?: 'active' | 'inactive';
+  mustChangePassword?: boolean;
 };
 
 export type Patient = {

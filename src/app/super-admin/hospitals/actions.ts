@@ -85,7 +85,9 @@ export async function saveHospital(
 
   const rawData = Object.fromEntries(formData.entries());
 
-  if (hospitalId && !rawData.password) {
+  // Password can only be set at creation time. Edits go through the maker/checker
+  // request flow and never touch the password (use "Resend Activation Link" instead).
+  if (hospitalId) {
     delete rawData.password;
   }
   const imageUrl = (formData.get('imageUrl') as string) || undefined;
@@ -169,23 +171,12 @@ export async function saveHospital(
         };
       }
 
-      // Prepare proposed changes (exclude password from being stored as JSON unless provided)
+      // Prepare proposed changes. Password is never part of an edit request —
+      // use "Resend Activation Link" if the hospital needs to (re)set its password.
       const proposedChanges: any = { ...dataToSave };
-      // Remove password from proposedChanges if not provided (to avoid storing empty/undefined)
-      if (password) {
-        // Validate & hash password before storing in request
-        const pwCheck = await validatePasswordAsync(password);
-        if (!pwCheck.valid) {
-          return { errors: { password: [pwCheck.errors.join(' ')] }, message: pwCheck.errors.join(' '), success: false };
-        }
-        proposedChanges.password = await bcrypt.hash(password, 10);
-        proposedChanges.mustChangePassword = true;
-      } else {
-        // Don't include password fields if not changing password
-        delete proposedChanges.password;
-        delete proposedChanges.mustChangePassword;
-      }
-      
+      delete proposedChanges.password;
+      delete proposedChanges.mustChangePassword;
+
       // Create pending edit request
       await prisma.hospitalRequest.create({
         data: {
@@ -553,8 +544,16 @@ export async function getPendingHospitals() {
       description: true,
       city: true,
       address: true,
+      latitude: true,
+      longitude: true,
+      mapDisplayAddress: true,
       contactEmail: true,
       contactPhone: true,
+      ownerName: true,
+      ownerPhone: true,
+      bankDistrict: true,
+      bankBranch: true,
+      accountNumber: true,
       imageUrl: true,
       status: true,
       approvalStatus: true as any,

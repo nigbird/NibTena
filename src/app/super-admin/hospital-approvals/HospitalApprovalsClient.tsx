@@ -52,6 +52,8 @@ export default function HospitalApprovalsClient({
   const [pendingRejectId, setPendingRejectId] = useState<number | null>(null);
   const [viewChangesDialogOpen, setViewChangesDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PendingRequest | null>(null);
+  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
+  const [selectedHospitalDetails, setSelectedHospitalDetails] = useState<PendingHospital | null>(null);
 
   const handleDecision = (id: number, decision: 'approved' | 'rejected') => {
     setActionId(id);
@@ -72,6 +74,11 @@ export default function HospitalApprovalsClient({
   const handleViewChanges = (request: PendingRequest) => {
     setSelectedRequest(request);
     setViewChangesDialogOpen(true);
+  };
+
+  const handleViewDetails = (hospital: PendingHospital) => {
+    setSelectedHospitalDetails(hospital);
+    setViewDetailsDialogOpen(true);
   };
 
   const handleRequestDecision = (id: number, decision: 'approved' | 'rejected') => {
@@ -195,6 +202,49 @@ export default function HospitalApprovalsClient({
     );
   };
 
+  const renderHospitalDetails = () => {
+    if (!selectedHospitalDetails) return null;
+    const h = selectedHospitalDetails;
+
+    const fields: { label: string; value: React.ReactNode }[] = [
+      { label: 'Hospital Name', value: h.name },
+      { label: 'Description', value: h.description },
+      { label: 'City', value: h.city },
+      { label: 'Address', value: h.address },
+      { label: 'Map Location', value: h.mapDisplayAddress || (h.latitude && h.longitude ? `${h.latitude}, ${h.longitude}` : null) },
+      { label: 'Contact Email', value: h.contactEmail },
+      { label: 'Contact Phone', value: h.contactPhone },
+      { label: 'Owner/Manager Name', value: h.ownerName },
+      { label: 'Owner/Manager Phone', value: h.ownerPhone },
+      { label: 'Bank District', value: h.bankDistrict },
+      { label: 'Bank Branch', value: h.bankBranch },
+      { label: 'Account Number', value: h.accountNumber },
+      { label: 'Submitted By', value: h.createdBySuperAdmin ? `${h.createdBySuperAdmin.name} (${h.createdBySuperAdmin.email})` : 'Unknown' },
+      { label: 'Submitted On', value: h.createdAt ? new Date(h.createdAt).toLocaleString() : null },
+    ];
+
+    return (
+      <div className="space-y-4">
+        {h.imageUrl && (
+          <div className="w-full h-48 relative rounded-md overflow-hidden border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={h.imageUrl} alt={h.name} className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="grid sm:grid-cols-2 gap-3">
+          {fields.map(({ label, value }) => (
+            <div key={label} className="border rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground">{label}</Label>
+              <div className="mt-1 text-sm break-words">
+                {value !== null && value !== undefined && value !== '' ? value : <span className="text-muted-foreground italic">(empty)</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const handleConfirmReject = () => {
     if (pendingRejectId === null) return;
     
@@ -250,6 +300,14 @@ export default function HospitalApprovalsClient({
                       <Badge variant="outline">Pending</Badge>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewDetails(h)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
                       <Button
                         size="sm"
                         variant="accent"
@@ -352,6 +410,49 @@ export default function HospitalApprovalsClient({
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={viewDetailsDialogOpen} onOpenChange={setViewDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Hospital Details</DialogTitle>
+            <DialogDescription>
+              Full submitted information for {selectedHospitalDetails?.name || 'this hospital'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(90vh-260px)] pr-4">
+            {renderHospitalDetails()}
+          </ScrollArea>
+          {selectedHospitalDetails && (
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setViewDetailsDialogOpen(false)}>
+                Close
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={isPending && actionId === selectedHospitalDetails.id && actionType === 'hospital'}
+                onClick={() => {
+                  setViewDetailsDialogOpen(false);
+                  handleDecision(selectedHospitalDetails.id, 'rejected');
+                }}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Reject
+              </Button>
+              <Button
+                variant="accent"
+                disabled={isPending && actionId === selectedHospitalDetails.id && actionType === 'hospital'}
+                onClick={() => {
+                  setViewDetailsDialogOpen(false);
+                  handleDecision(selectedHospitalDetails.id, 'approved');
+                }}
+              >
+                {isPending && actionId === selectedHospitalDetails.id && actionType === 'hospital' ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+                Approve
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={viewChangesDialogOpen} onOpenChange={setViewChangesDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh]">

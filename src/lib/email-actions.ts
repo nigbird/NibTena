@@ -9,6 +9,21 @@ import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import { createAuditLog } from '@/lib/audit';
 import { ImapFlow } from 'imapflow';
+import dns from 'dns';
+import net from 'net';
+
+async function resolveSmtpHost(hostname: string): Promise<{ host: string; servername?: string }> {
+  if (!hostname || net.isIP(hostname)) return { host: hostname };
+  try {
+    const addresses = await dns.promises.resolve4(hostname);
+    if (addresses.length > 0) {
+      return { host: addresses[0], servername: hostname };
+    }
+  } catch (e) {
+    // fall back to letting the OS/nodemailer resolve the hostname normally
+  }
+  return { host: hostname };
+}
 
 const EmailSettingsSchema = z.object({
   id: z.number().optional(),
@@ -140,9 +155,10 @@ export async function testEmailConnection(settings: EmailSettingsType) {
       const isSsl = settingsToTest.smtpPort === 465 || settingsToTest.smtpEncryption === 'ssl';
       const isStartTls = !isSsl && (settingsToTest.smtpEncryption === 'tls' || settingsToTest.smtpPort === 587);
       const tlsRejectUnauthorized = process.env.NODE_ENV === 'production' && process.env.EMAIL_ALLOW_INSECURE !== 'true';
+      const resolvedHost = await resolveSmtpHost(settingsToTest.smtpHost);
 
       const transporter = nodemailer.createTransport({
-        host: settingsToTest.smtpHost,
+        host: resolvedHost.host,
         port: settingsToTest.smtpPort,
         secure: isSsl, // true for port 465 (SSL)
         requireTLS: !!isStartTls, // enforce STARTTLS when using TLS/port 587
@@ -152,6 +168,7 @@ export async function testEmailConnection(settings: EmailSettingsType) {
         },
         tls: {
           rejectUnauthorized: !!tlsRejectUnauthorized,
+          servername: resolvedHost.servername,
         },
       });
       await transporter.verify();
@@ -255,10 +272,11 @@ export async function getEmailTransporter(hospitalId?: number) {
     const isSsl = configToUse.smtpPort === 465 || configToUse.smtpEncryption === 'ssl';
     const isStartTls = !isSsl && (configToUse.smtpEncryption === 'tls' || configToUse.smtpPort === 587);
     const tlsRejectUnauthorized = process.env.NODE_ENV === 'production' && process.env.EMAIL_ALLOW_INSECURE !== 'true';
+    const resolvedHost = await resolveSmtpHost(configToUse.smtpHost);
 
     return {
       transporter: nodemailer.createTransport({
-        host: configToUse.smtpHost,
+        host: resolvedHost.host,
         port: configToUse.smtpPort,
         secure: isSsl,
         requireTLS: !!isStartTls,
@@ -267,7 +285,8 @@ export async function getEmailTransporter(hospitalId?: number) {
           pass: configToUse.smtpPass,
         },
         tls: {
-          rejectUnauthorized: !!tlsRejectUnauthorized
+          rejectUnauthorized: !!tlsRejectUnauthorized,
+          servername: resolvedHost.servername
         }
       }),
       fromUser: configToUse.smtpUser,

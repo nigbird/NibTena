@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveDoctor, type DoctorFormState } from "@/app/hospital-admin/doctors/actions";
 import { getSpecialties } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { Doctor } from '@/lib/definitions';
 import { ScrollArea } from '../ui/scroll-area';
@@ -41,6 +41,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
   const { toast } = useToast();
   const [specialties, setSpecialties] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [imagePreview, setImagePreview] = useState<string | null>(doctorToEdit?.imageUrl || null);
   const [imageValidationErrors, setImageValidationErrors] = useState<string[]>([]);
@@ -168,6 +169,14 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
     }
   };
 
+  const handleRemoveImage = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+    setImagePreview(null);
+    setImageValidationErrors([]);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-lg flex flex-col">
@@ -183,8 +192,20 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
               {imagePreview && (
                 <div className="space-y-2">
                     <Label>Image Preview</Label>
-                    <div className="w-24 h-24 relative rounded-full overflow-hidden border-2 border-primary">
-                        <Image src={imagePreview} alt="Doctor preview" fill style={{ objectFit: 'cover' }} />
+                    <div className="group relative w-24 h-24">
+                        <div className="w-24 h-24 relative rounded-full overflow-hidden border-2 border-primary">
+                            <Image src={imagePreview} alt="Doctor preview" fill style={{ objectFit: 'cover' }} />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-1 -right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={handleRemoveImage}
+                          aria-label="Remove image"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                     </div>
                 </div>
               )}
@@ -193,7 +214,7 @@ export default function DoctorFormDrawer({ isOpen, setIsOpen, hospitalId, onDoct
                 Profile Photo
                 </Label>
                 <div className="col-span-3">
-                <Input id="image" name="image" type="file" accept="image/*" className="w-full" onChange={handleImageChange}/>
+                <Input ref={imageInputRef} id="image" name="image" type="file" accept="image/*" className="w-full" onChange={handleImageChange}/>
                 {imageValidationErrors.length > 0 && (
                   <div className="mt-2 space-y-1 text-sm">
                     {imageValidationErrors.map((msg, i) => (

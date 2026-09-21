@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useCsrfToken } from '@/hooks/use-csrf-token';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, X } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { saveHospital, type HospitalFormState } from '@/app/super-admin/hospitals/actions';
 import type { Hospital } from '@/lib/definitions';
@@ -62,6 +62,7 @@ export default function HospitalFormDrawer({
   const { toast } = useToast();
   const csrfToken = useCsrfToken();
   const formRef = useRef<HTMLFormElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   
@@ -164,6 +165,20 @@ export default function HospitalFormDrawer({
       }
     };
   }, []);
+
+  const handleRemoveImage = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+    if (lastBlobUrlRef.current) {
+      try {
+        URL.revokeObjectURL(lastBlobUrlRef.current);
+      } catch {}
+      lastBlobUrlRef.current = null;
+    }
+    setImagePreview(null);
+    setImageValidationErrors([]);
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -291,14 +306,26 @@ export default function HospitalFormDrawer({
             {imagePreview && (
                 <div key="preview" className="space-y-2">
                     <Label>Image Preview</Label>
-                    <div className="w-full h-48 relative rounded-md overflow-hidden border">
-                        <Image src={imagePreview} alt="Hospital preview" fill style={{ objectFit: 'cover' }} />
+                    <div className="group relative w-full h-48">
+                        <div className="w-full h-48 relative rounded-md overflow-hidden border">
+                            <Image src={imagePreview} alt="Hospital preview" fill style={{ objectFit: 'cover' }} />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={handleRemoveImage}
+                          aria-label="Remove image"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             )}
             <div key="image-input" className="space-y-2">
               <Label htmlFor="image">Hospital Photo</Label>
-              <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+              <Input ref={imageInputRef} id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
               {imageValidationErrors.map((msg, i) => (
                 <p key={i} className="text-destructive text-sm">{msg}</p>
               ))}

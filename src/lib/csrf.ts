@@ -24,6 +24,22 @@ export async function verifyCsrfToken(formToken?: string | null) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// Deployments behind a reverse proxy/load balancer often rewrite the Host
+// header to an internal address, so we validate against the known public
+// URL(s) instead of trusting the request's Host header.
+function getTrustedHosts(): string[] {
+  const hosts = new Set<string>();
+  for (const url of [process.env.NEXTAUTH_URL, process.env.NEXT_PUBLIC_BASE_URL]) {
+    if (!url) continue;
+    try {
+      hosts.add(new URL(url).host);
+    } catch (e) {
+      // ignore malformed env values
+    }
+  }
+  return [...hosts];
+}
+
 /**
  * Validates the Origin and/or Referer headers to protect against CSRF.
  * This is a defense-in-depth measure for API routes.
@@ -33,14 +49,17 @@ export function validateOrigin(request: Request): boolean {
   const referer = request.headers.get('referer');
   const host = request.headers.get('host');
 
-  // If no Host header, we can't verify (should not happen in valid HTTP/1.1+)
-  if (!host) return false;
+  // Prefer the configured public URL(s); fall back to the request's Host
+  // header only when neither env var is set (e.g. local dev).
+  const trustedHosts = getTrustedHosts();
+  const allowedHosts = trustedHosts.length > 0 ? trustedHosts : (host ? [host] : []);
+
+  if (allowedHosts.length === 0) return false;
 
   // Check Origin if present (Browsers send this for POST/PUT/DELETE/PATCH)
   if (origin) {
     try {
-      const originUrl = new URL(origin);
-      return originUrl.host === host;
+      return allowedHosts.includes(new URL(origin).host);
     } catch (e) {
       return false;
     }
@@ -49,8 +68,7 @@ export function validateOrigin(request: Request): boolean {
   // Fallback to Referer if Origin is missing (some older browsers or same-site navigation)
   if (referer) {
     try {
-      const refererUrl = new URL(referer);
-      return refererUrl.host === host;
+      return allowedHosts.includes(new URL(referer).host);
     } catch (e) {
       return false;
     }

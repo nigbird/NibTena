@@ -7,36 +7,28 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import DoctorBooking from './DoctorBooking';
 import { prisma } from '@/lib/prisma';
-import type { Hospital as HospitalType } from '@/lib/definitions';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 
 async function getDoctorData(doctorId: number) {
-  const doctor = await prisma.doctor.findUnique({
-      where: { id: doctorId },
+  // Only fields rendered here or by DoctorBooking; this data is serialized
+  // into the RSC payload, so never add contact, bank or status fields.
+  const doctor = await prisma.doctor.findFirst({
+      where: { id: doctorId, status: 'active' },
       select: {
         id: true,
         name: true,
-        contact: true,
         specialty: true,
         imageUrl: true,
         bio: true,
         consultationFee: true,
-        rating: true,
-        experience: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
         hospitals: {
-          include: {
+          where: { hospital: { status: 'active' } },
+          select: {
             hospital: {
               select: {
                 id: true,
                 name: true,
-                city: true,
-                contactEmail: true,
-                contactPhone: true,
-                imageUrl: true,
-                status: true,
               }
             }
           }
@@ -61,8 +53,11 @@ export default async function DoctorProfilePage({
     params: Promise<{ id: string }>;
     searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  if (!(await hasValidMiniAppSession())) return null;
+
   const { id } = await params;
   const doctorId = Number(id);
+  if (!Number.isInteger(doctorId)) notFound();
   
   const { doctor, doctorHospitals } = await getDoctorData(doctorId);
 
@@ -127,8 +122,8 @@ export default async function DoctorProfilePage({
             <Card className="p-6 md:p-8 shadow-lg rounded-2xl">
                <h2 className="font-headline text-xl md:text-2xl font-semibold mb-4">Book an Appointment</h2>
                <DoctorBooking 
-                  doctor={doctor} 
-                  doctorHospitals={doctorHospitals as HospitalType[]} 
+                  doctor={{ id: doctor.id }}
+                  doctorHospitals={doctorHospitals} 
                   searchParams={searchParams}
                 />
             </Card>

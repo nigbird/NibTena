@@ -12,10 +12,6 @@ export async function getHospitalsAndCities() {
             name: true,
             city: true,
             imageUrl: true,
-            description: true,
-            contactEmail: true,
-            contactPhone: true,
-            status: true,
         }
     });
 
@@ -25,7 +21,7 @@ export async function getHospitalsAndCities() {
 }
 
 export async function getHospitalData(hospitalId: number) {
-    const hospital = await prisma.hospital.findUnique({
+    const hospital = await prisma.hospital.findFirst({
         where: { id: hospitalId, status: 'active' },
         select: {
             id: true,
@@ -51,8 +47,6 @@ export async function getHospitalData(hospitalId: number) {
             name: true,
             specialty: true,
             imageUrl: true,
-            contact: true,
-            status: true,
         }
     });
 

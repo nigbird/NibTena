@@ -36,8 +36,8 @@ const specialtyIcons: { [key: string]: React.ElementType } = {
 
 
 type SearchResult = {
-  doctors: Doctor[];
-  hospitals: HospitalType[];
+  doctors: PublicDoctor[];
+  hospitals: PublicHospital[];
   specialties: string[];
 };
 
@@ -62,12 +62,15 @@ function Highlight({ text, highlight }: { text: string; highlight: string }) {
   );
 }
 
+type PublicHospital = Pick<HospitalType, 'id' | 'name' | 'city' | 'imageUrl'>;
+type PublicDoctor = Pick<Doctor, 'id' | 'name' | 'specialty' | 'imageUrl'>;
+
 type UserHomepageClientProps = {
     heroImage?: ImagePlaceholder;
     quickActions: { href: string; label: string; icon: string; color: string; }[];
-    topHospitals: HospitalType[];
-    featuredDoctors: Doctor[];
-    allData: { doctors: Doctor[]; hospitals: HospitalType[]; specialties: string[] };
+    topHospitals: PublicHospital[];
+    featuredDoctors: PublicDoctor[];
+    allData: { doctors: PublicDoctor[]; hospitals: PublicHospital[]; specialties: string[] };
     hasMiniAppSession: boolean;
 }
 

@@ -1,13 +1,13 @@
 
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import type { Doctor, Hospital } from '@/lib/definitions';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import DoctorSearch from './DoctorSearch';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 async function getDoctorsWithHospitals() {
   const doctors = await prisma.doctor.findMany({
@@ -17,23 +17,13 @@ async function getDoctorsWithHospitals() {
       name: true,
       specialty: true,
       imageUrl: true,
-      bio: true,
-      consultationFee: true,
-      rating: true,
-      experience: true,
-      contact: true,
-      status: true,
       hospitals: {
-        include: {
+        where: { hospital: { status: 'active' } },
+        select: {
           hospital: {
             select: {
               id: true,
               name: true,
-              city: true,
-              imageUrl: true,
-              contactEmail: true,
-              contactPhone: true,
-              status: true,
             }
           }
         },
@@ -60,7 +50,9 @@ async function getSpecialties() {
         .sort();
 }
 
-function DoctorCard({ doctor }: { doctor: (Doctor & { hospitals: { hospital: Hospital }[] }) }) {
+type DoctorWithHospital = Awaited<ReturnType<typeof getDoctorsWithHospitals>>[number];
+
+function DoctorCard({ doctor }: { doctor: DoctorWithHospital }) {
   const hospital = doctor.hospitals[0]?.hospital;
 
   return (
@@ -107,6 +99,8 @@ export default async function SearchPage({
     q?: string;
   };
 }) {
+  if (!(await hasValidMiniAppSession())) return null;
+
   const specialtyQuery = searchParams?.specialty;
   const nameQuery = searchParams?.q;
 

@@ -2,8 +2,7 @@
 import { placeholderImages } from '@/lib/placeholder-images';
 import { prisma } from '@/lib/prisma';
 import UserHomepageClient from '@/components/UserHomepageClient';
-import { cookies } from 'next/headers';
-import type { Hospital, Doctor } from '@prisma/client';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 const allQuickActions = [
     { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-primary/40 text-primary-foreground' },
@@ -12,101 +11,97 @@ const allQuickActions = [
     { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-primary/40 text-primary-foreground' },
 ];
 
-const safeDoctorSelect = {
+// Only the fields the homepage UI renders. Everything returned here is
+// serialized into the RSC payload, so never add contact, bank or status fields.
+const publicDoctorSelect = {
     id: true,
     name: true,
     specialty: true,
     imageUrl: true,
-    bio: true,
-    consultationFee: true,
-    rating: true,
-    experience: true,
-    contact: true,
-    status: true,
-};
+} as const;
 
-const safeHospitalSelect = {
+const publicHospitalSelect = {
     id: true,
     name: true,
     city: true,
     imageUrl: true,
-    description: true,
-    contactEmail: true,
-    contactPhone: true,
-    status: true,
-    bookingWindow: true,
-    startTime: true,
-    endTime: true,
-    accountNumber: true,
-};
+} as const;
 
 
 export default async function Home() {
-    const cookieStore = await cookies();
-    const hasMiniAppSession = !!cookieStore.get('miniapp_session');
+    const hasMiniAppSession = await hasValidMiniAppSession();
 
-    console.log('User home page: hasMiniAppSession:', hasMiniAppSession);
+    // The layout renders RestrictedAccess without a session; don't query or
+    // serialize any data for those visitors.
+    if (!hasMiniAppSession) return null;
 
-    const quickActions = hasMiniAppSession
-        ? allQuickActions.filter(action => action.label !== 'Profile')
-        : allQuickActions;
+    const quickActions = allQuickActions.filter(action => action.label !== 'Profile');
 
     const allHospitalsWithCounts = await prisma.hospital.findMany({
+        where: { status: 'active' },
         select: {
-            ...safeHospitalSelect,
+            ...publicHospitalSelect,
             _count: {
                 select: { appointments: true, doctors: true },
             },
         },
     });
 
-    const topHospitals = allHospitalsWithCounts
+    const toPublicHospital = ({ _count, ...hospital }: typeof allHospitalsWithCounts[number]) => hospital;
+
+    const topHospitalsRanked = allHospitalsWithCounts
         .map(hospital => ({
-            ...hospital,
+            hospital,
             popularityScore: (hospital._count.appointments * 2) + hospital._count.doctors,
         }))
         .sort((a, b) => b.popularityScore - a.popularityScore)
-        .slice(0, 5);
+        .slice(0, 5)
+        .map(({ hospital }) => hospital);
 
-    const topHospitalIds = topHospitals.map(h => h.id);
+    const topHospitalIds = topHospitalsRanked.map(h => h.id);
+    const topHospitals = topHospitalsRanked.map(toPublicHospital);
+    const hospitals = allHospitalsWithCounts.map(toPublicHospital);
 
     let featuredDoctors = await prisma.doctor.findMany({
         where: {
+            status: 'active',
             hospitals: {
                 some: {
                     hospitalId: { in: topHospitalIds },
                 },
             },
         },
-        select: safeDoctorSelect,
+        select: publicDoctorSelect,
         take: 10,
     });
-    
+
     if (featuredDoctors.length < 5) {
         const fallbackDoctors = await prisma.doctor.findMany({
             where: {
+                status: 'active',
                 rating: { gt: 4.5 },
                 id: { notIn: featuredDoctors.map(d => d.id) }
             },
-            select: safeDoctorSelect,
+            select: publicDoctorSelect,
             take: 5 - featuredDoctors.length
         });
         featuredDoctors = [...featuredDoctors, ...fallbackDoctors];
     }
-    
+
     featuredDoctors = featuredDoctors.slice(0, 5);
 
 
     const [allDoctors, allSpecialties] = await Promise.all([
-        prisma.doctor.findMany({ select: safeDoctorSelect }),
+        prisma.doctor.findMany({ where: { status: 'active' }, select: publicDoctorSelect }),
         prisma.doctor.findMany({
+            where: { status: 'active' },
             distinct: ['specialty'],
             select: { specialty: true },
         }),
     ]);
 
     const specialties = allSpecialties.map(s => s.specialty);
-    const allData = { doctors: allDoctors, hospitals: allHospitalsWithCounts, specialties };
+    const allData = { doctors: allDoctors, hospitals, specialties };
 
     const heroImage = placeholderImages.find(p => p.id === 'NibAppointment-hero');
 

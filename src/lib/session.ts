@@ -65,6 +65,16 @@ export function parseMiniAppSessionCookie(cookieValue?: string): MiniAppSession 
   }
 }
 
+// Server components under /user must not query or serialize data for visitors
+// without a verified mini-app session (the layout only shows RestrictedAccess,
+// but page props would still be embedded in the RSC payload).
+export async function hasValidMiniAppSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore
+    .getAll('miniapp_session')
+    .some(cookie => !!parseMiniAppSessionCookie(cookie.value));
+}
+
 export function createMiniAppSessionCookieValue(session: MiniAppSession): string {
     if (!AUTH_SECRET) {
         throw new Error('AUTH_SECRET not set');

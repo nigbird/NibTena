@@ -4,8 +4,8 @@
 import { prisma } from '@/lib/prisma';
 
 export async function getHospitalData(hospitalId: number) {
-    const hospital = await prisma.hospital.findUnique({
-        where: { id: hospitalId },
+    const hospital = await prisma.hospital.findFirst({
+        where: { id: hospitalId, status: 'active' },
         select: {
             id: true,
             name: true,
@@ -30,8 +30,6 @@ export async function getHospitalData(hospitalId: number) {
             name: true,
             specialty: true,
             imageUrl: true,
-            contact: true,
-            status: true,
         }
     });
 

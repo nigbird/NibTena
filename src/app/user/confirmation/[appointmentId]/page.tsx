@@ -3,17 +3,32 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, Calendar, Clock, User, Stethoscope } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import type { Appointment, Doctor } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { placeholderImages } from '@/lib/placeholder-images';
 import ConfirmationClient from './ConfirmationClient';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
+import { getPatientFromCookie } from '@/lib/session';
 
 async function getConfirmationData(appointmentId: string) {
-    const appointment = await prisma.appointment.findUnique({
-        where: { id: appointmentId },
+    // Only the owning patient may view their appointment.
+    const patient = await getPatientFromCookie();
+    if (!patient) {
+        return { appointment: null, doctor: null };
+    }
+
+    const appointment = await prisma.appointment.findFirst({
+        where: { id: appointmentId, patientId: patient.id },
+        select: {
+            doctorId: true,
+            appointmentDate: true,
+            appointmentSlot: true,
+            symptoms: true,
+            patient: {
+                select: { name: true, age: true, gender: true },
+            },
+        },
     });
 
     if (!appointment) {
@@ -23,16 +38,8 @@ async function getConfirmationData(appointmentId: string) {
     const doctor = await prisma.doctor.findUnique({
       where: { id: appointment.doctorId },
       select: {
-        id: true,
         name: true,
         specialty: true,
-        imageUrl: true,
-        bio: true,
-        consultationFee: true,
-        rating: true,
-        experience: true,
-        contact: true,
-        status: true,
       }
     });
 
@@ -92,8 +99,8 @@ export default async function ConfirmationPage({ params, searchParams }: { param
                   <div className="flex items-start">
                     <User className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
                     <div>
-                      <span className="font-semibold text-foreground">{(appointment as any).patientName}</span>
-                      <p className="text-sm">Age: {(appointment as any).patientAge}, Gender: {(appointment as any).patientGender}</p>
+                      <span className="font-semibold text-foreground">{appointment.patient.name}</span>
+                      <p className="text-sm">Age: {appointment.patient.age}, Gender: {appointment.patient.gender}</p>
                     </div>
                   </div>
                   <div className="flex items-center">

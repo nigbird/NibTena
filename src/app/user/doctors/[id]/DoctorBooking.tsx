@@ -13,8 +13,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { getAvailableTimeWindows } from './actions';
 
 type DoctorBookingProps = {
-  doctor: Doctor;
-  doctorHospitals: Hospital[];
+  doctor: Pick<Doctor, 'id'>;
+  doctorHospitals: (Pick<Hospital, 'id' | 'name'> & { bookingWindow?: number | null })[];
   searchParams?: { [key: string]: string | string[] | undefined };
 };
 

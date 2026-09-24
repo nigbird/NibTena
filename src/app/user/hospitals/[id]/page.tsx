@@ -6,10 +6,14 @@ import type { Doctor } from '@/lib/definitions';
 import { getHospitalData } from './actions';
 import HospitalDoctorsList from '@/components/patient-portal/hospital-doctors-list';
 import HospitalMapDisplay from '@/components/patient-portal/hospital-map-display';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 export default async function HospitalDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await hasValidMiniAppSession())) return null;
+
   const { id } = await params;
   const hospitalId = Number(id);
+  if (!Number.isInteger(hospitalId)) notFound();
   const { hospital, doctors, specialties } = await getHospitalData(hospitalId);
 
   if (!hospital) {

@@ -1,10 +1,8 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 export async function getMiniAppCookie(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const miniAppSession = cookieStore.get('miniapp_session');
-  console.log('getMiniAppCookie: miniapp_session present:', !!miniAppSession?.value, 'rawLength:', miniAppSession?.value?.length ?? 0);
-  return !!miniAppSession?.value;
+  // Verify the signed session rather than trusting mere cookie presence.
+  return hasValidMiniAppSession();
 }

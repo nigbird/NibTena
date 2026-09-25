@@ -2,9 +2,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { hasValidMiniAppSession } from '@/lib/session';
 
 export async function getDoctorsAndHospitalsByQuery(query: string) {
-    if (!query) {
+    // Server actions are callable directly via POST; require a verified session.
+    if (!query || !(await hasValidMiniAppSession())) {
         return { doctors: [], hospitals: [] };
     }
 

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './providers';
-import { headers, cookies } from 'next/headers';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'NibAppointment',
@@ -16,14 +16,6 @@ export default async function RootLayout({
 }>) {
   const headerList = await headers();
   const nonce = headerList.get('x-nonce') || '';
-  // Read the double-submit CSRF cookie (set by middleware) and expose it as
-  // a safe global for Next's client runtime which expects `csrfToken` when
-  // using server actions. The cookie is intentionally non-HttpOnly so client
-  // code can read it. We render it into an inline script using the same
-  // `nonce` value so CSP allows it.
-  const cookieStore = await cookies();
-  const csrfCookie = cookieStore.get('csrfToken')?.value || '';
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -39,13 +31,6 @@ export default async function RootLayout({
           rel="stylesheet"
         />
         <meta name="csp-nonce" content={nonce} />
-        {nonce ? (
-          <script
-            // Attach the per-request nonce so CSP allows this inline script
-            {...(nonce ? { nonce } : {})}
-            dangerouslySetInnerHTML={{ __html: `window.csrfToken = ${JSON.stringify(csrfCookie)};` }}
-          />
-        ) : null}
       </head>
       <body className="font-body antialiased">
         <AuthProvider>

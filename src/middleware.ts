@@ -41,6 +41,9 @@ export default withAuth(
     const nonce = randomBase64(16);
     const forwarded = new Headers(req.headers);
     forwarded.set('x-nonce', nonce);
+    // Next.js reads the nonce from the request CSP header and applies it to
+    // its own inline scripts (RSC flight data), so forward it as well.
+    forwarded.set('Content-Security-Policy', buildCsp(nonce));
 
     // Ensure a double-submit CSRF cookie is present for forms.
     // We create a non-HttpOnly cookie so client-side form components can read it and include
@@ -62,22 +65,6 @@ export default withAuth(
       }
     } catch (e) {
       // If cookie APIs are unavailable, continue without failing the request.
-    }
-
-    // If we have no auth token and no special response to return, continue but
-    // ensure the request forwarded header contains the nonce so the downstream
-    // render can use it. If we already built a response, return it (we'll add
-    // CSP headers before returning).
-    if (!token && !responseToReturn) {
-      // continue with forwarded headers
-    }
-    if (!token && responseToReturn) {
-      // attach CSP header and x-nonce header on the response and return
-        const csp = buildCsp(nonce);
-      responseToReturn.headers.set('Content-Security-Policy', csp);
-      responseToReturn.headers.set('x-nonce', nonce);
-      responseToReturn.headers.set('Referrer-Policy', 'same-origin');
-      return responseToReturn;
     }
 
     // Use forwarded headers for downstream rendering
@@ -106,6 +93,22 @@ export default withAuth(
           );
         }
       }
+    }
+
+    // If we have no auth token and no special response to return, continue but
+    // ensure the request forwarded header contains the nonce so the downstream
+    // render can use it. If we already built a response, return it (we'll add
+    // CSP headers before returning).
+    if (!token && !responseToReturn) {
+      // continue with forwarded headers
+    }
+    if (!token && responseToReturn) {
+      // attach CSP header and x-nonce header on the response and return
+        const csp = buildCsp(nonce);
+      responseToReturn.headers.set('Content-Security-Policy', csp);
+      responseToReturn.headers.set('x-nonce', nonce);
+      responseToReturn.headers.set('Referrer-Policy', 'same-origin');
+      return responseToReturn;
     }
 
     const mustChangePassword = token?.mustChangePassword === true;

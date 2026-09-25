@@ -31,13 +31,10 @@ export default function PatientAuth() {
     startTransition(async () => {
       const result = await generateAndSendOtp(phoneInput);
       if (result.success) {
-        if (result.otp) {
-            toast({
-              title: 'OTP For Testing',
-              description: `Your verification code is: ${result.otp}`,
-              duration: 10000,
-            });
-        }
+        toast({
+          title: 'OTP Sent',
+          description: 'A verification code has been sent to your phone.',
+        });
   const params = new URLSearchParams(searchParams);
   params.set('phone', phoneInput);
   // Determine redirectUrl: avoid sending users back to profile after login in standalone.

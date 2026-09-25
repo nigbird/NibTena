@@ -10,6 +10,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { validatePasswordAsync } from '@/lib/password-policy';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { isSafeUploadUrl } from '@/lib/image-upload';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import jwt from 'jsonwebtoken';
@@ -22,7 +23,7 @@ const DoctorFormSchema = z.object({
   experience: z.coerce.number().min(0, { message: 'Experience cannot be negative.' }),
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().refine(isSafeUploadUrl, { message: 'Invalid image URL.' }).optional(),
 });
 
 export type DoctorFormState = {

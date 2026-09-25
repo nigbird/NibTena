@@ -180,11 +180,10 @@ export default function BookingPage() {
           }
         }
       } else { // Standalone app flow
-        if (state.otp && state.data) {
+        if (state.data) {
           toast({
-            title: 'OTP For Testing',
-            description: `Your verification code is: ${state.otp}`,
-            duration: 10000,
+            title: 'OTP Sent',
+            description: 'A verification code has been sent to your phone.',
           });
 
           const bookingDetails = {

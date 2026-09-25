@@ -9,6 +9,7 @@ import { validatePasswordAsync } from '@/lib/password-policy';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { isSafeUploadUrl } from '@/lib/image-upload';
 import { sendWelcomeEmail, sendSetPasswordEmail } from '@/lib/email-actions';
 import { Prisma } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
@@ -30,7 +31,7 @@ const HospitalFormSchema = z.object({
   bankBranch: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters.').optional().or(z.literal('')),
   accountNumber: z.string().regex(/^[0-9]{6,20}$/, { message: 'Account number must be 6-20 digits.' }),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().refine(isSafeUploadUrl, { message: 'Invalid image URL.' }).optional(),
 });
 
 export type HospitalFormState = {

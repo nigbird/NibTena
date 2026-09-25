@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { saveImage } from '@/lib/image-upload';
+import { saveImage, isSafeUploadUrl, ImageValidationError } from '@/lib/image-upload';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/../../auth';
 import { validatePasswordAsync } from '@/lib/password-policy';
@@ -21,7 +21,7 @@ const DoctorProfileSchema = z.object({
   consultationFee: z.coerce.number().min(0, { message: 'Fee cannot be negative.' }),
   bio: z.string().min(10, { message: 'Bio must be at least 10 characters.' }),
   image: z.instanceof(File).optional(),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().refine(isSafeUploadUrl, { message: 'Invalid image URL.' }).optional(),
 });
 
 export type DoctorProfileState = {
@@ -60,6 +60,9 @@ export async function updateDoctorProfile(
   const imageFile = formData.get('image') as File | null;
   if (!imageFile || imageFile.size === 0) {
     delete rawData.image;
+  }
+  if (!rawData.imageUrl) {
+    delete rawData.imageUrl;
   }
 
   const validatedFields = DoctorProfileSchema.safeParse(rawData);
@@ -133,6 +136,9 @@ export async function updateDoctorProfile(
         }
     }
   } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return { errors: { image: [error.message] }, message: error.message, success: false };
+    }
     console.error('Profile update failed:', error);
     return {
       message: 'An error occurred while updating your profile. Please try again.',

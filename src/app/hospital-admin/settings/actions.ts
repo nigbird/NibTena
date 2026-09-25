@@ -4,7 +4,7 @@
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { saveImage } from '@/lib/image-upload';
+import { saveImage, ImageValidationError } from '@/lib/image-upload';
 import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
 import { verifyCsrfToken } from '@/lib/csrf';
 import { createAuditLog } from '@/lib/audit';
@@ -229,6 +229,9 @@ export async function updateHospitalGeneralSettings(
       }
     };
   } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return { errors: { image: [error.message] }, message: error.message, success: false };
+    }
     console.error("Failed to update hospital settings:", error);
     return { success: false, message: 'A database error occurred.' };
   }

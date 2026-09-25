@@ -98,7 +98,9 @@ export async function getMyAppointments(patientId: number) {
   }
 }
 
-export async function getMyAppointmentsByPhone(phone: string) {
+// Not exported: exports of a 'use server' file are client-callable, and this
+// trusts the phone argument. Callers must derive the phone from a verified session.
+async function getMyAppointmentsByPhone(phone: string) {
   if (!phone) return [];
 
   const normalized = normalizePhoneNumber(phone);
@@ -209,7 +211,9 @@ export async function getMyAppointmentsForMiniApp() {
   return appointments;
 }
 
-export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string }> {
+// Never return the code to the caller: it must only reach the user via SMS,
+// otherwise anyone can verify as any phone number.
+export async function generateAndSendOtp(phone: string): Promise<{ success: boolean; message: string }> {
   if (!phone) {
     return { success: false, message: 'Invalid phone number.' };
   }
@@ -221,7 +225,7 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
     } else {
       console.log(`OTP generated for ${fullPhone}`);
     }
-    return { success: true, message: `An OTP has been sent.`, otp: code };
+    return { success: true, message: `An OTP has been sent.` };
   } catch (error) {
     console.error('OTP generation failed:', error);
     return { success: false, message: 'Could not send OTP. Please try again.' };

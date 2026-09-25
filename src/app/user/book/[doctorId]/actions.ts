@@ -42,7 +42,6 @@ export type State = {
   message?: string | null;
   success?: boolean;
   data?: z.infer<typeof AppointmentFormSchema>;
-  otp?: string;
   paymentToken?: string;
   transactionId?: string;
 };
@@ -57,7 +56,9 @@ async function findOrCreatePatient(phone: string, defaults: { name: string, age:
     return patient;
 }
 
-export async function generateAndSaveOtp(phone: string): Promise<string> {
+// Not exported: exports of a 'use server' file are client-callable, and the
+// code must never reach the client (it is delivered via SMS only).
+async function generateAndSaveOtp(phone: string): Promise<void> {
   const normalized = normalizePhoneNumber(phone);
   const code = await createAndStoreOtp(normalized);
   if (process.env.NODE_ENV !== 'production') {
@@ -65,7 +66,6 @@ export async function generateAndSaveOtp(phone: string): Promise<string> {
   } else {
     console.log(`OTP generated for ${normalized}`);
   }
-  return code;
 }
 
 
@@ -116,7 +116,6 @@ export async function startBookingProcess(
     };
   }
 
-  let otpCode;
   try {
      // Normalize phone and ensure patient record and OTP use canonical format
      const normalizedPhone = normalizePhoneNumber(validatedFields.data.phone);
@@ -127,7 +126,7 @@ export async function startBookingProcess(
          gender: validatedFields.data.gender
      });
 
-     otpCode = await generateAndSaveOtp(normalizedPhone);
+     await generateAndSaveOtp(normalizedPhone);
 
      // return normalized phone in data so downstream uses the canonical value
      const returnedData = { ...validatedFields.data, phone: normalizedPhone };
@@ -135,7 +134,6 @@ export async function startBookingProcess(
      return {
        data: returnedData,
        success: true,
-       otp: otpCode,
      };
   } catch (error) {
     console.error('Error in booking process:', error);

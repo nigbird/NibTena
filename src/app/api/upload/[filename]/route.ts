@@ -56,14 +56,18 @@ export async function GET(
         mimeType = 'application/octet-stream';
     }
 
-    // Set appropriate headers with safe Content-Disposition
+    // Only known raster image types are rendered inline. Anything else (e.g. SVG,
+    // HTML) is forced to download so it can never execute in our origin.
+    const isImage = mimeType !== 'application/octet-stream';
+    const safeName = filename.replace(/[^A-Za-z0-9._-]/g, '_');
+
     const headers = new Headers();
     headers.set('Content-Type', mimeType);
     headers.set('Content-Length', fileBuffer.length.toString());
     headers.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-    // Safe Content-Disposition header to prevent inline execution vulnerabilities
-    // Using 'inline' for images is safe as they're already validated as image types
-    headers.set('Content-Disposition', `inline; filename="${filename}"`);
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
+    headers.set('Content-Disposition', `${isImage ? 'inline' : 'attachment'}; filename="${safeName}"`);
 
     return new NextResponse(fileBuffer, {
       status: 200,

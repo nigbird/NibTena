@@ -81,8 +81,7 @@ function OtpForm() {
              if (result.success) {
                 toast({
                     title: 'OTP Resent',
-                    description: `A new OTP has been generated: ${result.otp}`,
-                    duration: 10000,
+                    description: 'A new verification code has been sent to your phone.',
                 });
                 setCountdown(30);
             } else {

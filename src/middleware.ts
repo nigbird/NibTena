@@ -3,6 +3,25 @@ import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
 import { COOKIE_NAME } from './lib/csrf-common';
 import { validateTokenStructure } from '@/lib/token-validation';
+import { jwtVerify } from 'jose';
+
+// Mirrors parseMiniAppSessionCookie (src/lib/session.ts), which can't run here:
+// jsonwebtoken needs Node APIs, middleware runs on the Edge runtime. Checking
+// only that the cookie exists would let a forged `miniapp_session=x` through.
+async function hasValidMiniAppSession(req: { cookies: { getAll(name: string): { value: string }[] } }) {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) return false;
+  const key = new TextEncoder().encode(secret);
+  for (const cookie of req.cookies.getAll('miniapp_session')) {
+    try {
+      await jwtVerify(cookie.value, key, { algorithms: ['HS256'] });
+      return true;
+    } catch {
+      // Bad signature, expired, or not a JWT: try the next cookie.
+    }
+  }
+  return false;
+}
 
 function buildCsp(nonce: string) {
   
@@ -10,7 +29,7 @@ function buildCsp(nonce: string) {
 }
 
 export default withAuth(
-  function middleware(req) {
+  async function middleware(req) {
     let token = req.nextauth.token;
     
     // Validate token structure - Fail-safe: treat invalid tokens as unauthenticated
@@ -75,8 +94,7 @@ export default withAuth(
        MINI-APP ONLY ACCESS FOR USER PORTAL
     =============================== */
     if (pathname.startsWith('/user') || pathname.startsWith('/confirmation')) {
-      const miniappSession = req.cookies.get('miniapp_session');
-      if (!miniappSession) {
+      if (!(await hasValidMiniAppSession(req))) {
         // Redirect non-miniapp users from outside pages to /user to show the restriction message
         if (pathname.startsWith('/confirmation') && req.method === 'GET') {
           const url = req.nextUrl.clone();

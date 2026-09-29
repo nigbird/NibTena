@@ -4,11 +4,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { getPatientFromCookie } from '@/lib/session';
 
 // ✅ Zod schema for validation
 const ProfileSetupSchema = z.object({
   name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string().min(13, { message: 'Please enter a valid phone number (include +251).' }),
   age: z
     .union([z.coerce.number().gt(0, { message: 'Please enter a valid age.' }), z.nan()])
     .optional()
@@ -28,19 +28,26 @@ export type ProfileSetupState = {
 };
 
 // ✅ Update patient profile with validation and revalidation
+// The patient is always taken from the signed session cookie; the patientId
+// argument from the client is only checked against it, never trusted.
 export async function updatePatientProfile(
   patientId: number,
   formData: FormData
 ): Promise<ProfileSetupState> {
+  const sessionPatient = await getPatientFromCookie();
+  if (!sessionPatient || sessionPatient.id !== patientId) {
+    return { success: false, message: 'Unauthorized: You can only update your own profile.' };
+  }
+
   const _csrf = formData.get('_csrf') as string | null;
   if (!(await verifyCsrfToken(_csrf))) {
     return { success: false, message: 'Invalid or missing CSRF token.' };
   }
 
   try {
+    // Phone is the login identity and cannot be changed here.
     const validatedFields = ProfileSetupSchema.safeParse({
       name: formData.get('name'),
-      phone: formData.get('phone'),
       age: formData.get('age'),
       gender: formData.get('gender'),
     });
@@ -53,14 +60,13 @@ export async function updatePatientProfile(
       };
     }
 
-    const { name, phone, age, gender } = validatedFields.data;
+    const { name, age, gender } = validatedFields.data;
 
     // ✅ Update patient info in DB
     const updatedPatient = await prisma.patient.update({
-      where: { id: patientId },
+      where: { id: sessionPatient.id },
       data: {
         name,
-        phone,
         age: isNaN(Number(age)) ? null : Number(age),
         gender,
       },

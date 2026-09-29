@@ -49,7 +49,22 @@ const EmailSettingsSchema = z.object({
 
 export type EmailSettingsType = z.infer<typeof EmailSettingsSchema>;
 
+// Only super admins and hospital users allowed to manage settings may test
+// SMTP/IMAP connections; otherwise this is an open SSRF / port-scan endpoint.
+async function canManageEmailSettings(): Promise<boolean> {
+  const user = await getVerifiedUser();
+  if (!user) return false;
+  if (user.role === 'superadmin') return true;
+  if (user.role === 'hospital' && typeof user.hospitalId === 'number') {
+    return requireHospitalPermission('Settings:Update', user.hospitalId);
+  }
+  return false;
+}
+
 export async function getEmailSettings(hospitalId: number) {
+  const allowed = await requireHospitalPermission('Settings:View', hospitalId);
+  if (!allowed) throw new Error('Unauthorized');
+
   const [customSettings, globalSettings] = await Promise.all([
     prisma.emailSettings.findFirst({
       where: { hospitalId },
@@ -133,6 +148,13 @@ export async function updateEmailSettings(hospitalId: number, data: Partial<Emai
 }
 
 export async function testEmailConnection(settings: EmailSettingsType) {
+  if (!(await canManageEmailSettings())) {
+    return {
+      smtp: { success: false, error: 'Unauthorized' },
+      imap: { success: false, error: 'Unauthorized' },
+    };
+  }
+
   const results = {
     smtp: { success: false, error: 'Unknown error' },
     imap: { success: false, error: 'Unknown error' },

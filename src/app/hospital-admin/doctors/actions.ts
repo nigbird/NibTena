@@ -92,6 +92,12 @@ export async function saveDoctor(
     }
     
     if (doctorId) {
+      // Prevent IDOR: the doctor being edited must belong to this hospital.
+      const link = await prisma.doctorsOnHospitals.findFirst({ where: { doctorId, hospitalId }, select: { doctorId: true } });
+      if (!link) {
+        return { message: 'Unauthorized: this doctor does not belong to your hospital.', success: false };
+      }
+
       await prisma.doctor.update({ where: { id: doctorId }, data: dataToUpdate });
 
       await createAuditLog({

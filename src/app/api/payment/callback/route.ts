@@ -133,20 +133,53 @@ export async function POST(request: NextRequest) {
 
 
     // ✅ Process appointment update
-    const appointment = await prisma.appointment.findUnique({ where: { transactionId: txnRef } });
+    const appointment = await prisma.appointment.findUnique({
+      where: { transactionId: String(txnRef) },
+      select: {
+        id: true,
+        status: true,
+        doctor: { select: { consultationFee: true } },
+        hospital: { select: { accountNumber: true } },
+      },
+    });
 
     if (!appointment) {
       console.error("❌ Appointment not found for transaction (txnRef):", txnRef);
       return NextResponse.json({ message: "Appointment not found" }, { status: 400 });
     }
 
-    await prisma.appointment.update({
-      where: { id: appointment.id },
+    // Only an appointment that is still awaiting payment can be confirmed. This
+    // blocks replaying a callback to revive cancelled/completed appointments.
+    if (appointment.status !== "pending-payment") {
+      console.warn("⚠️ Payment callback for appointment not awaiting payment:", appointment.id, appointment.status);
+      return NextResponse.json({ message: "Appointment is not awaiting payment" }, { status: 409 });
+    }
+
+    // The paid amount and receiving account must match what we requested.
+    const expectedAmount = Number(appointment.doctor?.consultationFee);
+    const paid = Number(paidAmount);
+    if (!Number.isFinite(paid) || !Number.isFinite(expectedAmount) || paid + 0.005 < expectedAmount) {
+      console.error("❌ Payment amount mismatch for appointment", appointment.id, { paid, expectedAmount });
+      return NextResponse.json({ message: "Paid amount does not match" }, { status: 400 });
+    }
+
+    const expectedAccount = appointment.hospital?.accountNumber?.trim();
+    if (!expectedAccount || String(accountNo).trim() !== expectedAccount) {
+      console.error("❌ Payment account mismatch for appointment", appointment.id);
+      return NextResponse.json({ message: "Receiving account does not match" }, { status: 400 });
+    }
+
+    // Conditional update so two concurrent callbacks cannot both succeed.
+    const updated = await prisma.appointment.updateMany({
+      where: { id: appointment.id, status: "pending-payment" },
       data: {
         status: "confirmed",
         updatedAt: new Date(),
       },
     });
+    if (updated.count === 0) {
+      return NextResponse.json({ message: "Appointment is not awaiting payment" }, { status: 409 });
+    }
 
     // ✅ Respond success
     return NextResponse.json({ message: "Payment confirmed and updated." }, { status: 200 });

@@ -119,11 +119,16 @@ function OtpForm() {
                 });
                                 try {
                                     const parsed = JSON.parse(bookingDataString);
-                                    // Prefer passing verified patient id to the server action so
-                                    // it can create the appointment reliably even if cookies
-                                    // haven't been applied to the next request yet.
-                                    parsed.patientId = result.patient.id;
-                                    await completeBooking(parsed);
+                                    // The server takes the patient from the session cookie set
+                                    // by verifyOtpAndGetPatient, not from this payload.
+                                    const bookingResult = await completeBooking(parsed);
+                                    if (bookingResult && !bookingResult.success) {
+                                        toast({
+                                            variant: "destructive",
+                                            title: "Booking Failed",
+                                            description: bookingResult.message,
+                                        });
+                                    }
                                 } catch (e) {
                                     console.error('Failed to complete booking after verification:', e);
                                 }

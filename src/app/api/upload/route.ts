@@ -150,7 +150,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (configuredKey && !hasValidKey && !isSessionAuthorized) {
+    // Always require either a staff session or the API key, even when no key is configured.
+    if (!hasValidKey && !isSessionAuthorized) {
       logUploadAttempt({
         timestamp: new Date().toISOString(),
         ip: clientIp,

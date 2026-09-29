@@ -5,11 +5,13 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { addMinutes, format, parseISO, startOfDay } from 'date-fns';
+import { addMinutes, format, parse, parseISO, startOfDay } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { createAndStoreOtp } from '@/lib/otp';
 import { verifyCsrfToken } from '@/lib/csrf';
+import { verifyPatientSessionCookie } from '@/lib/session';
+import { getAvailableTimeWindows } from '@/app/user/doctors/[id]/actions';
 
 // Normalize phone numbers to canonical 251XXXXXXXXX format (no leading '+')
 function normalizePhoneNumber(input?: string | null) {
@@ -146,31 +148,67 @@ export async function startBookingProcess(
 
 // First implementation of initiateBookingAndPayment was removed to fix duplicate declaration
 
+// Checks that the doctor is active and works at the hospital, and that the
+// slot is one the schedule actually offers on that date.
+async function isBookableSlot(doctorId: number, hospitalId: number, appointmentDate: string, appointmentSlot: string) {
+  const link = await prisma.doctorsOnHospitals.findFirst({
+    where: { doctorId, hospitalId, doctor: { status: 'active' } },
+    select: { doctorId: true },
+  });
+  if (!link) return false;
+
+  const [startTimeStr] = String(appointmentSlot).split(' - ');
+  const slotStart = parse(startTimeStr, 'hh:mm a', new Date());
+  if (isNaN(slotStart.getTime())) return false;
+  const formattedSlotStart = format(slotStart, 'hh:mm a');
+
+  const availableWindows = await getAvailableTimeWindows(doctorId, appointmentDate, hospitalId);
+  return availableWindows.some(window => window.startsWith(formattedSlotStart));
+}
+
+// Creates a confirmed appointment without payment (standalone/OTP flow). The
+// patient comes only from the OTP-verified session cookie, never from the
+// client. Disabled unless ALLOW_UNPAID_BOOKINGS=true, since the mini app
+// requires payment and this would otherwise let anyone skip it.
 export async function completeBooking(bookingData: any) {
+  if (process.env.ALLOW_UNPAID_BOOKINGS !== 'true') {
+    return { success: false, message: 'Booking without payment is not available.' };
+  }
+
   let newAppointment;
   let patient;
   try {
-  if (bookingData.patientId) {
-    patient = await prisma.patient.findUnique({ where: { id: Number(bookingData.patientId) } });
-  } else {
-    const normalizedPhone = normalizePhoneNumber(bookingData.phone);
-    patient = await prisma.patient.findUnique({
-      where: { phone: normalizedPhone }
-    });
-  }
-    
+    const cookieStore = await cookies();
+    const patientSession = cookieStore.get('nib-tena-patient-session')?.value;
+    const verified = patientSession ? verifyPatientSessionCookie(patientSession) : null;
+    if (!verified?.patient?.id) {
+      return { success: false, message: 'Please verify your phone number to book.' };
+    }
+
+    patient = await prisma.patient.findUnique({ where: { id: verified.patient.id } });
     if (!patient) {
         return { success: false, message: 'Patient record not found.'};
     }
 
+    const doctorId = Number(bookingData?.doctorId);
+    const hospitalId = Number(bookingData?.hospitalId);
+    const appointmentDate = String(bookingData?.appointmentDate || '');
+    const appointmentSlot = String(bookingData?.appointmentSlot || '');
+    if (!doctorId || !hospitalId || !appointmentDate || !appointmentSlot) {
+      return { success: false, message: 'Invalid booking details.' };
+    }
+    if (!(await isBookableSlot(doctorId, hospitalId, appointmentDate, appointmentSlot))) {
+      return { success: false, message: 'The selected time slot is not available.' };
+    }
+
     newAppointment = await prisma.appointment.create({
       data: {
-        symptoms: bookingData.symptoms || '',
+        symptoms: typeof bookingData.symptoms === 'string' ? bookingData.symptoms : '',
         patientId: patient.id,
-        doctorId: bookingData.doctorId,
-        hospitalId: bookingData.hospitalId,
-        appointmentSlot: bookingData.appointmentSlot,
-        appointmentDate: startOfDay(parseISO(bookingData.appointmentDate)),
+        doctorId,
+        hospitalId,
+        appointmentSlot,
+        appointmentDate: startOfDay(parseISO(appointmentDate)),
         status: 'confirmed',
       },
     });
@@ -341,7 +379,10 @@ export async function initiateBookingAndPayment(
     
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { id: true, name: true, consultationFee: true } });
     if (!doctor) return { success: false, message: 'Doctor not found.'};
-    
+    if (!(await isBookableSlot(doctorId, hospitalId, appointmentDate, appointmentSlot))) {
+      return { success: false, message: 'The selected time slot is not available.' };
+    }
+
     // 1. Create the appointment first
     const newAppointment = await prisma.appointment.create({
       data: {

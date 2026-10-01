@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState } from './actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { getEmailSettings } from '@/lib/email-actions';
-import { useActionState } from 'react';
+import { useActionState, startTransition } from 'react';
 import type { Hospital } from '@/lib/definitions';
 import type { EmailSettings as EmailConfigType } from '@prisma/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -134,6 +134,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const [newSpecialty, setNewSpecialty] = useState('');
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const csrfToken = useCsrfToken();
 
   const [emailSettings, setEmailSettings] = useState<{ customSettings: EmailConfigType | null, globalSettings: EmailConfigType[] }>({ customSettings: null, globalSettings: [] });
 
@@ -189,7 +190,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
     const fd = new FormData();
     fd.set('name', newSpecialty);
     fd.set('_csrf', csrfToken);
-    addAction(fd);
+    startTransition(() => addAction(fd));
   };
 
   const handleToggle = async (id: number) => {

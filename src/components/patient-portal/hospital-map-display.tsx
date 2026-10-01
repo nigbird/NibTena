@@ -1,19 +1,8 @@
 
 "use client";
-import { useEffect, useRef, useState } from 'react';
 import { MapPin, Mail, Phone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import HospitalMapClient from './HospitalMapClient';
-
-// Fix for default marker icons in Next.js
-if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
-}
 
 interface HospitalMapDisplayProps {
   latitude: number | null;
@@ -23,15 +12,6 @@ interface HospitalMapDisplayProps {
   address?: string | null;
   contactEmail: string;
   contactPhone: string;
-}
-
-// Component to update map view when location changes
-function MapUpdater({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, 15);
-  }, [map, center]);
-  return null;
 }
 
 export default function HospitalMapDisplay({

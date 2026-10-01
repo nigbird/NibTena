@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition, useActionState, useRef } from 'react';
+import { useState, useEffect, useTransition, useActionState, useRef, startTransition } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -190,7 +190,7 @@ export default function DoctorScheduleDrawer({ isOpen, setIsOpen, doctor, hospit
     formData.append('_csrf', csrfToken);
 
     submissionAttemptRef.current = true;
-    formAction(formData as unknown as FormData);
+    startTransition(() => formAction(formData as unknown as FormData));
   };
 
   const handleShiftChange = (day: string, shift: string) => {

@@ -77,7 +77,7 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
     const formData = new FormData(event.currentTarget);
     // attach CSRF double-submit token
     formData.set('_csrf', csrfToken);
-    formAction(formData);
+    startTransition(() => formAction(formData));
   }
 
   return (

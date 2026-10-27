@@ -36,6 +36,7 @@ async function main() {
     // Settings
     { key: 'Settings:View', name: 'View Settings', category: 'Settings', description: 'Can view hospital settings' },
     { key: 'Settings:Update', name: 'Update Settings', category: 'Settings', description: 'Can update hospital-wide settings and data' },
+    { key: 'PaymentSettings:Manage', name: 'Manage Payment Settings', category: 'Settings', description: "Can view and update the hospital's YagoutPay merchant credentials" },
   ];
 
   for (const p of corePermissions) {

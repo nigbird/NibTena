@@ -4,7 +4,8 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
 }
 
 model SuperAdmin {
@@ -78,6 +79,13 @@ model Hospital {
   endTime           String               @default("19:00")
   bookingWindow     Int                  @default(30)
   accountNumber     String               @unique
+  // YagoutPay merchant account for web payments. Each hospital is its own
+  // Yagout merchant; there is no platform-wide fallback. The key is AES-GCM
+  // encrypted at rest (src/lib/hospital-secret.ts) and never leaves the server.
+  yagoutMeId          String?            @unique
+  yagoutEncryptionKey String?
+  yagoutPostUrl       String?
+  yagoutUpdatedAt     DateTime?
   doctors           DoctorsOnHospitals[]
   specialties       Specialty[]
   appointments      Appointment[]
@@ -180,10 +188,22 @@ model Appointment {
   hospitalId      Int
   appointmentSlot String
   appointmentDate DateTime
-  status          String   @default("confirmed") // confirmed, cancelled, completed, rescheduled, pending-payment, paid, checked-in, in-progress
+  // confirmed, cancelled, completed, rescheduled, pending-payment, paid, checked-in, in-progress,
+  // payment-failed, payment-expired, paid-slot-conflict (paid after the hold lapsed and the slot was taken: refund/rebook)
+  status          String   @default("confirmed")
   transactionId   String?  @unique // ✅ Added: links to payment gateway transaction
+  paymentMethod    String?   // "NIB_SUPERAPP" | "YAGOUT"
+  orderNo          String?   @unique // Yagout order_no (alphanumeric); correlates the return post
+  paymentRef       String?   // Yagout pg_ref, quoted when reconciling
+  paidAmount       Float?
+  paidAt           DateTime?
+  paymentExpiresAt DateTime? // slot hold for pending-payment; past this the hold no longer blocks the slot
+  paymentRequest   Json?     // the stored hand-off form fields (meId, postUrl, merchantRequest, hash, amount, currency)
+  paymentRaw       Json?     // decrypted return sections, for audit
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([status, paymentExpiresAt])
 }
 
 model Otp {

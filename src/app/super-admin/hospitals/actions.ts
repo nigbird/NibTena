@@ -462,12 +462,19 @@ export async function getHospitals(page: number, limit: number, query: string) {
       imageUrl: true,
       accountNumber: true,
       mustChangePassword: true,
+      yagoutMeId: true,
+      yagoutEncryptionKey: true,
     } as any,
     orderBy: { name: 'asc' },
     skip: (page - 1) * limit,
     take: limit,
   });
-  return results;
+  // Super admins see only whether YagoutPay is configured: the me_id and the
+  // (encrypted) key are read to work that out and never leave the server.
+  return results.map(({ yagoutMeId, yagoutEncryptionKey, ...hospital }: any) => ({
+    ...hospital,
+    yagoutConfigured: !!yagoutMeId && !!yagoutEncryptionKey,
+  }));
 }
 
 export async function resendActivationLink(hospitalId: number) {

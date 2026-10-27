@@ -107,6 +107,7 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
               <TableHead className="hidden lg:table-cell">Account #</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden md:table-cell">Approval</TableHead>
+              <TableHead className="hidden lg:table-cell">Yagout</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -133,6 +134,13 @@ export default function HospitalList({ hospitals, onEdit, onActionSuccess }: Hos
                     <Badge variant={hospital.approvalStatus === 'approved' ? 'accent' : hospital.approvalStatus === 'pending' ? 'outline' : 'destructive'}>
                       {hospital.approvalStatus}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {hospital.yagoutConfigured ? (
+                      <span className="text-sm text-green-600">configured ✓</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">not configured</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {isReadOnly ? null : <DropdownMenu>

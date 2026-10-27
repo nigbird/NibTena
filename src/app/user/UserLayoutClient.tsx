@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 import { useContext } from 'react';
 import { PatientContext } from '@/context/PatientContext';
 import Link from 'next/link';
-import { RestrictedAccess } from '@/components/patient-portal/RestrictedAccess';
 
 const pageTitles: { [key: string]: string } = {
   '/user': 'Home',
@@ -29,6 +28,7 @@ const getTitleForPath = (path: string) => {
   if (path.startsWith('/user/book/')) return 'Book Appointment';
   if (path.startsWith('/user/search')) return 'Search Results';
   if (path.startsWith('/user/confirmation')) return 'Confirmation';
+  if (path.startsWith('/user/pay/')) return 'Payment';
   if (path.startsWith('/user/verify/otp')) return 'Verify Account';
   if (path.startsWith('/user/profile/setup')) return 'Edit Profile';
   return 'NibAppointment';
@@ -53,15 +53,6 @@ export default function UserLayoutClient({
   
   // The login button should only show for standalone web users who are not logged in.
   const showLoginButton = !hasMiniAppSession && !isAuthenticated && isHomePage;
-
-
-  if (!hasMiniAppSession) {
-    return (
-      <div className="min-h-screen">
-        <RestrictedAccess />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

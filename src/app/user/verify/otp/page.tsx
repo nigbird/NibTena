@@ -14,10 +14,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { KeyRound, Loader2 } from 'lucide-react';
-import { completeBooking } from '../../book/[doctorId]/actions';
+import { KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
+import { initiateYagoutBooking } from '../../book/[doctorId]/yagout-actions';
 import { verifyOtpAndGetPatient, generateAndSendOtp } from '@/app/user/appointments/actions';
 import { PatientContext } from '@/context/PatientContext';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 function OtpForm() {
     const searchParams = useSearchParams();
@@ -31,7 +32,10 @@ function OtpForm() {
     const { setPatient } = useContext(PatientContext);
 
     const { toast } = useToast();
+    const csrfToken = useCsrfToken();
 
+    const [isVerifiedForBooking, setIsVerifiedForBooking] = useState(false);
+    const [isStartingPayment, startPayment] = useTransition();
     const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
     const [isVerifying, startVerification] = useTransition();
     const [isResending, startResend] = useTransition();
@@ -112,27 +116,12 @@ function OtpForm() {
             // Set the patient in the global context, which also saves to localStorage
             setPatient(result.patient);
 
-                        if (isBooking && bookingDataString) {
-                 toast({
+            if (isBooking && bookingDataString) {
+                toast({
                     title: "✅ Phone Verified",
-                    description: "Finalizing your booking...",
+                    description: "You can now proceed to payment.",
                 });
-                                try {
-                                    const parsed = JSON.parse(bookingDataString);
-                                    // The server takes the patient from the session cookie set
-                                    // by verifyOtpAndGetPatient, not from this payload.
-                                    const bookingResult = await completeBooking(parsed);
-                                    if (bookingResult && !bookingResult.success) {
-                                        toast({
-                                            variant: "destructive",
-                                            title: "Booking Failed",
-                                            description: bookingResult.message,
-                                        });
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to complete booking after verification:', e);
-                                }
-                // completeBooking will handle the final redirect
+                setIsVerifiedForBooking(true);
             } else {
                 toast({
                     title: "✅ Login Successful",
@@ -147,6 +136,66 @@ function OtpForm() {
     const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       handleSubmit(otp.join(""));
+    }
+
+    // Web booking: the server takes the patient from the session cookie set by
+    // verifyOtpAndGetPatient, and the fee from the database, not from this payload.
+    const handleProceedToPayment = () => {
+        if (!bookingDataString) return;
+        startPayment(async () => {
+            let parsed: any;
+            try {
+                parsed = JSON.parse(bookingDataString);
+            } catch {
+                toast({ variant: 'destructive', title: 'Booking Failed', description: 'Booking details are missing. Please start again.' });
+                return;
+            }
+            const fd = new FormData();
+            fd.set('_csrf', csrfToken);
+            fd.set('bookingFor', parsed.bookingFor === 'someoneElse' ? 'someoneElse' : 'myself');
+            fd.set('fullName', String(parsed.fullName ?? ''));
+            fd.set('phone', String(parsed.phone ?? ''));
+            fd.set('age', String(parsed.age ?? ''));
+            fd.set('gender', String(parsed.gender ?? ''));
+            fd.set('symptoms', String(parsed.symptoms ?? ''));
+
+            const result = await initiateYagoutBooking(
+                Number(parsed.doctorId),
+                Number(parsed.hospitalId),
+                String(parsed.appointmentSlot ?? ''),
+                String(parsed.appointmentDate ?? ''),
+                {},
+                fd,
+            );
+            if (result.success && result.redirectTo) {
+                router.push(result.redirectTo);
+            } else {
+                toast({ variant: 'destructive', title: 'Booking Failed', description: result.message || 'Could not start the payment.' });
+            }
+        });
+    }
+
+    if (isVerifiedForBooking) {
+        return (
+            <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
+                <Card className="max-w-md w-full shadow-lg">
+                    <CardHeader className="text-center">
+                        <div className="inline-block mx-auto rounded-full bg-accent p-3 ring-4 ring-background">
+                            <CheckCircle2 className="h-6 w-6 text-accent-foreground" />
+                        </div>
+                        <CardTitle className="font-headline text-2xl pt-2">Phone Verified</CardTitle>
+                        <CardDescription>
+                            Continue to YagoutPay to pay the consultation fee. Your slot is held for a short time while you pay.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button className="w-full" variant="accent" onClick={handleProceedToPayment} disabled={isStartingPayment}>
+                            {isStartingPayment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Starting payment...</> : 'Proceed to Payment'}
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     return (

@@ -2,12 +2,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { hasValidMiniAppSession } from '@/lib/session';
 
 export async function getHospitalsAndCities() {
-    // Server actions are callable directly via POST; require a verified session.
-    if (!(await hasValidMiniAppSession())) return { hospitals: [], cities: [] };
-
     const hospitals = await prisma.hospital.findMany({
         where: { status: 'active' },
         orderBy: { name: 'asc' },
@@ -25,8 +21,6 @@ export async function getHospitalsAndCities() {
 }
 
 export async function getHospitalData(hospitalId: number) {
-    if (!(await hasValidMiniAppSession())) return { hospital: null, doctors: [], specialties: [] };
-
     const hospital = await prisma.hospital.findFirst({
         where: { id: hospitalId, status: 'active' },
         select: {

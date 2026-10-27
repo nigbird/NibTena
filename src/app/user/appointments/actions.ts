@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import type { Patient } from '@/lib/definitions';
-import { createAndStoreOtp, verifyAndConsumeOtp } from '@/lib/otp';
+import { allowOtpVerifyAttempt, requestOtp, verifyAndConsumeOtp } from '@/lib/otp';
 import { createPatientSessionToken, verifyPatientSessionCookie } from '@/lib/session';
 import { getVerifiedUser } from '@/lib/permissions';
 
@@ -219,13 +219,7 @@ export async function generateAndSendOtp(phone: string): Promise<{ success: bool
   }
   const fullPhone = normalizePhoneNumber(phone);
   try {
-    const code = await createAndStoreOtp(fullPhone);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`OTP for ${fullPhone} is: ${code}`);
-    } else {
-      console.log(`OTP generated for ${fullPhone}`);
-    }
-    return { success: true, message: `An OTP has been sent.` };
+    return await requestOtp(fullPhone);
   } catch (error) {
     console.error('OTP generation failed:', error);
     return { success: false, message: 'Could not send OTP. Please try again.' };
@@ -238,6 +232,9 @@ export async function verifyOtpAndGetPatient(phone: string, code: string): Promi
   }
   const fullPhone = normalizePhoneNumber(phone);
   try {
+    if (!(await allowOtpVerifyAttempt())) {
+      return { success: false, message: 'Too many attempts. Please try again later.' };
+    }
     const result = await verifyAndConsumeOtp(fullPhone, code);
     if (!result.success) {
       return { success: false, message: result.message };

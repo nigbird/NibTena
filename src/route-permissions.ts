@@ -9,6 +9,8 @@ export const routePermissions: Array<{ prefix: string; permission: string }> = [
   { prefix: '/hospital-admin/roles', permission: 'Roles:View' },
   { prefix: '/hospital-admin/reports', permission: 'Reports:View' },
   { prefix: '/hospital-admin/settings', permission: 'Settings:View' },
+  // Payment-settings staff reach the settings page but see only the YagoutPay tab.
+  { prefix: '/hospital-admin/settings', permission: 'PaymentSettings:Manage' },
   // Add additional route -> permission mappings here as needed.
 ];
 

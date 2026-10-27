@@ -65,9 +65,8 @@ export function parseMiniAppSessionCookie(cookieValue?: string): MiniAppSession 
   }
 }
 
-// Server components under /user must not query or serialize data for visitors
-// without a verified mini-app session (the layout only shows RestrictedAccess,
-// but page props would still be embedded in the RSC payload).
+// Whether the request carries a verified Super App (mini-app) session. The
+// user portal is public, so this selects the payment path, not access.
 export async function hasValidMiniAppSession(): Promise<boolean> {
   const cookieStore = await cookies();
   return cookieStore
@@ -102,14 +101,29 @@ export function createPatientSessionToken(patient: Patient): string {
     return jwt.sign(session, AUTH_SECRET, { expiresIn: '15m' });
 }
 
+export const PATIENT_SESSION_COOKIE = 'nib-tena-patient-session';
+
+/**
+ * The web (OTP-verified) patient, re-read from the database by the id in the
+ * signed cookie so a stale or edited name in the token is never trusted.
+ */
+export async function getWebPatientFromCookie(): Promise<Patient | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(PATIENT_SESSION_COOKIE)?.value;
+  const verified = token ? verifyPatientSessionCookie(token) : null;
+  const id = Number(verified?.patient?.id);
+  if (!id) return null;
+  const patient = await prisma.patient.findUnique({ where: { id } });
+  return patient ? (patient as Patient) : null;
+}
+
 export async function getPatientFromCookie(): Promise<Patient | null> {
   const cookieStore = await cookies();
   
-  // 1. Fallback to mini-app session (Prioritize this now)
+  // 1. Mini-app session takes priority; web visitors fall back to the OTP cookie.
   const miniappSessionCookies = cookieStore.getAll('miniapp_session');
   if (miniappSessionCookies.length === 0) {
-    console.log('getPatientFromCookie: no miniapp session cookie found. Web version restricted.');
-    return null;
+    return getWebPatientFromCookie();
   }
 
   // Collect all valid sessions
@@ -123,7 +137,7 @@ export async function getPatientFromCookie(): Promise<Patient | null> {
   }
 
   if (validSessions.length === 0) {
-      return null;
+      return getWebPatientFromCookie();
   }
 
   // Sort by iat descending (newest first)

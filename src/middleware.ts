@@ -3,29 +3,16 @@ import { NextResponse } from 'next/server';
 import { routePermissions } from './route-permissions';
 import { COOKIE_NAME } from './lib/csrf-common';
 import { validateTokenStructure } from '@/lib/token-validation';
-import { jwtVerify } from 'jose';
+import { yagoutFormActionOrigins } from '@/lib/yagout-hosts';
 
-// Mirrors parseMiniAppSessionCookie (src/lib/session.ts), which can't run here:
-// jsonwebtoken needs Node APIs, middleware runs on the Edge runtime. Checking
-// only that the cookie exists would let a forged `miniapp_session=x` through.
-async function hasValidMiniAppSession(req: { cookies: { getAll(name: string): { value: string }[] } }) {
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret) return false;
-  const key = new TextEncoder().encode(secret);
-  for (const cookie of req.cookies.getAll('miniapp_session')) {
-    try {
-      await jwtVerify(cookie.value, key, { algorithms: ['HS256'] });
-      return true;
-    } catch {
-      // Bad signature, expired, or not a JWT: try the next cookie.
-    }
-  }
-  return false;
-}
+// The YagoutPay hand-off page (/user/pay/...) submits a form to Yagout, so
+// form-action must name the gateway's origins explicitly. They come from
+// YAGOUTPAY_POST_URL and YAGOUTPAY_ALLOWED_HOSTS — never a wildcard.
+const FORM_ACTION = ["'self'", ...yagoutFormActionOrigins()].join(' ');
 
 function buildCsp(nonce: string) {
   
-  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://nominatim.openstreetmap.org; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`;
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; img-src 'self' data: blob: https://placehold.co https://images.unsplash.com https://picsum.photos https://hakimethio.org https://ethioistanbulgeneralhospital.com http://old.ethioistanbulgeneralhospital.com https://img.semafor.com https://media.istockphoto.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://nominatim.openstreetmap.org; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action ${FORM_ACTION}`;
 }
 
 export default withAuth(
@@ -90,28 +77,9 @@ export default withAuth(
     // Note: when returning NextResponse.next below, we pass `request: { headers: forwarded }`.
     const pathname = req.nextUrl.pathname;
 
-    /* ===============================
-       MINI-APP ONLY ACCESS FOR USER PORTAL
-    =============================== */
-    if (pathname.startsWith('/user') || pathname.startsWith('/confirmation')) {
-      if (!(await hasValidMiniAppSession(req))) {
-        // Redirect non-miniapp users from outside pages to /user to show the restriction message
-        if (pathname.startsWith('/confirmation') && req.method === 'GET') {
-          const url = req.nextUrl.clone();
-          url.pathname = '/user';
-          return NextResponse.redirect(url);
-        }
-
-        // If it's a direct page access, we let it through so the layout can show the beautiful message.
-        // BUT if it's a POST request (Server Action), we block it.
-        if (req.method === 'POST') {
-          return new NextResponse(
-            JSON.stringify({ error: 'This portal is only accessible via the Mini App.' }),
-            { status: 403, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-    }
+    // The user portal (/user, /confirmation) is public: mini-app visitors pay
+    // through the Super App, web visitors verify by OTP and pay with YagoutPay.
+    // Patient-scoped data is protected by the session checks in each action.
 
     // If we have no auth token and no special response to return, continue but
     // ensure the request forwarded header contains the nonce so the downstream

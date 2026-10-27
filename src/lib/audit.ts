@@ -3,7 +3,9 @@ import { headers } from 'next/headers';
 
 export interface AuditLogParams {
   actorId: string | number;
-  actorType: 'SuperAdmin' | 'HospitalAdmin' | 'Doctor' | 'User';
+  // 'Patient' for web patients (OTP session); 'System' for unauthenticated
+  // gateway posts such as the YagoutPay return.
+  actorType: 'SuperAdmin' | 'HospitalAdmin' | 'Doctor' | 'User' | 'Patient' | 'System';
   action: string;
   targetId?: string | number;
   targetType?: string;

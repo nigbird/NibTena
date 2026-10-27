@@ -40,6 +40,7 @@ import { deleteAppointment, updateAppointmentStatus } from '@/app/hospital-admin
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { needsPaymentAction, paymentMethodLabel } from '@/lib/payment-display';
 
 type EnrichedAppointment = Appointment & { patient: Patient };
 
@@ -94,7 +95,26 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
     rescheduled: 'secondary',
     'checked-in': 'secondary',
     'in-progress': 'accent',
+    'pending-payment': 'outline',
+    'payment-failed': 'outline',
+    'payment-expired': 'outline',
+    'paid-slot-conflict': 'destructive',
   } as const;
+
+  const renderPayment = (appointment: EnrichedAppointment) => (
+    <div className="text-sm">
+      <div>{paymentMethodLabel(appointment.paymentMethod)}</div>
+      {appointment.paymentRef && <div className="text-xs text-muted-foreground">pg_ref {appointment.paymentRef}</div>}
+      {appointment.paidAmount != null && (
+        <div className="text-xs text-muted-foreground">
+          {appointment.paidAmount.toFixed(2)} ETB{appointment.paidAt ? ` · ${format(new Date(appointment.paidAt), 'PP p')}` : ''}
+        </div>
+      )}
+      {needsPaymentAction(appointment) && (
+        <div className="text-xs font-semibold text-amber-700">Paid, not booked: refund or rebook</div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -106,6 +126,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
               <TableHead>Doctor</TableHead>
               <TableHead>Date & Time</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -113,7 +134,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
           </TableHeader>
           <TableBody>
             {appointments.map((appointment) => (
-              <TableRow key={appointment.id}>
+              <TableRow key={appointment.id} className={needsPaymentAction(appointment) ? 'bg-amber-50 dark:bg-amber-950/30' : ''}>
                 <TableCell>
                   <div className="font-medium">{appointment.patient.name}</div>
                   <div className="text-sm text-muted-foreground">{appointment.patient.phone}</div>
@@ -132,6 +153,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
                 <TableCell>
                   <Badge variant={statusBadgeVariant[appointment.status]}>{appointment.status}</Badge>
                 </TableCell>
+                <TableCell>{renderPayment(appointment)}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -183,7 +205,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
       {/* Mobile Card View */}
       <div className="grid gap-4 md:hidden">
         {appointments.map(appointment => (
-          <div key={appointment.id} className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3">
+          <div key={appointment.id} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3", needsPaymentAction(appointment) && "border-amber-500")}>
               <div className="flex justify-between items-start">
                   <div>
                       <p className="font-semibold">{appointment.patient.name}</p>
@@ -197,6 +219,7 @@ export default function AppointmentList({ appointments, doctors, onEdit, onActio
                     {format(new Date(appointment.appointmentDate), 'PPP')} at {appointment.appointmentSlot}
                   </p>
               </div>
+              {renderPayment(appointment)}
               <div className="flex justify-end gap-2 border-t pt-2">
                   <Button variant="outline" size="sm" onClick={() => onEdit(appointment)}>Edit</Button>
                   <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(appointment)}>Delete</Button>

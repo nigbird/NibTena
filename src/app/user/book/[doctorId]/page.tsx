@@ -5,7 +5,7 @@
 import { useActionState, useEffect, useState, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
-import { Loader2, User, Users } from 'lucide-react';
+import { Loader2, User, Users, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { startBookingProcess, initiateBookingAndPayment, type State, getPhoneNumberFromCookie } from './actions';
+import { initiateYagoutBooking, getYagoutAvailability } from './yagout-actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -34,7 +35,15 @@ import { PatientContext } from '@/context/PatientContext';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 
-function SubmitButton({ isMiniApp }: { isMiniApp: boolean }) {
+// Normalises the +251 phone field the same way the server does.
+function toCanonicalPhone(input: string) {
+  const s = String(input || '').replace(/\s+/g, '').replace(/^\+/, '');
+  return s.startsWith('251') ? s : `251${s}`;
+}
+
+type BookingPageState = State & { redirectTo?: string };
+
+function SubmitButton({ isMiniApp, label }: { isMiniApp: boolean; label?: string }) {
   const { pending } = useFormStatus();
 
   return (
@@ -45,7 +54,7 @@ function SubmitButton({ isMiniApp }: { isMiniApp: boolean }) {
           Processing...
         </>
       ) : (
-        isMiniApp ? 'Proceed to Payment' : 'Proceed to Verification'
+        label ?? (isMiniApp ? 'Proceed to Payment' : 'Proceed to Verification')
       )}
     </Button>
   );
@@ -74,14 +83,39 @@ export default function BookingPage() {
 
   const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
+  // Web only: whether this hospital can take YagoutPay payments (null = checking).
+  const [yagoutAvailable, setYagoutAvailable] = useState<boolean | null>(isMiniApp ? true : null);
 
-  const initialState: State = { message: null, errors: {} };
-  
+  useEffect(() => {
+    if (isMiniApp) return;
+    getYagoutAvailability(hospitalId)
+      .then(result => setYagoutAvailable(result.available))
+      .catch(() => setYagoutAvailable(false));
+  }, [isMiniApp, hospitalId]);
+
+  // A web patient already verified for this phone goes straight to payment;
+  // anyone else verifies by OTP first. The server re-checks both.
+  const isVerifiedForPhone = !isMiniApp && !!patient?.phone && toCanonicalPhone(phoneNumber) === String(patient.phone);
+
+  const initialState: BookingPageState = { message: null, errors: {} };
+
+  const webAction = async (prevState: BookingPageState, formData: FormData): Promise<BookingPageState> => {
+    if (isVerifiedForPhone) {
+      const result = await initiateYagoutBooking(doctorId, hospitalId, slot, date, {}, formData);
+      if (result.success) return { success: true, redirectTo: result.redirectTo };
+      // Session expired since the page loaded: fall back to OTP verification.
+      if (result.message !== 'Please verify your phone number to book.') {
+        return { success: false, message: result.message, errors: result.errors as State['errors'] };
+      }
+    }
+    return startBookingProcess(doctorId, hospitalId, slot, date, prevState, formData);
+  };
+
   const actionToDispatch = isMiniApp 
     ? initiateBookingAndPayment.bind(null, doctorId, hospitalId, slot, date, superAppToken || '')
-    : startBookingProcess.bind(null, doctorId, hospitalId, slot, date);
+    : webAction;
 
-  const [state, dispatch] = useActionState<State, FormData>(actionToDispatch, initialState);
+  const [state, dispatch] = useActionState<BookingPageState, FormData>(actionToDispatch, initialState);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -180,13 +214,20 @@ export default function BookingPage() {
           }
         }
       } else { // Standalone app flow
-        if (state.data) {
+        if (state.redirectTo) {
+          toast({
+            title: 'Redirecting to Payment',
+            description: 'Taking you to YagoutPay to complete your payment.',
+          });
+          router.push(state.redirectTo);
+        } else if (state.data) {
           toast({
             title: 'OTP Sent',
             description: 'A verification code has been sent to your phone.',
           });
 
           const bookingDetails = {
+            bookingFor: state.data.bookingFor,
             fullName: state.data.fullName,
             phone: state.data.phone,
             age: state.data.age,
@@ -215,6 +256,36 @@ export default function BookingPage() {
   }, [state, toast, router, doctorId, hospitalId, slot, date, isMiniApp, patient]);
   
   const isBookingForSelf = bookingFor === 'myself';
+
+  if (!isMiniApp && yagoutAvailable === null) {
+    return (
+      <div className="container mx-auto max-w-2xl py-12 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isMiniApp && !yagoutAvailable) {
+    return (
+      <div className="container mx-auto max-w-2xl py-12">
+        <Card className="shadow-lg text-center">
+          <CardHeader>
+            <div className="mx-auto rounded-full bg-muted p-3">
+              <CreditCard className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <CardTitle className="font-headline text-xl pt-2">Online payment not yet available for this hospital</CardTitle>
+            <CardDescription>
+              This hospital is not accepting online payments yet, so appointments cannot be booked here on the web.
+              Please contact the hospital directly or choose another hospital.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => router.back()}>Go back</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
@@ -310,7 +381,7 @@ export default function BookingPage() {
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>
-            <SubmitButton isMiniApp={isMiniApp} />
+            <SubmitButton isMiniApp={isMiniApp} label={isVerifiedForPhone ? 'Proceed to Payment' : undefined} />
           </form>
         </CardContent>
       </Card>

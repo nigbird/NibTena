@@ -31,11 +31,10 @@ const publicHospitalSelect = {
 export default async function Home() {
     const hasMiniAppSession = await hasValidMiniAppSession();
 
-    // The layout renders RestrictedAccess without a session; don't query or
-    // serialize any data for those visitors.
-    if (!hasMiniAppSession) return null;
-
-    const quickActions = allQuickActions.filter(action => action.label !== 'Profile');
+    // Mini-app users have no Profile page (identity comes from the Super App).
+    const quickActions = hasMiniAppSession
+        ? allQuickActions.filter(action => action.label !== 'Profile')
+        : allQuickActions;
 
     const allHospitalsWithCounts = await prisma.hospital.findMany({
         where: { status: 'active' },

@@ -3,6 +3,11 @@ import { auth } from '../../auth';
 import { prisma } from '@/lib/prisma';
 import { cache } from 'react';
 
+// Grants viewing and editing the hospital's YagoutPay credentials. Kept
+// separate from Settings:Update so general settings staff cannot redirect
+// where the hospital's patient payments settle.
+export const PAYMENT_SETTINGS_PERMISSION = 'PaymentSettings:Manage';
+
 // Define the shape of the verified user data
 export type VerifiedUser = {
   id: number;

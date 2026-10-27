@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { countsAsRevenue, needsPaymentAction, paymentMethodLabel } from '@/lib/payment-display';
 
 export default function ReportsPageContent({ hospitalId }: { hospitalId: number }) {
   const [reportData, setReportData] = useState<{
@@ -64,7 +65,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
       const doctorAppointments = reportData.appointments.filter(a => a.doctorId === doctor.id);
       const patientCount = new Set(doctorAppointments.map(a => a.patientId)).size;
       const revenue = doctorAppointments
-        .filter(a => a.status !== 'pending-payment')
+        .filter(a => countsAsRevenue(a.status))
         .reduce((sum, a) => sum + (doctor.consultationFee || 0), 0);
 
       return {
@@ -87,7 +88,7 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
   const totalPatientRevenue = useMemo(() => {
     if (!reportData) return 0;
     return reportData.appointments.reduce((sum, appt) => {
-      if (appt.doctor && appt.status !== 'pending-payment') {
+      if (appt.doctor && countsAsRevenue(appt.status)) {
         return sum + (appt.doctor.consultationFee || 0);
       }
       return sum;
@@ -122,6 +123,12 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
       'Doctor Name': appt.doctor?.name || 'N/A',
       'Status': appt.status,
       'Fee (ETB)': appt.doctor?.consultationFee || 0,
+      'Payment Method': paymentMethodLabel(appt.paymentMethod),
+      'Yagout pg_ref': appt.paymentRef || '',
+      'Order No': appt.orderNo || '',
+      'Paid Amount (ETB)': appt.paidAmount ?? '',
+      'Paid At': appt.paidAt ? format(new Date(appt.paidAt), 'yyyy-MM-dd HH:mm') : '',
+      'Needs Action': needsPaymentAction(appt) ? 'YES - refund or rebook' : '',
     }));
     const patientKeys = Object.keys(patientExcelData[0] || {});
     wsPatients.columns = patientKeys.map(key => ({ header: key, key, width: Math.max(15, key.length + 2) }));
@@ -239,23 +246,36 @@ export default function ReportsPageContent({ hospitalId }: { hospitalId: number 
                           <TableHead>Doctor</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Payment</TableHead>
                           <TableHead className="text-right">Fee</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {patientReportData.map(appt => (
-                          <TableRow key={appt.id}>
+                          <TableRow key={appt.id} className={needsPaymentAction(appt) ? 'bg-amber-50 dark:bg-amber-950/30' : ''}>
                             <TableCell>{appt.patient.name}</TableCell>
                             <TableCell>{appt.doctor?.name}</TableCell>
                             <TableCell>{format(new Date(appt.appointmentDate), 'PPP')}</TableCell>
-                            <TableCell>{appt.status}</TableCell>
+                            <TableCell>
+                              {appt.status}
+                              {needsPaymentAction(appt) && <div className="text-xs font-semibold text-amber-700">Refund or rebook</div>}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div>{paymentMethodLabel(appt.paymentMethod)}</div>
+                              {appt.paymentRef && <div className="text-xs text-muted-foreground">pg_ref {appt.paymentRef}</div>}
+                              {appt.paidAmount != null && (
+                                <div className="text-xs text-muted-foreground">
+                                  {appt.paidAmount.toFixed(2)} ETB{appt.paidAt ? ` · ${format(new Date(appt.paidAt), 'PP p')}` : ''}
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">{appt.doctor?.consultationFee || 0} ETB</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                        <UiTableFooter>
                           <TableRow>
-                              <TableCell colSpan={4} className="font-bold text-right">Total Revenue</TableCell>
+                              <TableCell colSpan={5} className="font-bold text-right">Total Revenue</TableCell>
                               <TableCell className="text-right font-bold">
                                   {totalPatientRevenue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
                               </TableCell>

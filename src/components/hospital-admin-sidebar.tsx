@@ -110,7 +110,7 @@ export default function HospitalAdminSidebar() {
     return permissionKeys.includes(link.permissionKey as string);
   });
   
-  const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Update');
+  const canSeeSettings = isAdmin || permissionKeys.includes('Settings:View') || permissionKeys.includes('Settings:Update') || permissionKeys.includes('PaymentSettings:Manage');
 
   if (!session) {
     return (

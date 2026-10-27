@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { User, Hospital as HospitalIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import DoctorSearch from './DoctorSearch';
-import { hasValidMiniAppSession } from '@/lib/session';
 
 async function getDoctorsWithHospitals() {
   const doctors = await prisma.doctor.findMany({
@@ -99,8 +98,6 @@ export default async function SearchPage({
     q?: string;
   };
 }) {
-  if (!(await hasValidMiniAppSession())) return null;
-
   const specialtyQuery = searchParams?.specialty;
   const nameQuery = searchParams?.q;
 

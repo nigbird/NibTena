@@ -34,6 +34,9 @@ export type Hospital = {
   endTime: string;
   accountNumber: string;
   mustChangePassword?: boolean;
+  useGlobalEmailId?: number | null;
+  dataRetentionDays?: number;
+  yagoutConfigured?: boolean;
 };
 
 export type Doctor = {
@@ -68,8 +71,14 @@ export type Appointment = {
   hospitalId: number;
   appointmentSlot: string; // e.g., "09:00 AM - 09:30 AM"
   appointmentDate: Date;
-  status: 'pending-payment' | 'confirmed' | 'cancelled' | 'completed' | 'rescheduled' | 'checked-in' | 'in-progress';
+  status: 'pending-payment' | 'confirmed' | 'cancelled' | 'completed' | 'rescheduled' | 'checked-in' | 'in-progress' | 'payment-failed' | 'payment-expired' | 'paid-slot-conflict';
   transactionId?: string | null;
+  paymentMethod?: string | null;
+  orderNo?: string | null;
+  paymentRef?: string | null;
+  paidAmount?: number | null;
+  paidAt?: Date | string | null;
+  paymentExpiresAt?: Date | string | null;
   createdAt: string;
 };
 

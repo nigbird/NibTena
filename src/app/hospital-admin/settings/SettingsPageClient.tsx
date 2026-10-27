@@ -18,9 +18,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit, Mail } from 'lucide-react';
+import { Loader2, DatabaseZap, BriefcaseMedical, Building, Trash2, Edit, Mail, CreditCard } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState } from './actions';
+import { getHospitalSpecialties, addSpecialty, updateSpecialty, toggleSpecialtyActive, deleteSpecialty, getHospitalById, updateHospitalGeneralSettings, GeneralSettingsState, getYagoutSettings, type YagoutSettingsView } from './actions';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { getEmailSettings } from '@/lib/email-actions';
 import { useActionState, startTransition } from 'react';
@@ -29,6 +29,7 @@ import type { EmailSettings as EmailConfigType } from '@prisma/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import EmailSettingsTab from '@/components/hospital-admin/email-settings-tab';
+import YagoutSettingsTab from '@/components/hospital-admin/yagout-settings-tab';
 
 type Specialty = { id: number; name: string; active: boolean };
 
@@ -127,7 +128,15 @@ function GeneralSettingsForm({ hospital }: { hospital: Hospital }) {
   )
 }
 
-export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospitalId: number }) {
+export default function HospitalAdminSettingsPageClient({
+  hospitalId,
+  canViewGeneral,
+  canManagePayments,
+}: {
+  hospitalId: number;
+  canViewGeneral: boolean;
+  canManagePayments: boolean;
+}) {
   const [hospital, setHospital] = useState<Hospital | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
@@ -137,6 +146,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const csrfToken = useCsrfToken();
 
   const [emailSettings, setEmailSettings] = useState<{ customSettings: EmailConfigType | null, globalSettings: EmailConfigType[] }>({ customSettings: null, globalSettings: [] });
+  const [yagoutSettings, setYagoutSettings] = useState<YagoutSettingsView | null>(null);
 
   const initialState = { message: null, errors: {}, success: false };
   const [addState, addAction] = useActionState(addSpecialty.bind(null, hospitalId), initialState as any);
@@ -144,14 +154,19 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const [hospitalData, specialtiesData, emailData] = await Promise.all([
-        getHospitalById(hospitalId),
-        getHospitalSpecialties(hospitalId),
-        getEmailSettings(hospitalId)
-      ]);
-      setHospital(hospitalData as Hospital);
-      setSpecialties(specialtiesData.map((s: any) => ({ id: s.id, name: s.name, active: s.active })));
-      setEmailSettings(emailData as any);
+      if (canViewGeneral) {
+        const [hospitalData, specialtiesData, emailData] = await Promise.all([
+          getHospitalById(hospitalId),
+          getHospitalSpecialties(hospitalId),
+          getEmailSettings(hospitalId)
+        ]);
+        setHospital(hospitalData as Hospital);
+        setSpecialties(specialtiesData.map((s: any) => ({ id: s.id, name: s.name, active: s.active })));
+        setEmailSettings(emailData as any);
+      }
+      if (canManagePayments) {
+        await fetchYagoutSettings();
+      }
     } catch (e) {
       console.error('Failed to load settings data', e);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load hospital data.' });
@@ -175,6 +190,10 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
       toast({ variant: 'destructive', title: 'Error', description: addState.message });
     }
   }, [addState, toast]);
+
+  async function fetchYagoutSettings() {
+    setYagoutSettings(await getYagoutSettings());
+  }
 
   async function fetchList() {
     try {
@@ -232,7 +251,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
     }
   };
   
-  if (isLoading || !hospital) {
+  if (isLoading || (canViewGeneral && !hospital)) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -252,8 +271,9 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
         <p className="text-lg text-muted-foreground">Manage hospital-wide settings and configurations.</p>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue={canViewGeneral ? 'general' : 'yagout'} className="w-full">
+        <TabsList className={`grid w-full ${canViewGeneral && canManagePayments ? 'grid-cols-5' : canViewGeneral ? 'grid-cols-4' : 'grid-cols-1'}`}>
+          {canViewGeneral && hospital && (<>
           <TabsTrigger value="general">
             <Building className="mr-2 h-4 w-4" /> General
           </TabsTrigger>
@@ -266,8 +286,25 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
           <TabsTrigger value="data">
             <DatabaseZap className="mr-2 h-4 w-4" /> Data Management
           </TabsTrigger>
+          </>)}
+          {canManagePayments && (
+            <TabsTrigger value="yagout">
+              <CreditCard className="mr-2 h-4 w-4" /> YagoutPay
+            </TabsTrigger>
+          )}
         </TabsList>
 
+        {canManagePayments && (
+          <TabsContent value="yagout">
+            {yagoutSettings ? (
+              <YagoutSettingsTab settings={yagoutSettings} onUpdate={fetchYagoutSettings} />
+            ) : (
+              <Card><CardContent className="p-6 text-sm text-muted-foreground">YagoutPay settings could not be loaded.</CardContent></Card>
+            )}
+          </TabsContent>
+        )}
+
+        {canViewGeneral && hospital && (<>
         <TabsContent value="general">
           <GeneralSettingsForm hospital={hospital} />
         </TabsContent>
@@ -384,6 +421,7 @@ export default function HospitalAdminSettingsPageClient({ hospitalId }: { hospit
             </CardContent>
           </Card>
         </TabsContent>
+        </>)}
       </Tabs>
     </div>
   );

@@ -5,9 +5,21 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { saveImage, ImageValidationError } from '@/lib/image-upload';
-import { getVerifiedUser, requireHospitalPermission } from '@/lib/permissions';
+import { getVerifiedUser, requireHospitalPermission, PAYMENT_SETTINGS_PERMISSION, type VerifiedUser } from '@/lib/permissions';
 import { verifyCsrfToken } from '@/lib/csrf';
 import { createAuditLog } from '@/lib/audit';
+import { Prisma } from '@prisma/client';
+import { encryptHospitalSecret } from '@/lib/hospital-secret';
+import { encryptYagout, decryptYagout, isValidYagoutKey, yagoutHash } from '@/lib/yagout-crypto';
+import {
+  buildHostedMerchantRequest,
+  YAGOUT_CHANNEL_WEB,
+  YAGOUT_COUNTRY,
+  YAGOUT_CURRENCY,
+  YAGOUT_TXN_TYPE,
+} from '@/lib/yagout-request';
+import { resolveYagoutConfigForHospital, yagoutReturnUrls, YagoutConfigError } from '@/lib/yagout-client';
+import { defaultYagoutPostUrl, isAllowedYagoutPostUrl, yagoutAllowedHosts } from '@/lib/yagout-hosts';
 
 const AddSpecialtySchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -289,4 +301,250 @@ export async function deleteSpecialty(specialtyId: number) {
     console.error('[deleteSpecialty] error', error);
     return { success: false, message: 'Failed to delete specialty.' };
   }
+}
+
+// ---------------------------------------------------------------------------
+// YagoutPay (per-hospital merchant credentials)
+//
+// Every hospital is its own Yagout merchant. The hospital is always the one in
+// the caller's session, never a form or argument value, so an admin can only
+// ever configure their own hospital. Super admins are deliberately excluded
+// (requireHospitalPermission would let them through): they see configured /
+// not configured in the hospital list and nothing more.
+//
+// The encryption key is write-only. It is encrypted at rest and no action here
+// returns it, or anything derived from it, to the browser.
+// ---------------------------------------------------------------------------
+
+async function getYagoutSettingsActor(): Promise<(VerifiedUser & { hospitalId: number }) | null> {
+  const user = await getVerifiedUser();
+  if (!user || user.role !== 'hospital' || !user.hospitalId) return null;
+  if (!user.isAdmin && !user.permissions.includes(PAYMENT_SETTINGS_PERMISSION)) return null;
+  return user as VerifiedUser & { hospitalId: number };
+}
+
+export type YagoutSettingsView = {
+  meId: string | null;
+  hasKey: boolean;
+  postUrl: string | null;
+  updatedAt: string | null;
+  defaultPostUrl: string;
+  allowedHosts: string[];
+};
+
+export async function getYagoutSettings(): Promise<YagoutSettingsView | null> {
+  const user = await getYagoutSettingsActor();
+  if (!user) return null;
+
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: user.hospitalId },
+    select: { yagoutMeId: true, yagoutEncryptionKey: true, yagoutPostUrl: true, yagoutUpdatedAt: true },
+  });
+  if (!hospital) return null;
+
+  return {
+    meId: hospital.yagoutMeId,
+    hasKey: !!hospital.yagoutEncryptionKey,
+    postUrl: hospital.yagoutPostUrl,
+    updatedAt: hospital.yagoutUpdatedAt?.toISOString() ?? null,
+    defaultPostUrl: defaultYagoutPostUrl(),
+    allowedHosts: yagoutAllowedHosts(),
+  };
+}
+
+const YagoutSettingsSchema = z.object({
+  // Yagout issues numeric merchant ids, but they are identifiers: kept as a
+  // string so a leading zero is never lost. Letters/digits only, which also
+  // keeps the "|" and "~" framing characters out of the request.
+  yagoutMeId: z
+    .string()
+    .trim()
+    .min(1, 'Merchant ID is required.')
+    .max(30, 'Merchant ID is too long.')
+    .regex(/^[A-Za-z0-9]+$/, 'Merchant ID may contain only letters and digits.'),
+  // Blank on update keeps the stored key.
+  yagoutEncryptionKey: z
+    .string()
+    .trim()
+    .max(200)
+    .refine(v => v === '' || isValidYagoutKey(v), {
+      message: 'Encryption key must be base64 that decodes to exactly 32 bytes (AES-256).',
+    }),
+  yagoutPostUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(v => v === '' || isAllowedYagoutPostUrl(v), {
+      message: 'Post URL must be https and on an allowed Yagout host.',
+    }),
+});
+
+export type YagoutSettingsState = {
+  errors?: { yagoutMeId?: string[]; yagoutEncryptionKey?: string[]; yagoutPostUrl?: string[] };
+  message?: string | null;
+  success?: boolean;
+};
+
+export async function saveYagoutSettings(prevState: YagoutSettingsState, formData: FormData): Promise<YagoutSettingsState> {
+  const user = await getYagoutSettingsActor();
+  if (!user) return { success: false, message: 'Unauthorized.' };
+
+  const _csrf = formData.get('_csrf') as string | null;
+  if (!(await verifyCsrfToken(_csrf))) {
+    return { success: false, message: 'Invalid or missing CSRF token.' };
+  }
+
+  const parsed = YagoutSettingsSchema.safeParse({
+    yagoutMeId: String(formData.get('yagoutMeId') ?? ''),
+    yagoutEncryptionKey: String(formData.get('yagoutEncryptionKey') ?? ''),
+    yagoutPostUrl: String(formData.get('yagoutPostUrl') ?? ''),
+  });
+  if (!parsed.success) {
+    return { success: false, errors: parsed.error.flatten().fieldErrors, message: 'Please correct the highlighted fields.' };
+  }
+  const { yagoutMeId, yagoutEncryptionKey, yagoutPostUrl } = parsed.data;
+  const hospitalId = user.hospitalId;
+
+  const existing = await prisma.hospital.findUnique({
+    where: { id: hospitalId },
+    select: { yagoutMeId: true, yagoutEncryptionKey: true, yagoutPostUrl: true },
+  });
+  if (!existing) return { success: false, message: 'Hospital not found.' };
+
+  if (!yagoutEncryptionKey && !existing.yagoutEncryptionKey) {
+    return {
+      success: false,
+      errors: { yagoutEncryptionKey: ['The encryption key is required the first time.'] },
+      message: 'Please correct the highlighted fields.',
+    };
+  }
+
+  let encryptedKey: string | undefined;
+  if (yagoutEncryptionKey) {
+    try {
+      encryptedKey = encryptHospitalSecret(yagoutEncryptionKey);
+    } catch (error) {
+      console.error('[saveYagoutSettings] could not encrypt key:', (error as Error).message);
+      return { success: false, message: 'Payment settings cannot be saved: the server encryption key is not configured.' };
+    }
+  }
+
+  try {
+    await prisma.hospital.update({
+      where: { id: hospitalId },
+      data: {
+        yagoutMeId,
+        ...(encryptedKey ? { yagoutEncryptionKey: encryptedKey } : {}),
+        yagoutPostUrl: yagoutPostUrl || null,
+        yagoutUpdatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return {
+        success: false,
+        errors: { yagoutMeId: ['This Yagout merchant ID is already used by another hospital.'] },
+        message: 'This Yagout merchant ID is already used by another hospital.',
+      };
+    }
+    console.error('[saveYagoutSettings] update failed:', (error as Error).message);
+    return { success: false, message: 'Failed to save payment settings.' };
+  }
+
+  await createAuditLog({
+    actorId: user.id,
+    actorType: user.entityType === 'hospital' ? 'HospitalAdmin' : 'User',
+    action: 'YAGOUT_CONFIG_UPDATED',
+    targetId: hospitalId,
+    targetType: 'Hospital',
+    // Never the key: only whether it changed.
+    changes: {
+      yagoutMeId,
+      previousYagoutMeId: existing.yagoutMeId,
+      keyRotated: !!encryptedKey,
+      postUrlOverride: yagoutPostUrl || null,
+    },
+  });
+
+  revalidatePath('/hospital-admin/settings');
+  revalidatePath('/super-admin/hospitals');
+  return { success: true, message: 'YagoutPay settings saved.' };
+}
+
+export type YagoutCheck = { label: string; status: 'pass' | 'warn' | 'fail'; detail: string };
+
+/**
+ * Builds, encrypts and hashes a sample request with the saved credentials,
+ * exactly as a real payment would, then decrypts it back. Nothing is sent to
+ * Yagout (the hosted flow only accepts a browser form post), so a pass proves
+ * the stored credentials are well-formed and usable, not that Yagout has
+ * activated them: the first real payment confirms that.
+ */
+export async function testYagoutConfiguration(): Promise<{ success: boolean; checks: YagoutCheck[]; message?: string }> {
+  const user = await getYagoutSettingsActor();
+  if (!user) return { success: false, checks: [], message: 'Unauthorized.' };
+
+  const checks: YagoutCheck[] = [];
+
+  let config;
+  try {
+    config = await resolveYagoutConfigForHospital(user.hospitalId);
+    checks.push({ label: 'Saved credentials', status: 'pass', detail: `Merchant ID ${config.meId} and an encryption key are saved and the key decrypts.` });
+  } catch (error) {
+    const detail = error instanceof YagoutConfigError
+      ? 'Save a merchant ID and encryption key first (and check the Post URL is on an allowed host).'
+      : 'The saved key could not be decrypted on this server (check HOSPITAL_SECRET_KEY).';
+    checks.push({ label: 'Saved credentials', status: 'fail', detail });
+    return { success: false, checks };
+  }
+
+  if (!/^[0-9]+$/.test(config.meId)) {
+    checks.push({ label: 'Merchant ID', status: 'warn', detail: `"${config.meId}" is not numeric; Yagout normally issues numeric merchant IDs.` });
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  if (!baseUrl) {
+    checks.push({ label: 'Return URLs', status: 'fail', detail: 'NEXT_PUBLIC_BASE_URL is not set on the server, so Yagout would have nowhere to return patients.' });
+    return { success: false, checks };
+  }
+  const { successUrl, failureUrl } = yagoutReturnUrls(baseUrl);
+  const returnPathOk = [successUrl, failureUrl].every(u => /^[A-Za-z0-9/_]+$/.test(new URL(u).pathname));
+  const isHttps = baseUrl.startsWith('https://');
+  checks.push({
+    label: 'Return URLs',
+    status: returnPathOk ? (isHttps ? 'pass' : 'warn') : 'fail',
+    detail: `${successUrl} and ${failureUrl}${isHttps ? '' : ' (not https; Yagout production requires https)'}. Register these with Yagout.`,
+  });
+
+  checks.push({ label: 'Post URL', status: 'pass', detail: config.postUrl });
+
+  try {
+    const orderNo = `test${Date.now().toString(36)}`;
+    const amount = '1.00';
+    const plaintext = buildHostedMerchantRequest({
+      txn: {
+        agId: config.aggregatorId,
+        meId: config.meId,
+        orderNo,
+        amount,
+        country: YAGOUT_COUNTRY,
+        currency: YAGOUT_CURRENCY,
+        txnType: YAGOUT_TXN_TYPE,
+        successUrl,
+        failureUrl,
+        channel: YAGOUT_CHANNEL_WEB,
+      },
+      cust: { custName: 'Test Patient', emailId: 'test@example.com', mobileNo: '251900000000', isLoggedIn: 'Y' },
+    });
+    const merchantRequest = encryptYagout(plaintext, config.encryptionKey);
+    yagoutHash({ meId: config.meId, orderNo, amount, country: YAGOUT_COUNTRY, currency: YAGOUT_CURRENCY }, config.encryptionKey);
+    if (decryptYagout(merchantRequest, config.encryptionKey) !== plaintext) {
+      throw new Error('round-trip mismatch');
+    }
+    checks.push({ label: 'Sample request', status: 'pass', detail: 'A sample payment request was built, encrypted, hashed and decrypted back successfully.' });
+  } catch (error) {
+    checks.push({ label: 'Sample request', status: 'fail', detail: `Could not build a sample request: ${(error as Error).message}` });
+  }
+
+  return { success: checks.every(c => c.status !== 'fail'), checks };
 }

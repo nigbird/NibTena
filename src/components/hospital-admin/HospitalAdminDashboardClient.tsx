@@ -7,6 +7,7 @@ import { LineChart, PieChart as PieChartIcon, DollarSign, BarChart as BarChartIc
 import type { Appointment, Doctor, Patient } from '@/lib/definitions';
 import { useMemo, useState } from 'react';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
+import { countsAsRevenue } from '@/lib/payment-display';
 
 const COLORS = ['hsl(var(--accent))', 'hsl(var(--primary))', 'hsl(var(--destructive))'];
 
@@ -42,7 +43,7 @@ export function HospitalAdminDashboardClient({ initialReportData, chartData, app
         const filteredAppointments = reportData.appointments;
 
         const totalRevenue = filteredAppointments
-            .filter((a) => a.status !== 'pending-payment' && a.doctor)
+            .filter((a) => countsAsRevenue(a.status) && a.doctor)
             .reduce((sum, a) => {
                 if (!a.doctor) return sum; // Guard against null doctor
                 return sum + (a.doctor.consultationFee || 0);
@@ -72,7 +73,7 @@ export function HospitalAdminDashboardClient({ initialReportData, chartData, app
               revenueByDoctor[doc.id] = { name: doc.name.replace('Dr. ', ''), revenue: 0, appointments: 0 };
             });
             filteredAppointments
-                .filter((a) => a.status !== 'pending-payment' && a.doctor)
+                .filter((a) => countsAsRevenue(a.status) && a.doctor)
                 .forEach((appt) => {
                     if (appt.doctor && revenueByDoctor[appt.doctorId]) {
                         revenueByDoctor[appt.doctorId].revenue += appt.doctor.consultationFee || 0;

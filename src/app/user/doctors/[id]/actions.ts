@@ -2,7 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { hasValidMiniAppSession } from '@/lib/session';
+import { expireStalePaymentHolds, slotBlockingWhere } from '@/lib/appointment-hold';
 import type { TimeSlot } from '@/lib/definitions';
 import { parse as parseTime, addMinutes, format as formatTime, isBefore, isEqual, isAfter, startOfHour, parseISO, startOfDay, addDays, isToday } from 'date-fns';
 
@@ -33,8 +33,9 @@ function isTimeInRanges(timeToCheck: Date, ranges: { startTime: string; endTime:
 
 export async function getAvailableTimeWindows(doctorId: number, date: string, hospitalId: number): Promise<string[]> {
     if (!doctorId || !date || !hospitalId) return [];
-    // Server actions are callable directly via POST; require a verified session.
-    if (!(await hasValidMiniAppSession())) return [];
+
+    // Lapsed web-payment holds must not keep blocking the slot.
+    await expireStalePaymentHolds({ doctorId, hospitalId });
 
     const parsedDate = parseISO(date); // parse 'yyyy-MM-dd' as local date
     const dayIndex = parsedDate.getDay();
@@ -62,7 +63,7 @@ export async function getAvailableTimeWindows(doctorId: number, date: string, ho
                     gte: startOfDay(parsedDate),
                     lt: addDays(startOfDay(parsedDate), 1),
                 },
-                status: { in: ['confirmed', 'rescheduled'] }
+                ...slotBlockingWhere(now),
             },
             select: {
                 appointmentSlot: true

@@ -8,36 +8,10 @@ import { redirect } from 'next/navigation';
 import { addMinutes, format, parse, parseISO, startOfDay } from 'date-fns';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
-import { createAndStoreOtp } from '@/lib/otp';
+import { requestOtp } from '@/lib/otp';
 import { verifyCsrfToken } from '@/lib/csrf';
 import { verifyPatientSessionCookie } from '@/lib/session';
-import { getAvailableTimeWindows } from '@/app/user/doctors/[id]/actions';
-
-// Normalize phone numbers to canonical 251XXXXXXXXX format (no leading '+')
-function normalizePhoneNumber(input?: string | null) {
-  if (!input) return '';
-  let s = String(input).trim();
-  // remove spaces
-  s = s.replace(/\s+/g, '');
-  // if already starts with 251, keep it; otherwise prepend
-  if (!s.startsWith('251')) {
-    s = '251' + s;
-  }
-  // Return canonical storage format without a leading '+' (e.g. 251908279572)
-  return s;
-}
-
-const PatientInfoSchema = z.object({
-  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  phone: z.string().min(9, { message: 'Please enter a valid phone number.' }),
-  age: z.coerce.number().gt(0, { message: 'Please enter a valid age.' }),
-  gender: z.enum(['male', 'female'], { required_error: 'Please select a gender.' }),
-});
-
-const AppointmentFormSchema = PatientInfoSchema.extend({
-  bookingFor: z.enum(['myself', 'someoneElse']),
-  symptoms: z.string().optional(),
-});
+import { AppointmentFormSchema, isBookableSlot, normalizePhoneNumber } from './booking-shared';
 
 export type State = {
   errors?: z.infer<z.ZodError<typeof AppointmentFormSchema>>['formErrors']['fieldErrors'];
@@ -60,14 +34,8 @@ async function findOrCreatePatient(phone: string, defaults: { name: string, age:
 
 // Not exported: exports of a 'use server' file are client-callable, and the
 // code must never reach the client (it is delivered via SMS only).
-async function generateAndSaveOtp(phone: string): Promise<void> {
-  const normalized = normalizePhoneNumber(phone);
-  const code = await createAndStoreOtp(normalized);
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`OTP for ${normalized} is: ${code}`);
-  } else {
-    console.log(`OTP generated for ${normalized}`);
-  }
+async function generateAndSaveOtp(phone: string): Promise<{ success: boolean; message: string }> {
+  return requestOtp(normalizePhoneNumber(phone));
 }
 
 
@@ -128,7 +96,10 @@ export async function startBookingProcess(
          gender: validatedFields.data.gender
      });
 
-     await generateAndSaveOtp(normalizedPhone);
+     const otp = await generateAndSaveOtp(normalizedPhone);
+     if (!otp.success) {
+       return { success: false, message: otp.message };
+     }
 
      // return normalized phone in data so downstream uses the canonical value
      const returnedData = { ...validatedFields.data, phone: normalizedPhone };
@@ -147,24 +118,6 @@ export async function startBookingProcess(
 }
 
 // First implementation of initiateBookingAndPayment was removed to fix duplicate declaration
-
-// Checks that the doctor is active and works at the hospital, and that the
-// slot is one the schedule actually offers on that date.
-async function isBookableSlot(doctorId: number, hospitalId: number, appointmentDate: string, appointmentSlot: string) {
-  const link = await prisma.doctorsOnHospitals.findFirst({
-    where: { doctorId, hospitalId, doctor: { status: 'active' } },
-    select: { doctorId: true },
-  });
-  if (!link) return false;
-
-  const [startTimeStr] = String(appointmentSlot).split(' - ');
-  const slotStart = parse(startTimeStr, 'hh:mm a', new Date());
-  if (isNaN(slotStart.getTime())) return false;
-  const formattedSlotStart = format(slotStart, 'hh:mm a');
-
-  const availableWindows = await getAvailableTimeWindows(doctorId, appointmentDate, hospitalId);
-  return availableWindows.some(window => window.startsWith(formattedSlotStart));
-}
 
 // Creates a confirmed appointment without payment (standalone/OTP flow). The
 // patient comes only from the OTP-verified session cookie, never from the
@@ -393,6 +346,7 @@ export async function initiateBookingAndPayment(
         appointmentSlot,
         appointmentDate: startOfDay(parseISO(appointmentDate)),
         status: 'pending-payment', // New status
+        paymentMethod: 'NIB_SUPERAPP',
       },
     });
 

@@ -36,7 +36,7 @@ export async function getHospitalReportData(dateRange?: DateRange) {
             approvedBySuperAdmin: { select: { id: true, name: true, email: true } },
             // Include appointments directly filtered by date range and payment status in the query
             appointments: {
-                where: { status: { not: 'pending-payment' }, ...(createdAtDateFilter && { createdAt: createdAtDateFilter }) },
+                where: { status: { notIn: ['pending-payment', 'payment-failed', 'payment-expired', 'paid-slot-conflict'] }, ...(createdAtDateFilter && { createdAt: createdAtDateFilter }) },
                 select: {
                     doctor: { select: { id: true, consultationFee: true } }
                 }

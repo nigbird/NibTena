@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import DoctorBooking from './DoctorBooking';
 import { prisma } from '@/lib/prisma';
-import { hasValidMiniAppSession } from '@/lib/session';
 
 
 async function getDoctorData(doctorId: number) {
@@ -53,8 +52,6 @@ export default async function DoctorProfilePage({
     params: Promise<{ id: string }>;
     searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  if (!(await hasValidMiniAppSession())) return null;
-
   const { id } = await params;
   const doctorId = Number(id);
   if (!Number.isInteger(doctorId)) notFound();

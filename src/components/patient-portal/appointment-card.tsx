@@ -41,6 +41,10 @@ const statusConfig = {
   rescheduled: { variant: 'secondary', label: 'Rescheduled' },
   completed: { variant: 'outline', label: 'Completed' },
   cancelled: { variant: 'destructive', label: 'Canceled' },
+  'pending-payment': { variant: 'outline', label: 'Awaiting payment' },
+  'payment-failed': { variant: 'destructive', label: 'Payment failed' },
+  'payment-expired': { variant: 'outline', label: 'Payment expired' },
+  'paid-slot-conflict': { variant: 'destructive', label: 'Paid - contact hospital' },
 } as const;
 
 export default function AppointmentCard({

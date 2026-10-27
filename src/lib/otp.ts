@@ -35,8 +35,19 @@ export function hashOtp(otp: string) {
   return h.digest('hex');
 }
 
+/**
+ * TEMPORARY: OTP_MOCK=true skips SMS and makes every phone's code
+ * OTP_MOCK_CODE (default 123456). Anyone can then verify as any phone number,
+ * so this must be turned off before real patients use the site.
+ */
+function mockOtpCode(): string | null {
+  if (process.env.OTP_MOCK !== 'true') return null;
+  const code = process.env.OTP_MOCK_CODE?.trim() || '123456';
+  return /^\d{6}$/.test(code) ? code : '123456';
+}
+
 export async function createAndStoreOtp(phone: string, expiryMinutes = DEFAULT_EXPIRY_MINUTES) {
-  const otp = generateNumericOtp();
+  const otp = mockOtpCode() ?? generateNumericOtp();
   const hashed = hashOtp(otp);
   const expiresAt = addMinutes(new Date(), expiryMinutes);
 
@@ -175,6 +186,10 @@ export async function requestOtp(phone: string): Promise<{ success: boolean; mes
   }
 
   const code = await createAndStoreOtp(phone);
+  if (mockOtpCode()) {
+    console.warn(`[otp] OTP_MOCK is ON: no SMS sent to ${phone}; the fixed mock code is accepted. Turn OTP_MOCK off before going live.`);
+    return { success: true, message: 'An OTP has been sent.' };
+  }
   try {
     await sendOtpSms(phone, code);
   } catch (error) {

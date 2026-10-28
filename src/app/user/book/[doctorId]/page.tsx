@@ -83,6 +83,13 @@ export default function BookingPage() {
 
   const [bookingFor, setBookingFor] = useState<'myself' | 'someoneElse'>('myself');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
+  // Web only: the number the payer uses on YagoutPay. Follows the patient's
+  // phone until the user edits it.
+  const [paymentPhone, setPaymentPhone] = useState<string>('');
+  const [paymentPhoneEdited, setPaymentPhoneEdited] = useState(false);
+  useEffect(() => {
+    if (!paymentPhoneEdited) setPaymentPhone(phoneNumber);
+  }, [phoneNumber, paymentPhoneEdited]);
   // Web only: whether this hospital can take YagoutPay payments (null = checking).
   const [yagoutAvailable, setYagoutAvailable] = useState<boolean | null>(isMiniApp ? true : null);
 
@@ -233,6 +240,7 @@ export default function BookingPage() {
             age: state.data.age,
             gender: state.data.gender,
             symptoms: state.data.symptoms,
+            paymentPhone,
             doctorId,
             hospitalId,
             appointmentSlot: slot,
@@ -381,6 +389,30 @@ export default function BookingPage() {
               />
                {state.errors?.symptoms && <p className="text-sm font-medium text-destructive">{state.errors.symptoms[0]}</p>}
             </div>
+            {!isMiniApp && (
+              <div className="space-y-2">
+                <Label htmlFor="paymentPhone">Phone Number for Payment</Label>
+                <div className="flex items-center">
+                  <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+                    +251
+                  </span>
+                  <Input
+                    id="paymentPhone"
+                    name="paymentPhone"
+                    type="tel"
+                    placeholder="912345678"
+                    value={paymentPhone}
+                    onChange={(e) => { setPaymentPhoneEdited(true); setPaymentPhone(e.target.value); }}
+                    required
+                    className="rounded-l-none"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">The number you will pay with on YagoutPay. It can differ from the patient&apos;s number.</p>
+                {(state.errors as Record<string, string[] | undefined> | undefined)?.paymentPhone && (
+                  <p className="text-sm font-medium text-destructive">{(state.errors as Record<string, string[]>).paymentPhone[0]}</p>
+                )}
+              </div>
+            )}
             <SubmitButton isMiniApp={isMiniApp} label={isVerifiedForPhone ? 'Proceed to Payment' : undefined} />
           </form>
         </CardContent>

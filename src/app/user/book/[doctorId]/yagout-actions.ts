@@ -54,6 +54,17 @@ function framingSafe(value: string, max = 100): string {
   return value.replace(/[|~\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+/**
+ * Yagout takes the local 9-digit mobile number (9XXXXXXXX / 7XXXXXXXX), not
+ * the 251-prefixed form we store. Returns null if it is not a valid one.
+ */
+function toYagoutMobile(input: string): string | null {
+  let digits = String(input || '').replace(/\D/g, '');
+  if (digits.startsWith('251')) digits = digits.slice(3);
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  return /^[79]\d{8}$/.test(digits) ? digits : null;
+}
+
 function baseUrl(): string | null {
   const url = process.env.NEXT_PUBLIC_BASE_URL?.trim();
   return url ? url.replace(/\/$/, '') : null;
@@ -72,6 +83,8 @@ async function raiseYagoutPayment(input: {
   appointmentDate: Date;
   symptoms: string;
   config: YagoutConfig;
+  /** 9-digit number the payer uses on Yagout; may differ from the patient's. */
+  paymentMobile: string;
   retryOf?: string;
 }): Promise<YagoutBookingState> {
   const root = baseUrl();
@@ -143,7 +156,7 @@ async function raiseYagoutPayment(input: {
       cust: {
         custName: framingSafe(input.patient.name),
         emailId: framingSafe(email, 100),
-        mobileNo: input.patient.phone.replace(/\D/g, ''),
+        mobileNo: input.paymentMobile,
         isLoggedIn: 'Y',
       },
       other: {
@@ -255,6 +268,15 @@ export async function initiateYagoutBooking(
     return { success: false, message: 'Invalid booking details.' };
   }
 
+  // The payer may pay from a different number than the patient's; blank
+  // means the patient's own verified number.
+  const rawPaymentPhone = String(formData.get('paymentPhone') || '').trim();
+  const paymentMobile = toYagoutMobile(rawPaymentPhone || patient.phone);
+  if (!paymentMobile) {
+    const message = 'Please enter a valid phone number for payment (e.g. 912345678).';
+    return { success: false, message, errors: { paymentPhone: [message] } };
+  }
+
   const config = await resolveConfigOrNull(hospitalId);
   if (!config) {
     return { success: false, message: NOT_AVAILABLE };
@@ -282,6 +304,7 @@ export async function initiateYagoutBooking(
       appointmentDate: startOfDay(new Date(`${appointmentDate}T00:00:00`)),
       symptoms: symptoms || '',
       config,
+      paymentMobile,
     });
   } catch (error) {
     console.error('[YAGOUT] initiateYagoutBooking failed:', (error as Error).message);
@@ -322,6 +345,11 @@ export async function retryYagoutPayment(appointmentId: string, formData: FormDa
     return { success: false, message: 'This appointment cannot be paid again.' };
   }
 
+  const paymentMobile = toYagoutMobile(String(formData.get('paymentPhone') || '').trim() || patient.phone);
+  if (!paymentMobile) {
+    return { success: false, message: 'Please enter a valid phone number for payment (e.g. 912345678).' };
+  }
+
   const config = await resolveConfigOrNull(previous.hospitalId);
   if (!config) {
     return { success: false, message: NOT_AVAILABLE };
@@ -341,6 +369,7 @@ export async function retryYagoutPayment(appointmentId: string, formData: FormDa
       appointmentDate: previous.appointmentDate,
       symptoms: previous.symptoms,
       config,
+      paymentMobile,
       retryOf: previous.id,
     });
   } catch (error) {

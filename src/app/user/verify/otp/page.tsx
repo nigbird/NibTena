@@ -158,6 +158,7 @@ function OtpForm() {
             fd.set('age', String(parsed.age ?? ''));
             fd.set('gender', String(parsed.gender ?? ''));
             fd.set('symptoms', String(parsed.symptoms ?? ''));
+            fd.set('paymentPhone', String(parsed.paymentPhone ?? ''));
 
             const result = await initiateYagoutBooking(
                 Number(parsed.doctorId),

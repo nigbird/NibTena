@@ -134,7 +134,7 @@ export default async function ConfirmationPage({ params, searchParams }: { param
             )}
             {isYagout && view === 'pending' && (
               <div className="mt-6 flex justify-center">
-                <Button asChild variant="accent" className={ctaClass}>
+                <Button asChild variant="brand" className={ctaClass}>
                   <Link href={`/user/pay/${appointmentId}`}>Continue to payment</Link>
                 </Button>
               </div>
@@ -180,10 +180,10 @@ export default async function ConfirmationPage({ params, searchParams }: { param
           </PortalCard>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Button asChild variant="outline" className={ctaClass}>
+            <Button asChild variant="brandOutline" className={ctaClass}>
               <Link href="/user/appointments">My bookings</Link>
             </Button>
-            <Button asChild variant="accent" className={ctaClass}>
+            <Button asChild variant="brand" className={ctaClass}>
               <Link href="/user">Back to Home</Link>
             </Button>
           </div>

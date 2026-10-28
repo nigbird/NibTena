@@ -72,9 +72,9 @@ export default function AppointmentCard({
     <>
       <PortalCard className="p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="h-12 w-12 ring-2 ring-primary/40">
+          <Avatar className="h-12 w-12 ring-2 ring-border">
             {doctor?.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor?.name} className="object-cover" />}
-            <AvatarFallback className="bg-primary/30 font-semibold text-secondary">{doctor?.name?.charAt(0) ?? 'D'}</AvatarFallback>
+            <AvatarFallback className="bg-secondary/10 font-semibold text-secondary">{doctor?.name?.charAt(0) ?? 'D'}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{doctor?.name || 'Doctor'}</p>
@@ -103,11 +103,11 @@ export default function AppointmentCard({
 
         {(appointment.status === 'confirmed' || appointment.status === 'rescheduled') && (
           <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-4">
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setIsRescheduleDrawerOpen(true)}>
+            <Button variant="brandOutline" size="sm" className="rounded-xl" onClick={() => setIsRescheduleDrawerOpen(true)}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Reschedule
             </Button>
-            <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setIsCancelAlertOpen(true)}>
+            <Button variant="brandOutline" size="sm" className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setIsCancelAlertOpen(true)}>
               <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>

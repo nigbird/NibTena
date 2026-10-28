@@ -156,7 +156,7 @@ function AppointmentsContent() {
           title="No appointments found"
           description={`You don’t have any ${activeFilter} appointments.`}
           action={
-            <Button asChild variant="accent" className={ctaClass}>
+            <Button asChild variant="brand" className={ctaClass}>
               <Link href="/user/doctors">Book an Appointment</Link>
             </Button>
           }

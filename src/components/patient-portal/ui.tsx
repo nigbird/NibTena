@@ -14,9 +14,21 @@ import { cn } from '@/lib/utils';
  * Admins can paste image URLs from any host, and next/image throws for hosts
  * missing from `images.remotePatterns`. Serve external URLs as-is instead.
  */
+/** "Dr. Hawi Bekele" -> "HB"; skips titles so every avatar does not read "D". */
+export function initials(name: string) {
+  const words = name.replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').trim().split(/\s+/).filter(Boolean);
+  return (words.slice(0, 2).map(w => w[0]).join('') || name.charAt(0)).toUpperCase();
+}
+
+/** Hides the browser's own (blue) clear button on type="search" inputs. */
+export const hideNativeClear = '[&::-webkit-search-cancel-button]:appearance-none';
+
 export const isExternalImage = (src: string) => /^https?:\/\//i.test(src);
 
-/** Primary call-to-action sizing; pair with `variant="accent"`. */
+/** The one filled brand style: buttons, selected chips, dates and slots. */
+export const brandFill = 'bg-gradient-to-br from-[hsl(28_31%_46%)] to-[hsl(28_40%_28%)] text-white';
+
+/** Primary call-to-action sizing; pair with `variant="brand"`. */
 export const ctaClass = 'h-11 rounded-xl font-semibold';
 /** Sizing for Select triggers that sit next to a SearchField. */
 export const filterTriggerClass = 'h-11 rounded-xl bg-card shadow-sm';
@@ -110,7 +122,7 @@ export function StatusPill({ tone = 'brand', className, children }: { tone?: Ton
 
 export function SpecialtyPill({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <span className={cn('inline-block max-w-full truncate rounded-full bg-primary/25 px-2.5 py-0.5 text-xs font-medium text-secondary', className)}>
+    <span className={cn('inline-block max-w-full truncate rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary', className)}>
       {children}
     </span>
   );
@@ -141,7 +153,7 @@ export const SearchField = React.forwardRef<HTMLInputElement, React.InputHTMLAtt
   ({ className, ...props }, ref) => (
     <div className="relative">
       <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input ref={ref} type="search" className={cn('h-11 rounded-xl bg-card pl-10 shadow-sm', className)} {...props} />
+      <Input ref={ref} type="search" className={cn('h-11 rounded-xl bg-card pl-10 shadow-sm', hideNativeClear, className)} {...props} />
     </div>
   )
 );
@@ -169,7 +181,7 @@ export function FilterChip({
       type="button"
       className={cn(
         'shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-        active ? 'border-secondary bg-secondary text-secondary-foreground' : 'bg-card hover:bg-muted',
+        active ? cn('border-transparent shadow-sm', brandFill) : 'bg-card hover:border-secondary/40 hover:bg-secondary/5',
         className
       )}
       {...props}
@@ -247,8 +259,9 @@ export function CenteredCard({
 
 function RowArrow() {
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/30 text-secondary transition-colors group-hover:bg-secondary group-hover:text-secondary-foreground">
-      <ArrowRight className="h-4 w-4" />
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary/10 text-secondary transition-colors group-hover:text-white">
+      <span className={cn('absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100', brandFill)} />
+      <ArrowRight className="relative h-4 w-4" />
     </span>
   );
 }
@@ -265,9 +278,9 @@ export function DoctorRow({
   return (
     <Link href={href} className="group block">
       <PortalCard className="flex items-center gap-4 p-4 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md">
-        <Avatar className="h-16 w-16 ring-2 ring-primary/40">
+        <Avatar className="h-16 w-16 ring-2 ring-border">
           {doctor.imageUrl && <AvatarImage src={doctor.imageUrl} alt={doctor.name} className="object-cover" />}
-          <AvatarFallback className="bg-primary/30 text-lg font-semibold text-secondary">{doctor.name.charAt(0)}</AvatarFallback>
+          <AvatarFallback className="bg-secondary/10 text-lg font-semibold text-secondary">{initials(doctor.name)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1 space-y-1">
           <h3 className="truncate font-semibold text-foreground">{doctor.name}</h3>
@@ -298,8 +311,8 @@ export function HospitalCard({ hospital }: { hospital: { id: number; name: strin
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/40 to-primary/10">
-              <HospitalIcon className="h-12 w-12 text-secondary/60" />
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary/15 to-secondary/5">
+              <HospitalIcon className="h-12 w-12 text-secondary/40" />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />

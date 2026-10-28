@@ -44,7 +44,7 @@ export function YagoutAutoSubmitForm({ postUrl, meId, merchantRequest, hash }: P
       <input type="hidden" name="merchant_request" value={merchantRequest} />
       <input type="hidden" name="hash" value={hash} />
 
-      <Button type="submit" variant="accent" className="h-11 w-full rounded-xl font-semibold">
+      <Button type="submit" variant="brand" className="h-11 w-full rounded-xl font-semibold">
         {stalled ? (
           'Continue to payment'
         ) : (

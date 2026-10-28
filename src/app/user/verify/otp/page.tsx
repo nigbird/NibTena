@@ -179,7 +179,7 @@ function OtpForm() {
                 title="Phone verified"
                 description="Continue to YagoutPay to pay the consultation fee. Your slot is held for a short time while you pay."
             >
-                <Button className={cn(ctaClass, 'w-full')} variant="accent" onClick={handleProceedToPayment} disabled={isStartingPayment}>
+                <Button className={cn(ctaClass, 'w-full')} variant="brand" onClick={handleProceedToPayment} disabled={isStartingPayment}>
                     {isStartingPayment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Starting payment...</> : 'Proceed to Payment'}
                 </Button>
             </CenteredCard>
@@ -217,7 +217,7 @@ function OtpForm() {
                     })}
                 </div>
                 </div>
-                <Button type="submit" className={cn(ctaClass, 'w-full')} variant="accent" disabled={isVerifying || otp.join('').length < 6}>
+                <Button type="submit" className={cn(ctaClass, 'w-full')} variant="brand" disabled={isVerifying || otp.join('').length < 6}>
                     {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Continue'}
                 </Button>
             </form>

@@ -55,7 +55,7 @@ export function RetryPaymentButton({ appointmentId }: { appointmentId: string })
     };
 
     return (
-        <Button variant="accent" className="h-11 rounded-xl font-semibold" onClick={handleRetry} disabled={isPending}>
+        <Button variant="brand" className="h-11 rounded-xl font-semibold" onClick={handleRetry} disabled={isPending}>
             {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting payment...</> : <><RefreshCw className="mr-2 h-4 w-4" /> Try payment again</>}
         </Button>
     );

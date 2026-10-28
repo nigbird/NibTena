@@ -37,10 +37,10 @@ export default function ProfilePage() {
   return (
     <PageShell size="narrow" className="py-8">
       <PortalCard className="relative overflow-hidden p-6 text-center">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/40 to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-secondary/10 to-transparent" />
         <Avatar className="relative mx-auto h-20 w-20 shadow-md ring-4 ring-card">
           {/* The user model doesn't have an avatar, so we use a fallback */}
-          <AvatarFallback className="bg-primary text-2xl font-semibold text-primary-foreground">
+          <AvatarFallback className="bg-secondary/10 text-2xl font-semibold text-secondary">
             {patient.name ? patient.name.charAt(0) : <User />}
           </AvatarFallback>
         </Avatar>

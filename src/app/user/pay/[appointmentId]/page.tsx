@@ -34,10 +34,10 @@ function Notice({ title, message, doctorId }: { title: string; message: string; 
   return (
     <CenteredCard icon={CreditCard} tone="muted" title={title} description={message}>
       <div className="flex flex-col gap-2">
-        <Button asChild variant="accent" className={ctaClass}>
+        <Button asChild variant="brand" className={ctaClass}>
           <Link href={doctorId ? `/user/doctors/${doctorId}` : '/user/doctors'}>Book again</Link>
         </Button>
-        <Button asChild variant="outline" className={ctaClass}>
+        <Button asChild variant="brandOutline" className={ctaClass}>
           <Link href="/user/appointments">My appointments</Link>
         </Button>
       </div>

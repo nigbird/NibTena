@@ -73,12 +73,12 @@ export default async function DoctorProfilePage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-1">
           <PortalCard className="relative overflow-hidden p-6 text-center">
-            <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/40 to-transparent" />
+            <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-secondary/10 to-transparent" />
             <Avatar className="relative mx-auto mb-4 h-24 w-24 shadow-md ring-4 ring-card md:h-28 md:w-28">
               {doctor.imageUrl && (
                 <AvatarImage src={doctor.imageUrl} alt={doctor.name} className="object-cover" />
               )}
-              <AvatarFallback className="bg-primary/40 text-3xl font-semibold text-secondary">
+              <AvatarFallback className="bg-secondary/10 text-3xl font-semibold text-secondary">
                 {doctor.name.charAt(0)}
               </AvatarFallback>
             </Avatar>

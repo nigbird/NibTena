@@ -14,10 +14,10 @@ export default function PaymentErrorPage() {
       description="We could not match the payment response to a booking. If money was taken from your account, please contact the hospital with your payment reference. Otherwise, check your appointments or book again."
     >
       <div className="flex flex-col gap-2">
-        <Button asChild variant="accent" className={ctaClass}>
+        <Button asChild variant="brand" className={ctaClass}>
           <Link href="/user/appointments">My appointments</Link>
         </Button>
-        <Button asChild variant="outline" className={ctaClass}>
+        <Button asChild variant="brandOutline" className={ctaClass}>
           <Link href="/user/doctors">Book an appointment</Link>
         </Button>
       </div>

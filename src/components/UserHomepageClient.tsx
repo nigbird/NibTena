@@ -17,7 +17,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import Autoplay from "embla-carousel-autoplay";
 import { type ImagePlaceholder } from '@/lib/placeholder-images';
 import { PatientContext } from '@/context/PatientContext';
-import { HospitalCard } from '@/components/patient-portal/ui';
+import { HospitalCard, hideNativeClear, initials } from '@/components/patient-portal/ui';
 
 const actionIcons: { [key: string]: React.ElementType } = {
   Hospital: Hospital,
@@ -52,7 +52,7 @@ function Highlight({ text, highlight }: { text: string; highlight: string }) {
     <span className="text-foreground/80">
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <strong key={i} className="font-bold text-foreground bg-primary/20 rounded-sm">
+          <strong key={i} className="font-bold text-secondary">
             {part}
           </strong>
         ) : (
@@ -158,14 +158,16 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
   return (
     <div className="flex flex-col">
       {/* Hero: brand gradient instead of a photo, so text contrast never depends on an image */}
-      <div className="relative overflow-hidden rounded-b-[2rem] bg-gradient-to-br from-[hsl(var(--primary-foreground))] via-[hsl(28_38%_28%)] to-secondary">
-        <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-        <Stethoscope aria-hidden className="pointer-events-none absolute right-6 top-8 h-28 w-28 rotate-12 text-white/[0.06]" />
+      <div className="relative rounded-b-[2rem] bg-gradient-to-br from-[hsl(var(--primary-foreground))] via-[hsl(28_38%_28%)] to-secondary">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-b-[2rem]">
+          <div className="absolute -top-24 -right-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
+          <div className="absolute -bottom-28 -left-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+          <Stethoscope className="absolute right-6 top-8 h-28 w-28 rotate-12 text-white/[0.06]" />
+        </div>
 
         <section className="relative mx-auto max-w-3xl px-5 pt-8 pb-24 text-white sm:text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-white/15">
-            <Sparkles className="h-3.5 w-3.5" /> Book your visit in minutes
+          <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-white/15">
+            Book your visit in minutes
           </span>
           <h1 className="mt-4 font-headline text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
             How are you feeling <span className="text-primary">today?</span>
@@ -178,7 +180,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
               <Input
                 type="search"
                 placeholder="Search doctors, hospitals, or specialties…"
-                className="h-14 w-full rounded-2xl border-0 bg-card pl-12 pr-4 text-base text-foreground shadow-xl shadow-black/20 focus-visible:ring-2 focus-visible:ring-primary"
+                className={cn("h-14 w-full rounded-2xl border-0 bg-card pl-12 pr-4 text-base text-foreground shadow-xl shadow-black/20 focus-visible:ring-4 focus-visible:ring-white/40 focus-visible:ring-offset-0", hideNativeClear)}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onBlur={() => setTimeout(() => setShowResults(false), 200)}
@@ -186,7 +188,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
               />
             </form>
             {showResults && (
-              <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border bg-card text-left shadow-xl">
+              <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border bg-card text-left text-foreground shadow-2xl">
                 {isSearching ? (
                   <div className="p-4 text-center text-muted-foreground">Searching...</div>
                 ) : hasResults ? (
@@ -199,7 +201,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                           return (
                             <li key={specialty}>
                               <button onClick={() => handleSuggestionClick(specialty, `/user/doctors?specialty=${specialty}`)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/60">
-                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/30 text-secondary"><Icon className="h-4 w-4" /></span>
+                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/10 text-secondary"><Icon className="h-4 w-4" /></span>
                                 <span className="text-sm font-medium"><Highlight text={specialty} highlight={debouncedSearchQuery} /></span>
                               </button>
                             </li>
@@ -213,7 +215,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                         {searchResults.hospitals.map(hospital => (
                           <li key={`h-${hospital.id}`}>
                             <button onClick={() => handleSuggestionClick(hospital.name, `/user/hospitals/${hospital.id}`)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/60">
-                              <Avatar className="h-8 w-8 rounded-lg"><AvatarFallback className="rounded-lg bg-primary/30 text-secondary"><Building className="h-4 w-4" /></AvatarFallback></Avatar>
+                              <Avatar className="h-8 w-8 rounded-lg"><AvatarFallback className="rounded-lg bg-secondary/10 text-secondary"><Building className="h-4 w-4" /></AvatarFallback></Avatar>
                               <div>
                                 <p className="text-sm font-medium"><Highlight text={hospital.name} highlight={debouncedSearchQuery} /></p>
                                 <p className="text-xs text-muted-foreground">{hospital.city}</p>
@@ -229,7 +231,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                         {searchResults.doctors.map(doctor => (
                           <li key={`d-${doctor.id}`}>
                             <button onClick={() => handleSuggestionClick(doctor.name, `/user/doctors/${doctor.id}`)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/60">
-                              <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary/30 text-secondary">{doctor.name.charAt(0)}</AvatarFallback></Avatar>
+                              <Avatar className="h-8 w-8"><AvatarFallback className="bg-secondary/10 text-secondary">{doctor.name.charAt(0)}</AvatarFallback></Avatar>
                               <div>
                                 <p className="text-sm font-medium"><Highlight text={doctor.name} highlight={debouncedSearchQuery} /></p>
                                 <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
@@ -288,7 +290,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
                 <Link
                   key={specialty}
                   href={`/user/doctors?specialty=${encodeURIComponent(specialty)}`}
-                  className="flex shrink-0 items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:border-secondary/40 hover:bg-primary/20"
+                  className="flex shrink-0 items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:border-secondary/40 hover:bg-secondary/5"
                 >
                   <Icon className="h-4 w-4 text-secondary" />
                   {specialty}
@@ -316,8 +318,8 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="left-2 hidden md:inline-flex" />
-          <CarouselNext className="right-2 hidden md:inline-flex" />
+          <CarouselPrevious variant="brandOutline" className="left-2 hidden shadow-md md:inline-flex" />
+          <CarouselNext variant="brandOutline" className="right-2 hidden shadow-md md:inline-flex" />
         </Carousel>
         <SlideDots count={topHospitals.length} current={currentHospitalSlide} onSelect={(i) => hospitalApi?.scrollTo(i)} />
       </section>
@@ -336,26 +338,26 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
             {featuredDoctors.map(doctor => (
               <CarouselItem key={doctor.id} className="basis-[46%] pl-3 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
                 <Card className="relative flex h-full flex-col items-center overflow-hidden rounded-2xl border-0 p-4 text-center shadow-sm ring-1 ring-border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <div aria-hidden className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-primary/40 to-transparent" />
-                  <Avatar className="relative mb-3 h-20 w-20 shadow-md ring-4 ring-card">
+                  <div aria-hidden className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-secondary/10 to-transparent" />
+                  <Avatar className="relative mb-3 h-20 w-20 shadow-sm ring-4 ring-card">
                     {doctor.imageUrl && (
                       <AvatarImage src={doctor.imageUrl} alt={doctor.name} className="object-cover" />
                     )}
-                    <AvatarFallback className="bg-primary/40 text-xl font-semibold text-secondary">{doctor.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="bg-secondary/10 text-xl font-semibold text-secondary">{initials(doctor.name)}</AvatarFallback>
                   </Avatar>
                   <div className="mb-3 w-full flex-grow">
                     <h3 title={doctor.name} className="line-clamp-2 text-sm font-bold text-foreground">{doctor.name}</h3>
-                    <span className="mt-1 inline-block max-w-full truncate rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{doctor.specialty}</span>
+                    <span className="mt-1 inline-block max-w-full truncate rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">{doctor.specialty}</span>
                   </div>
-                  <Button asChild size="sm" variant="accent" className="h-9 w-full rounded-xl">
+                  <Button asChild size="sm" variant="brand" className="h-9 w-full rounded-xl font-semibold">
                     <Link href={`/user/doctors/${doctor.id}`}>Book Now</Link>
                   </Button>
                 </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="left-2 hidden md:inline-flex" />
-          <CarouselNext className="right-2 hidden md:inline-flex" />
+          <CarouselPrevious variant="brandOutline" className="left-2 hidden shadow-md md:inline-flex" />
+          <CarouselNext variant="brandOutline" className="right-2 hidden shadow-md md:inline-flex" />
         </Carousel>
         <SlideDots count={featuredDoctors.length} current={currentDoctorSlide} onSelect={(i) => doctorApi?.scrollTo(i)} />
       </section>
@@ -371,7 +373,7 @@ function SectionHeader({ title, subtitle, href }: { title: string; subtitle?: st
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       {href && (
-        <Link href={href} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/30 px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-primary/50">
+        <Link href={href} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary/10 px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/15">
           See all <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       )}
@@ -390,7 +392,7 @@ function SlideDots({ count, current, onSelect }: { count: number; current: numbe
           onClick={() => onSelect(index)}
           className={cn(
             "h-1.5 rounded-full transition-all duration-300",
-            index === current ? "w-6 bg-secondary" : "w-1.5 bg-secondary/25"
+            index === current ? "w-6 bg-secondary" : "w-1.5 bg-secondary/20"
           )}
         />
       ))}

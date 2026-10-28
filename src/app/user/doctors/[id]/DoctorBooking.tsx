@@ -9,7 +9,7 @@ import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format, startOfToday } from 'date-fns';
 import { Hospital as HospitalIcon, Clock, Loader2, Calendar, CalendarDays } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { FilterChip, ctaClass } from '@/components/patient-portal/ui';
+import { FilterChip, brandFill, ctaClass } from '@/components/patient-portal/ui';
 
 import { getAvailableTimeWindows } from './actions';
 
@@ -113,8 +113,8 @@ export default function DoctorBooking({
                 className={cn(
                     'rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors',
                     selectedSlot === window
-                    ? 'border-secondary bg-secondary text-secondary-foreground'
-                    : 'bg-card hover:border-secondary/40 hover:bg-muted'
+                    ? cn('border-transparent shadow-sm', brandFill)
+                    : 'bg-card hover:border-secondary/40 hover:bg-secondary/5'
                 )}
             >
                 {window}
@@ -160,8 +160,8 @@ export default function DoctorBooking({
                           className={cn(
                           'flex h-20 w-full flex-col items-center justify-center rounded-xl border transition-colors',
                           isSelected
-                              ? 'border-secondary bg-secondary text-secondary-foreground'
-                              : 'bg-card hover:border-secondary/40 hover:bg-muted'
+                              ? cn('border-transparent shadow-sm', brandFill)
+                              : 'bg-card hover:border-secondary/40 hover:bg-secondary/5'
                           )}
                       >
                           <span className={cn('text-xs font-medium', !isSelected && 'text-muted-foreground')}>{format(date, 'EEE')}</span>
@@ -172,8 +172,8 @@ export default function DoctorBooking({
                   );
                 })}
               </CarouselContent>
-              <CarouselPrevious className="-left-1 hidden h-8 w-8 sm:flex" />
-              <CarouselNext className="-right-1 hidden h-8 w-8 sm:flex" />
+              <CarouselPrevious variant="brandOutline" className="-left-1 hidden h-8 w-8 sm:flex" />
+              <CarouselNext variant="brandOutline" className="-right-1 hidden h-8 w-8 sm:flex" />
             </Carousel>
         </div>
 
@@ -186,7 +186,7 @@ export default function DoctorBooking({
         className={cn(ctaClass, 'w-full text-base')}
         onClick={handleBookNow}
         disabled={!selectedHospitalId || !selectedDate || !selectedSlot}
-        variant="accent"
+        variant="brand"
       >
         Book Appointment
       </Button>

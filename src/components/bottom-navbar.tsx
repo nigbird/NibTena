@@ -111,7 +111,7 @@ export default function BottomNavbar({ hasMiniAppSession }: { hasMiniAppSession:
               <div
                 className={cn(
                   'flex items-center justify-center h-8 w-14 rounded-full transition-all duration-300',
-                  isActive ? 'bg-primary/50' : 'group-hover:bg-muted'
+                  isActive ? 'bg-secondary/10' : 'group-hover:bg-muted'
                 )}
               >
                 <Icon className="w-5 h-5" />

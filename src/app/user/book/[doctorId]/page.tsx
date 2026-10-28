@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PatientContext } from '@/context/PatientContext';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
-import { CenteredCard, PageShell, PhoneInput, PortalCard, SectionTitle, ctaClass } from '@/components/patient-portal/ui';
+import { CenteredCard, PageShell, PhoneInput, PortalCard, SectionTitle, brandFill, ctaClass } from '@/components/patient-portal/ui';
 
 
 // Normalises the +251 phone field the same way the server does.
@@ -41,7 +41,7 @@ function SubmitButton({ isMiniApp, label }: { isMiniApp: boolean; label?: string
   const { pending } = useFormStatus();
 
   return (
-    <Button variant="accent" type="submit" className={cn(ctaClass, 'w-full text-base')} disabled={pending}>
+    <Button variant="brand" type="submit" className={cn(ctaClass, 'w-full text-base')} disabled={pending}>
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -275,14 +275,14 @@ export default function BookingPage() {
         title="Online payment not yet available"
         description="This hospital is not accepting online payments yet, so appointments cannot be booked here on the web. Please contact the hospital directly or choose another hospital."
       >
-        <Button variant="outline" className={cn(ctaClass, 'w-full')} onClick={() => router.back()}>Go back</Button>
+        <Button variant="brandOutline" className={cn(ctaClass, 'w-full')} onClick={() => router.back()}>Go back</Button>
       </CenteredCard>
     );
   }
 
   return (
     <PageShell size="medium">
-      <PortalCard className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-primary/15 p-4 text-sm">
+      <PortalCard className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-secondary/5 p-4 text-sm">
         <span className="flex items-center gap-2 font-semibold"><Calendar className="h-4 w-4 text-secondary" /> {displayDate}</span>
         <span className="flex items-center gap-2 font-semibold"><Clock className="h-4 w-4 text-secondary" /> {slot}</span>
       </PortalCard>
@@ -294,12 +294,12 @@ export default function BookingPage() {
             <div className="space-y-3">
                 <Label>Who are you booking for?</Label>
                 <RadioGroup name="bookingFor" value={bookingFor} onValueChange={(value: 'myself' | 'someoneElse') => setBookingFor(value)} className="grid grid-cols-2 gap-4">
-                    <Label htmlFor="myself" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'myself' ? "border-secondary bg-secondary text-secondary-foreground" : "bg-card hover:border-secondary/40 hover:bg-muted")}>
+                    <Label htmlFor="myself" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'myself' ? cn("border-transparent shadow-sm", brandFill) : "bg-card hover:border-secondary/40 hover:bg-secondary/5")}>
                         <RadioGroupItem value="myself" id="myself" className="sr-only" />
                         <User className="h-5 w-5" />
                         Myself
                     </Label>
-                    <Label htmlFor="someoneElse" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'someoneElse' ? "border-secondary bg-secondary text-secondary-foreground" : "bg-card hover:border-secondary/40 hover:bg-muted")}>
+                    <Label htmlFor="someoneElse" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'someoneElse' ? cn("border-transparent shadow-sm", brandFill) : "bg-card hover:border-secondary/40 hover:bg-secondary/5")}>
                          <RadioGroupItem value="someoneElse" id="someoneElse" className="sr-only" />
                         <Users className="h-5 w-5" />
                         Someone Else

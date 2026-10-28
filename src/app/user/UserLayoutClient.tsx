@@ -66,8 +66,8 @@ export default function UserLayoutClient({
               <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4">
                  {hasMiniAppSession ? (
                     <>
-                      <Avatar className="h-10 w-10 ring-2 ring-primary/60">
-                         {patient?.name && <AvatarFallback className="bg-primary text-primary-foreground font-semibold">{patient.name.charAt(0)}</AvatarFallback>}
+                      <Avatar className="h-10 w-10 ring-2 ring-white/25">
+                         {patient?.name && <AvatarFallback className="bg-white/15 text-white font-semibold">{patient.name.charAt(0)}</AvatarFallback>}
                       </Avatar>
                       <div>
                         <p className="text-xs text-white/70">Hi, Welcome!</p>
@@ -76,14 +76,14 @@ export default function UserLayoutClient({
                     </>
                  ) : (
                     <>
-                    <Avatar className="h-10 w-10 ring-2 ring-primary/60">
+                    <Avatar className="h-10 w-10 ring-2 ring-white/25">
                         {session?.user?.image ? (
                         <AvatarImage
                             src={session.user.image}
                             alt={session.user.name || 'User'}
                         />
                         ) : null}
-                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        <AvatarFallback className="bg-white/15 text-white font-semibold">
                           {patient?.name ? patient.name.charAt(0) : <User className="h-5 w-5" />}
                         </AvatarFallback>
                     </Avatar>
@@ -95,7 +95,7 @@ export default function UserLayoutClient({
                  )}
                  <div className="ml-auto flex items-center gap-2">
                    {showLoginButton && (
-                     <Button asChild size="sm" className="rounded-full bg-primary px-5 font-semibold text-primary-foreground hover:bg-primary/90">
+                     <Button asChild size="sm" className="rounded-full bg-white px-5 font-semibold text-secondary hover:bg-white/90">
                        <Link href="/user/profile">Login</Link>
                      </Button>
                    )}
@@ -107,7 +107,7 @@ export default function UserLayoutClient({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="-ml-2 h-9 w-9 shrink-0 rounded-full text-secondary hover:bg-primary/30 hover:text-secondary"
+                  className="-ml-2 h-9 w-9 shrink-0 rounded-full text-secondary hover:bg-secondary/10 hover:text-secondary"
                   onClick={() => router.back()}
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -119,7 +119,7 @@ export default function UserLayoutClient({
               </h1>
               <div className="ml-auto flex items-center gap-2">
                 {showLoginButton && (
-                  <Button asChild variant="accent" size="sm" className="rounded-full px-5">
+                  <Button asChild variant="brand" size="sm" className="rounded-full px-5 font-semibold">
                     <Link href="/user/profile">Login</Link>
                   </Button>
                 )}

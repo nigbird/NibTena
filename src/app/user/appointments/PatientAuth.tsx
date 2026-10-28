@@ -65,7 +65,7 @@ export default function PatientAuth() {
             disabled={isPending}
           />
         </div>
-        <Button type="submit" className={cn(ctaClass, 'w-full')} variant="accent" disabled={isPending}>
+        <Button type="submit" className={cn(ctaClass, 'w-full')} variant="brand" disabled={isPending}>
           {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : 'Send Code'}
         </Button>
       </form>

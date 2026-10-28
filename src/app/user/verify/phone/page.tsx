@@ -48,7 +48,7 @@ function PhoneVerificationForm() {
                         required
                     />
                 </div>
-                <Button type="submit" className={cn(ctaClass, 'w-full')} variant="accent">
+                <Button type="submit" className={cn(ctaClass, 'w-full')} variant="brand">
                     Send OTP
                 </Button>
             </form>

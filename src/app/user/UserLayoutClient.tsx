@@ -56,43 +56,46 @@ export default function UserLayoutClient({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
+      <header className={cn(
+        "sticky top-0 z-40 w-full backdrop-blur-sm",
+        isHomePage ? "bg-[hsl(var(--primary-foreground))] text-white" : "border-b bg-card/95"
+      )}>
         <div className="flex h-16 items-center">
           {isHomePage ? (
               // Mini App session present
-              <div className="container flex items-center gap-3 w-full">
+              <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4">
                  {hasMiniAppSession ? (
                     <>
-                      <Avatar className="h-10 w-10 border">
-                         {patient?.name && <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>}
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/60">
+                         {patient?.name && <AvatarFallback className="bg-primary text-primary-foreground font-semibold">{patient.name.charAt(0)}</AvatarFallback>}
                       </Avatar>
                       <div>
-                        <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
-                        <p className="font-semibold text-foreground">{patient?.name || ''}</p>
+                        <p className="text-xs text-white/70">Hi, Welcome!</p>
+                        <p className="font-semibold text-white">{patient?.name || ''}</p>
                       </div>
                     </>
                  ) : (
                     <>
-                    <Avatar className="h-10 w-10 border">
+                    <Avatar className="h-10 w-10 ring-2 ring-primary/60">
                         {session?.user?.image ? (
                         <AvatarImage
                             src={session.user.image}
                             alt={session.user.name || 'User'}
                         />
                         ) : null}
-                        <AvatarFallback>
-                          {patient?.name ? patient.name.charAt(0) : <User />}
+                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                          {patient?.name ? patient.name.charAt(0) : <User className="h-5 w-5" />}
                         </AvatarFallback>
                     </Avatar>
                     <div>
-                        <p className="text-xs text-muted-foreground">Hi, Welcome!</p>
-                        <p className="font-semibold text-foreground">{patient?.name || session?.user?.name || ''}</p>
+                        <p className="text-xs text-white/70">Hi, Welcome!</p>
+                        <p className="font-semibold text-white">{patient?.name || session?.user?.name || ''}</p>
                     </div>
                     </>
                  )}
                  <div className="ml-auto flex items-center gap-2">
                    {showLoginButton && (
-                     <Button asChild variant="accent" size="sm">
+                     <Button asChild size="sm" className="rounded-full bg-primary px-5 font-semibold text-primary-foreground hover:bg-primary/90">
                        <Link href="/user/profile">Login</Link>
                      </Button>
                    )}

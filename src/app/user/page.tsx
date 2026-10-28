@@ -5,10 +5,10 @@ import UserHomepageClient from '@/components/UserHomepageClient';
 import { hasValidMiniAppSession } from '@/lib/session';
 
 const allQuickActions = [
-    { href: '/user/hospitals', label: 'Hospitals', icon: 'Hospital', color: 'bg-amber-100 text-amber-700' },
-    { href: '/user/doctors', label: 'Doctors', icon: 'Stethoscope', color: 'bg-emerald-100 text-emerald-700' },
-    { href: '/user/appointments', label: 'Bookings', icon: 'CalendarCheck', color: 'bg-sky-100 text-sky-700' },
-    { href: '/user/profile', label: 'Profile', icon: 'User', color: 'bg-rose-100 text-rose-700' },
+    { href: '/user/hospitals', label: 'Hospitals', description: 'Find a facility', icon: 'Hospital', color: 'bg-secondary/10 text-secondary' },
+    { href: '/user/doctors', label: 'Doctors', description: 'Browse specialists', icon: 'Stethoscope', color: 'bg-secondary/10 text-secondary' },
+    { href: '/user/appointments', label: 'Bookings', description: 'Your appointments', icon: 'CalendarCheck', color: 'bg-secondary/10 text-secondary' },
+    { href: '/user/profile', label: 'Profile', description: 'Account details', icon: 'User', color: 'bg-secondary/10 text-secondary' },
 ];
 
 // Only the fields the homepage UI renders. Everything returned here is

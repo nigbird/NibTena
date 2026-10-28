@@ -67,7 +67,7 @@ type PublicDoctor = Pick<Doctor, 'id' | 'name' | 'specialty' | 'imageUrl'>;
 
 type UserHomepageClientProps = {
     heroImage?: ImagePlaceholder;
-    quickActions: { href: string; label: string; icon: string; color: string; }[];
+    quickActions: { href: string; label: string; description: string; icon: string; color: string; }[];
     topHospitals: PublicHospital[];
     featuredDoctors: PublicDoctor[];
     allData: { doctors: PublicDoctor[]; hospitals: PublicHospital[]; specialties: string[] };
@@ -150,7 +150,9 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
   
   const hasResults = searchResults && (searchResults.doctors.length > 0 || searchResults.hospitals.length > 0 || searchResults.specialties.length > 0);
 
-  const featuredSpecialties = allData.specialties.slice(0, 8);
+  const featuredSpecialties = allData.specialties
+    .filter((s, i, all) => all.findIndex(o => o.trim().toLowerCase() === s.trim().toLowerCase()) === i)
+    .slice(0, 8);
 
   return (
     <div className="flex flex-col">
@@ -251,17 +253,24 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
       {/* Quick actions: one floating card overlapping the hero */}
       <section className="relative z-20 -mt-12 px-4">
         <div className={cn(
-          "mx-auto grid max-w-3xl gap-2 rounded-3xl border bg-card p-3 shadow-lg shadow-black/5",
+          "mx-auto grid max-w-4xl divide-x divide-border overflow-hidden rounded-2xl border bg-card shadow-lg shadow-black/5",
           hasMiniAppSession ? "grid-cols-3" : "grid-cols-4"
         )}>
-          {quickActions.map(({ href, label, icon, color }) => {
+          {quickActions.map(({ href, label, description, icon, color }) => {
             const Icon = actionIcons[icon] || Stethoscope;
             return (
-              <Link href={href} key={label} className="group flex flex-col items-center gap-2 rounded-2xl p-2 text-center transition-colors hover:bg-muted/60">
-                <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105", color)}>
-                  <Icon className="h-7 w-7" />
+              <Link
+                href={href}
+                key={label}
+                className="group flex flex-col items-center gap-2 px-2 py-4 text-center transition-colors hover:bg-muted/50 sm:flex-row sm:gap-3 sm:px-5 sm:py-5 sm:text-left"
+              >
+                <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors group-hover:bg-secondary group-hover:text-secondary-foreground", color)}>
+                  <Icon className="h-5 w-5" />
                 </div>
-                <p className="text-xs font-semibold text-foreground">{label}</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground sm:text-sm">{label}</p>
+                  <p className="hidden truncate text-xs text-muted-foreground sm:block">{description}</p>
+                </div>
               </Link>
             )
           })}

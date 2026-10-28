@@ -1,8 +1,14 @@
 
 "use client";
 import { MapPin, Mail, Phone } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import HospitalMapClient from './HospitalMapClient';
+import dynamic from 'next/dynamic';
+
+// Leaflet touches `window` on import, so the map must never render on the server.
+const HospitalMapClient = dynamic(() => import('./HospitalMapClient'), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse rounded-xl bg-muted md:col-span-3" />,
+});
+import { DetailRow, PortalCard, SectionTitle } from './ui';
 
 interface HospitalMapDisplayProps {
   latitude: number | null;
@@ -27,47 +33,30 @@ export default function HospitalMapDisplay({
   const displayAddress = address && city ? `${address}, ${city}` : city || 'Address not available';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          Location & Contact
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="md:col-span-2 space-y-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm text-muted-foreground">Physical Address</h3>
-            <p className="text-base">{displayAddress}</p>
+    <PortalCard className="p-5 sm:p-6">
+      <SectionTitle title="Location & Contact" />
+      <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="space-y-4 md:col-span-2">
+          <DetailRow icon={MapPin} label="Address">
+            {displayAddress}
             {mapDisplayAddress && mapDisplayAddress !== displayAddress && (
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium">Map location:</span> {mapDisplayAddress}
-              </p>
+              <p className="mt-0.5 text-xs font-normal text-muted-foreground">Map location: {mapDisplayAddress}</p>
             )}
-          </div>
-
-          <div className="space-y-3 pt-4 border-t">
-            <h3 className="font-semibold text-sm text-muted-foreground">Contact Information</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <a href={`tel:${contactPhone}`} className="text-base hover:underline">
-                  {contactPhone}
-                </a>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a href={`mailto:${contactEmail}`} className="text-base hover:underline break-all">
-                  {contactEmail}
-                </a>
-              </div>
-            </div>
-          </div>
+          </DetailRow>
+          <DetailRow icon={Phone} label="Phone">
+            <a href={`tel:${contactPhone}`} className="hover:text-secondary hover:underline">
+              {contactPhone}
+            </a>
+          </DetailRow>
+          <DetailRow icon={Mail} label="Email">
+            <a href={`mailto:${contactEmail}`} className="break-all hover:text-secondary hover:underline">
+              {contactEmail}
+            </a>
+          </DetailRow>
         </div>
 
-        {/* Client-only map: dynamically imported to avoid server-side Leaflet import */}
         <HospitalMapClient latitude={latitude} longitude={longitude} />
-      </CardContent>
-    </Card>
+      </div>
+    </PortalCard>
   );
 }

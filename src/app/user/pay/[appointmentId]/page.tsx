@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Calendar, Clock, Hospital, Stethoscope } from 'lucide-react';
+import { Calendar, Clock, Hospital, Stethoscope, CreditCard, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CenteredCard, DetailRow, PageShell, PortalCard, ctaClass } from '@/components/patient-portal/ui';
 import { prisma } from '@/lib/prisma';
 import { getWebPatientFromCookie } from '@/lib/session';
 import PatientAuth from '@/app/user/appointments/PatientAuth';
@@ -32,22 +32,16 @@ type StoredRequest = {
 
 function Notice({ title, message, doctorId }: { title: string; message: string; doctorId?: number }) {
   return (
-    <div className="container mx-auto max-w-md py-12">
-      <Card className="shadow-lg text-center">
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">{title}</CardTitle>
-          <CardDescription>{message}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <Button asChild variant="accent">
-            <Link href={doctorId ? `/user/doctors/${doctorId}` : '/user/doctors'}>Book again</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/user/appointments">My appointments</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <CenteredCard icon={CreditCard} tone="muted" title={title} description={message}>
+      <div className="flex flex-col gap-2">
+        <Button asChild variant="accent" className={ctaClass}>
+          <Link href={doctorId ? `/user/doctors/${doctorId}` : '/user/doctors'}>Book again</Link>
+        </Button>
+        <Button asChild variant="outline" className={ctaClass}>
+          <Link href="/user/appointments">My appointments</Link>
+        </Button>
+      </div>
+    </CenteredCard>
   );
 }
 
@@ -122,39 +116,25 @@ export default async function YagoutHandoffPage({ params }: PageProps) {
   const currency = typeof stored.currency === 'string' ? stored.currency : 'ETB';
 
   return (
-    <div className="container mx-auto max-w-md py-12">
-      <Card className="shadow-lg">
-        <CardHeader className="text-center">
-          <CardDescription className="uppercase tracking-wider text-xs font-semibold">Consultation fee</CardDescription>
-          <CardTitle className="font-headline text-3xl">
+    <PageShell size="narrow" className="py-10">
+      <PortalCard className="overflow-hidden">
+        <div className="bg-gradient-to-br from-[hsl(var(--primary-foreground))] to-secondary px-6 py-6 text-center text-white">
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Consultation fee</p>
+          <p className="mt-1 font-headline text-3xl font-bold">
             {amount} {currency}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <Hospital className="h-4 w-4 shrink-0" />
-              <span className="font-medium text-foreground">{appointment.hospital.name}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Stethoscope className="h-4 w-4 shrink-0" />
-              <span>
-                <span className="font-medium text-foreground">{appointment.doctor.name}</span> · {appointment.doctor.specialty}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 shrink-0" />
-              <span>{format(appointment.appointmentDate, 'PPP')}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Clock className="h-4 w-4 shrink-0" />
-              <span>{appointment.appointmentSlot}</span>
-            </div>
+          </p>
+        </div>
+        <div className="space-y-6 p-6">
+          <div className="space-y-3">
+            <DetailRow icon={Hospital} label="Hospital">{appointment.hospital.name}</DetailRow>
+            <DetailRow icon={Stethoscope} label={appointment.doctor.specialty}>{appointment.doctor.name}</DetailRow>
+            <DetailRow icon={Calendar} label="Date">{format(appointment.appointmentDate, 'PPP')}</DetailRow>
+            <DetailRow icon={Clock} label="Time">{appointment.appointmentSlot}</DetailRow>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="rounded-xl bg-muted/60 p-3 text-center text-sm text-muted-foreground">
             Taking you to YagoutPay to complete this payment securely. Your slot is held until{' '}
-            {format(appointment.paymentExpiresAt, 'p')}.
+            <span className="font-semibold text-foreground">{format(appointment.paymentExpiresAt, 'p')}</span>.
           </p>
 
           <YagoutAutoSubmitForm
@@ -164,9 +144,11 @@ export default async function YagoutHandoffPage({ params }: PageProps) {
             hash={stored.hash}
           />
 
-          <p className="text-center text-[11px] text-muted-foreground">Do not close this window until the payment completes.</p>
-        </CardContent>
-      </Card>
-    </div>
+          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+            <Lock className="h-3 w-3" /> Do not close this window until the payment completes.
+          </p>
+        </div>
+      </PortalCard>
+    </PageShell>
   );
 }

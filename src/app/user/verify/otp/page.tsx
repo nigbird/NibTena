@@ -4,17 +4,12 @@
 import { Suspense, useState, useRef, useEffect, useTransition, useContext } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
+import { CenteredCard, ctaClass } from '@/components/patient-portal/ui';
+import { cn } from '@/lib/utils';
 import { initiateYagoutBooking } from '../../book/[doctorId]/yagout-actions';
 import { verifyOtpAndGetPatient, generateAndSendOtp } from '@/app/user/appointments/actions';
 import { PatientContext } from '@/context/PatientContext';
@@ -178,81 +173,64 @@ function OtpForm() {
 
     if (isVerifiedForBooking) {
         return (
-            <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-                <Card className="max-w-md w-full shadow-lg">
-                    <CardHeader className="text-center">
-                        <div className="inline-block mx-auto rounded-full bg-accent p-3 ring-4 ring-background">
-                            <CheckCircle2 className="h-6 w-6 text-accent-foreground" />
-                        </div>
-                        <CardTitle className="font-headline text-2xl pt-2">Phone Verified</CardTitle>
-                        <CardDescription>
-                            Continue to YagoutPay to pay the consultation fee. Your slot is held for a short time while you pay.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button className="w-full" variant="accent" onClick={handleProceedToPayment} disabled={isStartingPayment}>
-                            {isStartingPayment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Starting payment...</> : 'Proceed to Payment'}
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <CenteredCard
+                icon={CheckCircle2}
+                tone="success"
+                title="Phone verified"
+                description="Continue to YagoutPay to pay the consultation fee. Your slot is held for a short time while you pay."
+            >
+                <Button className={cn(ctaClass, 'w-full')} variant="accent" onClick={handleProceedToPayment} disabled={isStartingPayment}>
+                    {isStartingPayment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Starting payment...</> : 'Proceed to Payment'}
+                </Button>
+            </CenteredCard>
         );
     }
 
     return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-            <Card className="max-w-md w-full shadow-lg">
-                <CardHeader className="text-center">
-                    <div className="inline-block mx-auto rounded-full bg-primary p-3 ring-4 ring-background">
-                        <KeyRound className="h-6 w-6 text-primary-foreground" />
-                    </div>
-                    <CardTitle className="font-headline text-2xl pt-2">Enter Verification Code</CardTitle>
-                    <CardDescription>
-                        We've sent a 6-digit code to +251{phone}. Please check your messages.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={onFormSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                        <Label htmlFor="otp-1">Verification Code</Label>
-                        <div className="flex justify-center gap-2">
-                            {otp.map((data, index) => {
-                                return (
-                                    <Input
-                                        key={index}
-                                        id={`otp-${index}`}
-                                        type="text"
-                                        name="otp"
-                                        maxLength={1}
-                                        className="w-12 h-12 text-center text-lg"
-                                        value={data}
-                                        onChange={e => handleChange(e.target, index)}
-                                        onKeyDown={e => handleKeyDown(e, index)}
-                                        onFocus={e => e.target.select()}
-                                        ref={el => inputRefs.current[index] = el}
-                                        autoFocus={index === 0}
-                                        disabled={isVerifying}
-                                    />
-                                );
-                            })}
-                        </div>
-                        </div>
-                        <Button type="submit" className="w-full" variant="accent" disabled={isVerifying || otp.join('').length < 6}>
-                            {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Continue'}
-                        </Button>
-                    </form>
-                    <div className="mt-4 text-center text-sm">
-                        {countdown > 0 ? (
-                            <p className="text-muted-foreground">Didn't receive code? Resend in {countdown}s</p>
-                        ) : (
-                             <Button onClick={handleResend} variant="link" className="p-0 h-auto" disabled={isResending}>
-                                {isResending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Resending...</> : 'Resend Code'}
-                            </Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+        <CenteredCard
+            icon={KeyRound}
+            title="Enter verification code"
+            description={<>We&apos;ve sent a 6-digit code to <span className="font-semibold text-foreground">+251{phone}</span>.</>}
+        >
+            <form onSubmit={onFormSubmit} className="space-y-6">
+                <div className="space-y-2">
+                <Label htmlFor="otp-1">Verification Code</Label>
+                <div className="flex justify-center gap-2">
+                    {otp.map((data, index) => {
+                        return (
+                            <Input
+                                key={index}
+                                id={`otp-${index}`}
+                                type="text"
+                                name="otp"
+                                maxLength={1}
+                                className="h-12 w-11 rounded-xl text-center text-lg font-semibold sm:w-12"
+                                value={data}
+                                onChange={e => handleChange(e.target, index)}
+                                onKeyDown={e => handleKeyDown(e, index)}
+                                onFocus={e => e.target.select()}
+                                ref={el => inputRefs.current[index] = el}
+                                autoFocus={index === 0}
+                                disabled={isVerifying}
+                            />
+                        );
+                    })}
+                </div>
+                </div>
+                <Button type="submit" className={cn(ctaClass, 'w-full')} variant="accent" disabled={isVerifying || otp.join('').length < 6}>
+                    {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Verify & Continue'}
+                </Button>
+            </form>
+            <div className="mt-4 text-center text-sm">
+                {countdown > 0 ? (
+                    <p className="text-muted-foreground">Didn't receive code? Resend in {countdown}s</p>
+                ) : (
+                     <Button onClick={handleResend} variant="link" className="p-0 h-auto" disabled={isResending}>
+                        {isResending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Resending...</> : 'Resend Code'}
+                    </Button>
+                )}
+            </div>
+        </CenteredCard>
     )
 }
 

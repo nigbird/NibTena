@@ -48,7 +48,7 @@ export default function HospitalMapClient({ latitude, longitude }: HospitalMapCl
   }, []);
 
   return (
-    <div className="md:col-span-3 h-80 w-full rounded-md overflow-hidden border">
+    <div className="md:col-span-3 h-72 w-full rounded-xl overflow-hidden border">
       {hasLocation ? (
         isMapReady ? (
           <MapContainer

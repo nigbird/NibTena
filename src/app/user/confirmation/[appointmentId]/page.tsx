@@ -1,10 +1,8 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { CheckCircle2, Calendar, Clock, User, Stethoscope, XCircle, Hourglass, AlertTriangle, Receipt } from 'lucide-react';
+import { CheckCircle2, Calendar, Clock, User, Stethoscope, XCircle, Hourglass, AlertTriangle, Receipt, Hospital as HospitalIcon } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { placeholderImages } from '@/lib/placeholder-images';
+import { DetailRow, IconBadge, PageShell, PortalCard, ctaClass, type Tone } from '@/components/patient-portal/ui';
 import ConfirmationClient, { RetryPaymentButton } from './ConfirmationClient';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
@@ -74,14 +72,14 @@ function viewStateFor(appointment: { status: string; paymentMethod: string | nul
     }
 }
 
-const headings: Record<ViewState, { title: string; icon: typeof CheckCircle2; tone: string }> = {
-    confirmed: { title: 'Appointment Confirmed!', icon: CheckCircle2, tone: 'bg-accent text-accent-foreground' },
-    pending: { title: 'Payment Pending', icon: Hourglass, tone: 'bg-muted text-muted-foreground' },
-    failed: { title: 'Payment Failed', icon: XCircle, tone: 'bg-destructive text-destructive-foreground' },
-    expired: { title: 'Payment Window Expired', icon: Hourglass, tone: 'bg-muted text-muted-foreground' },
-    conflict: { title: 'Payment Received — Slot Unavailable', icon: AlertTriangle, tone: 'bg-amber-500 text-white' },
-    'needs-action': { title: 'Payment Needs Review', icon: AlertTriangle, tone: 'bg-amber-500 text-white' },
-    cancelled: { title: 'Appointment Cancelled', icon: XCircle, tone: 'bg-muted text-muted-foreground' },
+const headings: Record<ViewState, { title: string; icon: typeof CheckCircle2; tone: Tone }> = {
+    confirmed: { title: 'Appointment Confirmed!', icon: CheckCircle2, tone: 'success' },
+    pending: { title: 'Payment Pending', icon: Hourglass, tone: 'warning' },
+    failed: { title: 'Payment Failed', icon: XCircle, tone: 'danger' },
+    expired: { title: 'Payment Window Expired', icon: Hourglass, tone: 'muted' },
+    conflict: { title: 'Payment Received — Slot Unavailable', icon: AlertTriangle, tone: 'warning' },
+    'needs-action': { title: 'Payment Needs Review', icon: AlertTriangle, tone: 'warning' },
+    cancelled: { title: 'Appointment Cancelled', icon: XCircle, tone: 'muted' },
 };
 
 export default async function ConfirmationPage({ params, searchParams }: { params: Promise<{ appointmentId: string }>, searchParams?: Promise<{ success?: string }> }) {
@@ -120,112 +118,77 @@ export default async function ConfirmationPage({ params, searchParams }: { param
     cancelled: 'This appointment has been cancelled.',
   };
 
-  const confirmationImage = placeholderImages.find(p => p.id === 'confirmation-image');
-
   return (
-    <div className="container py-12">
+    <PageShell size="medium">
       <ConfirmationClient success={view === 'confirmed' && resolvedSearchParams?.success === 'true'} appointmentId={appointmentId}>
-        <div className="mx-auto max-w-3xl">
-          <Card className="overflow-hidden shadow-xl">
-            {confirmationImage && (
-              <div className="relative h-48 w-full">
-                <Image
-                  src={confirmationImage.imageUrl}
-                  alt={confirmationImage.description}
-                  fill
-                  className="object-cover"
-                  data-ai-hint={confirmationImage.imageHint}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+        <div className="space-y-4">
+          <PortalCard className="p-6 text-center sm:p-8">
+            <IconBadge icon={HeadingIcon} tone={heading.tone} size="lg" className="mx-auto rounded-full" />
+            <h1 className="mt-4 font-headline text-2xl font-bold tracking-tight sm:text-3xl">{heading.title}</h1>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground sm:text-base">{descriptions[view]}</p>
+
+            {isYagout && (view === 'failed' || view === 'expired') && (
+              <div className="mt-6 flex justify-center">
+                <RetryPaymentButton appointmentId={appointmentId} />
               </div>
             )}
-            <div className="p-8 text-center -mt-16">
-              <div className={`inline-block rounded-full p-4 ring-4 ring-background ${heading.tone}`}>
-                <HeadingIcon className="h-12 w-12" />
+            {isYagout && view === 'pending' && (
+              <div className="mt-6 flex justify-center">
+                <Button asChild variant="accent" className={ctaClass}>
+                  <Link href={`/user/pay/${appointmentId}`}>Continue to payment</Link>
+                </Button>
               </div>
+            )}
+          </PortalCard>
 
-              <CardHeader className="p-0 pt-4">
-                <CardTitle className="font-headline text-3xl">{heading.title}</CardTitle>
-                <CardDescription className="text-lg">
-                  {descriptions[view]}
-                </CardDescription>
-              </CardHeader>
-
-              {isYagout && (view === 'failed' || view === 'expired') && (
-                <div className="mt-6 flex justify-center">
-                  <RetryPaymentButton appointmentId={appointmentId} />
-                </div>
+          <PortalCard className="p-5 sm:p-6">
+            <h2 className="font-headline text-lg font-bold tracking-tight">Appointment details</h2>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailRow icon={Stethoscope} label={doctor.specialty}>{doctor.name}</DetailRow>
+              {appointment.hospital?.name && (
+                <DetailRow icon={HospitalIcon} label="Hospital">{appointment.hospital.name}</DetailRow>
               )}
-              {isYagout && view === 'pending' && (
-                <div className="mt-6 flex justify-center">
-                  <Button asChild variant="accent">
-                    <Link href={`/user/pay/${appointmentId}`}>Continue to payment</Link>
-                  </Button>
-                </div>
+              <DetailRow icon={Calendar} label="Date">{format(new Date(appointment.appointmentDate), 'EEEE, MMMM d, yyyy')}</DetailRow>
+              <DetailRow icon={Clock} label="Time">{appointment.appointmentSlot}</DetailRow>
+              <DetailRow icon={User} label={`Age ${appointment.patient.age ?? '-'} · ${appointment.patient.gender ?? '-'}`}>
+                {appointment.patient.name}
+              </DetailRow>
+              {isYagout && appointment.paymentRef && (
+                <DetailRow icon={Receipt} label={`Reference: ${appointment.paymentRef}`}>
+                  {appointment.paidAmount != null ? `${appointment.paidAmount.toFixed(2)} ETB paid via YagoutPay` : 'YagoutPay'}
+                </DetailRow>
               )}
-
-              <CardContent className="mt-6 text-left">
-                <div className="space-y-4 text-muted-foreground">
-                  <div className="flex items-start">
-                    <Stethoscope className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
-                    <div>
-                      <span className="font-semibold text-foreground">{doctor.name}</span>
-                      <p className="text-sm">{doctor.specialty}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <User className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
-                    <div>
-                      <span className="font-semibold text-foreground">{appointment.patient.name}</span>
-                      <p className="text-sm">Age: {appointment.patient.age}, Gender: {appointment.patient.gender}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="mr-3 h-5 w-5 flex-shrink-0" />
-                    <span>{format(new Date(appointment.appointmentDate), 'PPP')}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="mr-3 h-5 w-5 flex-shrink-0" />
-                    <span>{appointment.appointmentSlot}</span>
-                  </div>
-                  {isYagout && appointment.paymentRef && (
-                    <div className="flex items-start">
-                      <Receipt className="mr-3 mt-1 h-5 w-5 flex-shrink-0" />
-                      <div>
-                        <span className="font-semibold text-foreground">
-                          {appointment.paidAmount != null ? `${appointment.paidAmount.toFixed(2)} ETB paid via YagoutPay` : 'YagoutPay'}
-                        </span>
-                        <p className="text-sm">Reference: {appointment.paymentRef}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 rounded-lg border bg-muted/50 p-4">
-                  <h3 className="mb-2 font-semibold text-foreground">Symptoms & Concerns</h3>
-                  <p className="text-sm whitespace-pre-wrap">{appointment.symptoms}</p>
-                </div>
-
-                {view === 'confirmed' && (
-                  <p className="mt-6 text-center text-sm text-muted-foreground">
-                    You will receive an SMS confirmation shortly.
-                  </p>
-                )}
-                {(view === 'conflict' || view === 'needs-action') && appointment.hospital?.contactPhone && (
-                  <p className="mt-6 text-center text-sm text-muted-foreground">
-                    {hospitalName}: {appointment.hospital.contactPhone}
-                  </p>
-                )}
-              </CardContent>
             </div>
-          </Card>
-          <div className="mt-6 text-center">
-              <Button asChild>
-                  <Link href="/user">Back to Home</Link>
-              </Button>
+
+            {appointment.symptoms && (
+              <div className="mt-5 rounded-xl bg-muted/60 p-4">
+                <h3 className="mb-1 text-sm font-semibold text-foreground">Symptoms & concerns</h3>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{appointment.symptoms}</p>
+              </div>
+            )}
+
+            {view === 'confirmed' && (
+              <p className="mt-5 text-center text-sm text-muted-foreground">
+                You will receive an SMS confirmation shortly.
+              </p>
+            )}
+            {(view === 'conflict' || view === 'needs-action') && appointment.hospital?.contactPhone && (
+              <p className="mt-5 text-center text-sm text-muted-foreground">
+                {hospitalName}: {appointment.hospital.contactPhone}
+              </p>
+            )}
+          </PortalCard>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button asChild variant="outline" className={ctaClass}>
+              <Link href="/user/appointments">My bookings</Link>
+            </Button>
+            <Button asChild variant="accent" className={ctaClass}>
+              <Link href="/user">Back to Home</Link>
+            </Button>
           </div>
         </div>
       </ConfirmationClient>
-    </div>
+    </PageShell>
   );
 }

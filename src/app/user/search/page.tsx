@@ -3,22 +3,30 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { getDoctorsAndHospitalsByQuery } from './actions';
 import type { Doctor, Hospital } from '@/lib/definitions';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { User, Hospital as HospitalIcon, Search as SearchIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-// removed placeholder images; use uploaded imageUrl with fallback
-import Image from 'next/image';
+import { Search as SearchIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DoctorRow, EmptyState, HospitalCard, PageShell, SectionTitle } from '@/components/patient-portal/ui';
+
+function SearchSkeleton() {
+  return (
+    <PageShell>
+      <Skeleton className="h-6 w-40" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Skeleton className="h-56 w-full rounded-2xl" />
+        <Skeleton className="h-56 w-full rounded-2xl" />
+      </div>
+      <Skeleton className="h-6 w-40" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+    </PageShell>
+  );
+}
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  
+
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [filteredHospitals, setFilteredHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,115 +49,63 @@ function SearchResults() {
   }, [query]);
 
   if (isLoading) {
-    return (
-        <div className="p-4 space-y-8">
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-40 w-full" />
-            </div>
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </div>
-        </div>
-    );
+    return <SearchSkeleton />;
   }
 
   if (!query) {
-    return <p className="text-center text-muted-foreground mt-8">Please enter a search term.</p>;
+    return (
+      <PageShell>
+        <EmptyState icon={SearchIcon} title="Search for care" description="Enter a doctor, hospital or specialty to get started." />
+      </PageShell>
+    );
   }
 
   const hasResults = filteredDoctors.length > 0 || filteredHospitals.length > 0;
 
   return (
-    <>
-      <div className="p-4 space-y-8">
-        {hasResults ? (
-          <>
-            {filteredHospitals.length > 0 && (
-              <section>
-                <h2 className="text-xl font-bold mb-4 font-headline">Hospitals</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredHospitals.map((hospital) => {
-                    return (
-                       <Card key={hospital.id} className="flex flex-col overflow-hidden shadow-lg">
-                          {hospital.imageUrl ? (
-                              <div className="aspect-video relative overflow-hidden">
-                                  <Image
-                                      src={hospital.imageUrl}
-                                      alt={hospital.name}
-                                      fill
-                                      className="object-cover"
-                                  />
-                              </div>
-                          ) : null}
-                          <CardHeader>
-                            <CardTitle className="font-headline flex items-center gap-2">
-                                <HospitalIcon className="h-5 w-5 text-primary-foreground" />
-                                {hospital.name}
-                            </CardTitle>
-                          </CardHeader>
-                           <CardContent className="flex-grow">
-                            <p className="text-sm text-muted-foreground">{hospital.city}</p>
-                          </CardContent>
-                          <CardFooter>
-                            <Button asChild className="w-full" variant="accent">
-                                <Link href={`/user/hospitals/${hospital.id}`}>View Details</Link>
-                            </Button>
-                          </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+    <PageShell>
+      <p className="text-sm text-muted-foreground">
+        Results for <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span>
+      </p>
+      {hasResults ? (
+        <>
+          {filteredHospitals.length > 0 && (
+            <section className="space-y-4">
+              <SectionTitle title="Hospitals" subtitle={`${filteredHospitals.length} found`} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredHospitals.map((hospital) => (
+                  <HospitalCard key={hospital.id} hospital={hospital} />
+                ))}
+              </div>
+            </section>
+          )}
 
-            {filteredDoctors.length > 0 && (
-              <section>
-                <h2 className="text-xl font-bold mb-4 font-headline">Doctors</h2>
-                <div className="space-y-4">
-                  {filteredDoctors.map((doctor) => {
-                    return (
-                        <Card key={doctor.id} className="flex items-start p-4 gap-4 shadow-md">
-                           <Avatar className="h-20 w-20 border-2 border-primary/20">
-                              {doctor.imageUrl ? (
-                                <AvatarImage src={doctor.imageUrl} alt={doctor.name} />
-                              ) : null}
-                              <AvatarFallback><User /></AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-lg">{doctor.name}</h3>
-                                <Badge variant="secondary" className="mt-1">{doctor.specialty}</Badge>
-                                <Button asChild size="sm" variant="accent" className="rounded-full mt-3">
-                                    <Link href={`/user/doctors/${doctor.id}`}>View Profile</Link>
-                                </Button>
-                            </div>
-                        </Card>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
-            <SearchIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-xl font-semibold font-headline">No Results Found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              We couldn't find any doctors or hospitals matching your search. Try a different term.
-            </p>
-          </div>
-        )}
-      </div>
-    </>
+          {filteredDoctors.length > 0 && (
+            <section className="space-y-4">
+              <SectionTitle title="Doctors" subtitle={`${filteredDoctors.length} found`} />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {filteredDoctors.map((doctor) => (
+                  <DoctorRow key={doctor.id} doctor={doctor} href={`/user/doctors/${doctor.id}`} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      ) : (
+        <EmptyState
+          icon={SearchIcon}
+          title="No results found"
+          description="We couldn't find any doctors or hospitals matching your search. Try a different term."
+        />
+      )}
+    </PageShell>
   );
 }
 
 
 export default function SearchPage() {
     return (
-        <Suspense fallback={<div className="text-center p-8">Loading...</div>}>
+        <Suspense fallback={<SearchSkeleton />}>
             <SearchResults />
         </Suspense>
     )

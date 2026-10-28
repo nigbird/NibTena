@@ -5,17 +5,10 @@
 import { useActionState, useEffect, useState, useContext } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
-import { Loader2, User, Users, CreditCard } from 'lucide-react';
+import { Loader2, User, Users, CreditCard, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,6 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PatientContext } from '@/context/PatientContext';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { CenteredCard, PageShell, PhoneInput, PortalCard, SectionTitle, ctaClass } from '@/components/patient-portal/ui';
 
 
 // Normalises the +251 phone field the same way the server does.
@@ -47,7 +41,7 @@ function SubmitButton({ isMiniApp, label }: { isMiniApp: boolean; label?: string
   const { pending } = useFormStatus();
 
   return (
-    <Button variant="accent" type="submit" className="w-full" disabled={pending}>
+    <Button variant="accent" type="submit" className={cn(ctaClass, 'w-full text-base')} disabled={pending}>
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -267,7 +261,7 @@ export default function BookingPage() {
 
   if (!isMiniApp && yagoutAvailable === null) {
     return (
-      <div className="container mx-auto max-w-2xl py-12 flex justify-center">
+      <div className="flex w-full justify-center py-16">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -275,60 +269,45 @@ export default function BookingPage() {
 
   if (!isMiniApp && !yagoutAvailable) {
     return (
-      <div className="container mx-auto max-w-2xl py-12">
-        <Card className="shadow-lg text-center">
-          <CardHeader>
-            <div className="mx-auto rounded-full bg-muted p-3">
-              <CreditCard className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <CardTitle className="font-headline text-xl pt-2">Online payment not yet available for this hospital</CardTitle>
-            <CardDescription>
-              This hospital is not accepting online payments yet, so appointments cannot be booked here on the web.
-              Please contact the hospital directly or choose another hospital.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" onClick={() => router.back()}>Go back</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <CenteredCard
+        icon={CreditCard}
+        tone="muted"
+        title="Online payment not yet available"
+        description="This hospital is not accepting online payments yet, so appointments cannot be booked here on the web. Please contact the hospital directly or choose another hospital."
+      >
+        <Button variant="outline" className={cn(ctaClass, 'w-full')} onClick={() => router.back()}>Go back</Button>
+      </CenteredCard>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-12">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline text-2xl">Book Your Appointment</CardTitle>
-          <CardDescription>
-            You are booking for <span className="font-semibold text-foreground">{slot}</span> on <span className="font-semibold text-foreground">{displayDate}</span>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={dispatch} className="space-y-6">
+    <PageShell size="medium">
+      <PortalCard className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-primary/15 p-4 text-sm">
+        <span className="flex items-center gap-2 font-semibold"><Calendar className="h-4 w-4 text-secondary" /> {displayDate}</span>
+        <span className="flex items-center gap-2 font-semibold"><Clock className="h-4 w-4 text-secondary" /> {slot}</span>
+      </PortalCard>
+      <PortalCard className="p-5 sm:p-6">
+          <SectionTitle title="Patient details" subtitle="Tell us who the appointment is for" />
+          <form action={dispatch} className="mt-5 space-y-6">
             <input type="hidden" name="_csrf" value={csrfToken} />
             
             <div className="space-y-3">
                 <Label>Who are you booking for?</Label>
                 <RadioGroup name="bookingFor" value={bookingFor} onValueChange={(value: 'myself' | 'someoneElse') => setBookingFor(value)} className="grid grid-cols-2 gap-4">
-                    <Label htmlFor="myself" className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", bookingFor === 'myself' && "border-accent")}>
+                    <Label htmlFor="myself" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'myself' ? "border-secondary bg-secondary text-secondary-foreground" : "bg-card hover:border-secondary/40 hover:bg-muted")}>
                         <RadioGroupItem value="myself" id="myself" className="sr-only" />
-                        <User className="mb-3 h-6 w-6" />
+                        <User className="h-5 w-5" />
                         Myself
                     </Label>
-                    <Label htmlFor="someoneElse" className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", bookingFor === 'someoneElse' && "border-accent")}>
+                    <Label htmlFor="someoneElse" className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors", bookingFor === 'someoneElse' ? "border-secondary bg-secondary text-secondary-foreground" : "bg-card hover:border-secondary/40 hover:bg-muted")}>
                          <RadioGroupItem value="someoneElse" id="someoneElse" className="sr-only" />
-                        <Users className="mb-3 h-6 w-6" />
+                        <Users className="h-5 w-5" />
                         Someone Else
                     </Label>
                 </RadioGroup>
             </div>
             
-            <Card className="bg-muted/30">
-                <CardHeader className="p-4">
-                    <CardTitle className="text-lg font-semibold">Patient's Information</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 space-y-6">
+            <div className="space-y-6 rounded-xl bg-muted/50 p-4">
                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Full Name</Label>
@@ -337,22 +316,15 @@ export default function BookingPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone Number</Label>
-                          <div className="flex items-center">
-                            <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
-                              +251
-                            </span>
-                            <Input
-                              id="phone"
-                              name="phone"
-                              placeholder="912345678"
-                              value={phoneNumber}
-                              onChange={(e) => setPhoneNumber(e.target.value)}
-                              required
-                              className="rounded-l-none"
-                              readOnly={isMiniApp}
-                            />
-
-                          </div>
+                          <PhoneInput
+                            id="phone"
+                            name="phone"
+                            placeholder="912345678"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            required
+                            readOnly={isMiniApp}
+                          />
                           {state.errors?.phone && <p className="text-sm font-medium text-destructive">{state.errors.phone[0]}</p>}
                         </div>
                     </div>
@@ -376,8 +348,7 @@ export default function BookingPage() {
                             {state.errors?.gender && <p className="text-sm font-medium text-destructive">{state.errors.gender[0]}</p>}
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="symptoms">Symptoms & Concerns (Optional)</Label>
@@ -392,21 +363,14 @@ export default function BookingPage() {
             {!isMiniApp && (
               <div className="space-y-2">
                 <Label htmlFor="paymentPhone">Phone Number for Payment</Label>
-                <div className="flex items-center">
-                  <span className="inline-flex h-10 items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
-                    +251
-                  </span>
-                  <Input
-                    id="paymentPhone"
-                    name="paymentPhone"
-                    type="tel"
-                    placeholder="912345678"
-                    value={paymentPhone}
-                    onChange={(e) => { setPaymentPhoneEdited(true); setPaymentPhone(e.target.value); }}
-                    required
-                    className="rounded-l-none"
-                  />
-                </div>
+                <PhoneInput
+                  id="paymentPhone"
+                  name="paymentPhone"
+                  placeholder="912345678"
+                  value={paymentPhone}
+                  onChange={(e) => { setPaymentPhoneEdited(true); setPaymentPhone(e.target.value); }}
+                  required
+                />
                 <p className="text-xs text-muted-foreground">The number you will pay with on YagoutPay. It can differ from the patient&apos;s number.</p>
                 {(state.errors as Record<string, string[] | undefined> | undefined)?.paymentPhone && (
                   <p className="text-sm font-medium text-destructive">{(state.errors as Record<string, string[]>).paymentPhone[0]}</p>
@@ -415,9 +379,8 @@ export default function BookingPage() {
             )}
             <SubmitButton isMiniApp={isMiniApp} label={isVerifiedForPhone ? 'Proceed to Payment' : undefined} />
           </form>
-        </CardContent>
-      </Card>
-    </div>
+      </PortalCard>
+    </PageShell>
   );
 }
 

@@ -1,11 +1,12 @@
 
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { Hospital as HospitalIcon } from 'lucide-react';
+import { Hospital as HospitalIcon, MapPin } from 'lucide-react';
 import type { Doctor } from '@/lib/definitions';
 import { getHospitalData } from './actions';
 import HospitalDoctorsList from '@/components/patient-portal/hospital-doctors-list';
 import HospitalMapDisplay from '@/components/patient-portal/hospital-map-display';
+import { PageShell, isExternalImage } from '@/components/patient-portal/ui';
 
 export default async function HospitalDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,35 +17,31 @@ export default async function HospitalDetailsPage({ params }: { params: Promise<
   if (!hospital) {
     notFound();
   }
-  
+
   return (
     <div className="flex flex-col">
-        <div className="relative h-48 w-full bg-muted">
-          {hospital.imageUrl ? (
-            <Image
-              src={hospital.imageUrl}
-              alt={hospital.name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <HospitalIcon className="w-16 h-16 text-muted-foreground" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-           <div className="absolute bottom-0 left-0 p-4">
-                <h1 className="font-headline text-3xl font-bold text-foreground shadow-black/50 text-shadow-lg">
-                  {hospital.name}
-                </h1>
-                <p className="text-md font-semibold text-foreground/90 shadow-black/50 text-shadow">
-                  {hospital.city}
-                </p>
-            </div>
+      <div className="relative h-56 w-full overflow-hidden rounded-b-[2rem] bg-gradient-to-br from-[hsl(var(--primary-foreground))] via-[hsl(28_38%_28%)] to-secondary sm:h-72">
+        {hospital.imageUrl ? (
+          <Image
+            src={hospital.imageUrl}
+            alt={hospital.name}
+            fill
+            unoptimized={isExternalImage(hospital.imageUrl)}
+            className="object-cover"
+          />
+        ) : (
+          <HospitalIcon aria-hidden className="absolute right-6 top-6 h-28 w-28 text-white/[0.08]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 text-white">
+          <h1 className="font-headline text-2xl font-bold tracking-tight sm:text-3xl">{hospital.name}</h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85">
+            <MapPin className="h-4 w-4" /> {hospital.city}
+          </p>
         </div>
-        
-      <div className="p-4 space-y-6">
-        {/* Hospital Location and Map */}
+      </div>
+
+      <PageShell>
         <HospitalMapDisplay
           latitude={(hospital as any).latitude}
           longitude={(hospital as any).longitude}
@@ -55,13 +52,12 @@ export default async function HospitalDetailsPage({ params }: { params: Promise<
           contactPhone={hospital.contactPhone}
         />
 
-        {/* Doctors List */}
-        <HospitalDoctorsList 
+        <HospitalDoctorsList
           hospitalId={hospitalId}
-          doctors={doctors as Doctor[]} 
-          specialties={specialties} 
+          doctors={doctors as Doctor[]}
+          specialties={specialties}
         />
-      </div>
+      </PageShell>
     </div>
   );
 }

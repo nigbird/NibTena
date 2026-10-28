@@ -5,8 +5,7 @@ import { useState, useEffect, useMemo, Suspense, useContext } from 'react';
 import Link from 'next/link';
 import { getMyAppointments, getMyAppointmentsForMiniApp } from './actions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, FileX } from 'lucide-react';
+import { CalendarX2 } from 'lucide-react';
 import AppointmentCard from '@/components/patient-portal/appointment-card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,9 +13,23 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import PatientAuth from './PatientAuth';
 import { PatientContext } from '@/context/PatientContext';
 import { getMiniAppCookie } from './server-utils';
+import { EmptyState, PageShell, SearchField, SegmentedControl, ctaClass } from '@/components/patient-portal/ui';
 
 const appointmentStatuses = ['upcoming', 'completed', 'cancelled'] as const;
 type AppointmentStatusFilter = (typeof appointmentStatuses)[number];
+
+function AppointmentsSkeleton() {
+  return (
+    <PageShell size="medium">
+      <Skeleton className="h-11 w-full rounded-xl" />
+      <Skeleton className="h-11 w-full rounded-xl" />
+      <div className="space-y-3">
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+      </div>
+    </PageShell>
+  );
+}
 
 function AppointmentsContent() {
   const router = useRouter();
@@ -40,7 +53,7 @@ function AppointmentsContent() {
   useEffect(() => {
     setIsAuthenticated(!!patient || isMiniApp);
   }, [patient, isMiniApp]);
-  
+
   const fetchData = async (isMini: boolean = false) => {
     setIsLoading(true);
     try {
@@ -107,28 +120,25 @@ function AppointmentsContent() {
     }
     return filtered.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
   }, [appointments, activeFilter, searchTerm]);
-  
+
   if (!isAuthenticated && !isMiniApp) {
     return <PatientAuth />;
   }
-  
+
   if (isLoading) {
-    return (
-       <div className="p-4 space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <div className="space-y-4 pt-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-       </div>
-    );
+    return <AppointmentsSkeleton />;
   }
 
-  const renderContent = () => {
-    if (filteredAppointments.length > 0) {
-      return (
-        <div className="space-y-4">
+  return (
+    <PageShell size="medium" className="space-y-4">
+      <SearchField
+        placeholder="Search by doctor, hospital or date..."
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+      />
+      <SegmentedControl options={appointmentStatuses} value={activeFilter} onChange={setActiveFilter} />
+      {filteredAppointments.length > 0 ? (
+        <div className="space-y-3">
           {filteredAppointments.map(appointment => (
             <AppointmentCard
               key={appointment.id}
@@ -140,57 +150,25 @@ function AppointmentsContent() {
             />
           ))}
         </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
-        <FileX className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-xl font-semibold font-headline">
-          No Appointments Found
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You don’t have any {activeFilter} appointments.
-        </p>
-        <Button asChild className="mt-6" variant="accent">
-          <Link href="/user/doctors">Book an Appointment</Link>
-        </Button>
-      </div>
-    );
-  };
-
-  return (
-    <div className="p-4 space-y-4">
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by doctor, hospital or date..."
-          className="w-full appearance-none bg-background pl-8"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+      ) : (
+        <EmptyState
+          icon={CalendarX2}
+          title="No appointments found"
+          description={`You don’t have any ${activeFilter} appointments.`}
+          action={
+            <Button asChild variant="accent" className={ctaClass}>
+              <Link href="/user/doctors">Book an Appointment</Link>
+            </Button>
+          }
         />
-      </div>
-      <div className="flex items-center gap-2">
-        {appointmentStatuses.map(status => (
-          <Button
-            key={status}
-            variant={activeFilter === status ? 'accent' : 'outline'}
-            onClick={() => setActiveFilter(status)}
-            className="capitalize flex-1"
-          >
-            {status}
-          </Button>
-        ))}
-      </div>
-      {renderContent()}
-    </div>
+      )}
+    </PageShell>
   );
 }
 
 export default function MyAppointmentsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<AppointmentsSkeleton />}>
       <AppointmentsContent />
     </Suspense>
   );

@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Doctor, Hospital } from '@/lib/definitions';
 import { addDays, format, startOfToday } from 'date-fns';
-import { Hospital as HospitalIcon, Clock, Loader2, Calendar } from 'lucide-react';
+import { Hospital as HospitalIcon, Clock, Loader2, Calendar, CalendarDays } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { FilterChip, ctaClass } from '@/components/patient-portal/ui';
 
 import { getAvailableTimeWindows } from './actions';
 
@@ -17,6 +18,15 @@ type DoctorBookingProps = {
   doctorHospitals: (Pick<Hospital, 'id' | 'name'> & { bookingWindow?: number | null })[];
   searchParams?: { [key: string]: string | string[] | undefined };
 };
+
+function StepLabel({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
+  return (
+    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+      <Icon className="h-4 w-4 text-secondary" />
+      {children}
+    </h3>
+  );
+}
 
 export default function DoctorBooking({
   doctor,
@@ -27,7 +37,7 @@ export default function DoctorBooking({
 
   const getInitialHospitalId = () => {
     const hospitalIdParam = searchParams?.hospitalId;
-    return hospitalIdParam 
+    return hospitalIdParam
       ? Number(hospitalIdParam)
       : (doctorHospitals[0]?.id);
   }
@@ -73,37 +83,38 @@ export default function DoctorBooking({
       router.push(`/user/book/${doctor.id}?${params.toString()}`);
     }
   };
-  
+
   const renderTimeSelection = () => {
     if (isLoadingSchedule) {
         return (
-            <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">Finding available windows...</p>
+            <div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">Finding available times...</p>
             </div>
         );
     }
     if (timeWindows.length === 0) {
         return (
-             <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg text-center p-4">
-                <Calendar className="h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 font-semibold">No available slots</p>
-                <p className="text-sm text-muted-foreground">There are no bookable time windows for this day. Please select another date.</p>
+             <div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed p-4 text-center">
+                <Calendar className="h-6 w-6 text-muted-foreground" />
+                <p className="mt-2 text-sm font-semibold">No available times</p>
+                <p className="text-sm text-muted-foreground">Please select another date.</p>
             </div>
         );
     }
-    
+
     return (
-       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {timeWindows.map((window, i) => (
             <button
                 key={i}
+                type="button"
                 onClick={() => setSelectedSlot(window)}
                 className={cn(
-                    'px-3 py-2 rounded-full text-xs font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105',
+                    'rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors',
                     selectedSlot === window
-                    ? 'bg-primary text-secondary'
-                    : 'bg-background text-foreground'
+                    ? 'border-secondary bg-secondary text-secondary-foreground'
+                    : 'bg-card hover:border-secondary/40 hover:bg-muted'
                 )}
             >
                 {window}
@@ -114,75 +125,65 @@ export default function DoctorBooking({
   }
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="space-y-6">
+        {doctorHospitals.length > 1 && (
+            <div>
+                <StepLabel icon={HospitalIcon}>Select hospital</StepLabel>
+                <Carousel opts={{align: 'start', dragFree: true}} className="w-full">
+                  <CarouselContent className="-ml-2">
+                    {doctorHospitals.map((hospital) => (
+                      <CarouselItem key={hospital.id} className="basis-auto pl-2">
+                        <FilterChip
+                          active={selectedHospitalId === hospital.id}
+                          onClick={() => setSelectedHospitalId(hospital.id)}
+                        >
+                          {hospital.name}
+                        </FilterChip>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+            </div>
+        )}
+
         <div>
-            {doctorHospitals.length > 1 && (
-                 <div className="space-y-3">
-                    <h3 className="font-medium text-lg text-foreground/80 flex items-center gap-2">
-                        <HospitalIcon className="h-5 w-5" />
-                        Select Hospital
-                    </h3>
-                    <Carousel opts={{align: 'start', dragFree: true}} className="w-full">
-                      <CarouselContent className="-ml-2">
-                        {doctorHospitals.map((hospital) => (
-                          <CarouselItem key={hospital.id} className="basis-auto pl-2">
-                            <button
-                              onClick={() => setSelectedHospitalId(hospital.id)}
-                              className={cn(
-                                'px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors',
-                                selectedHospitalId === hospital.id
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-card hover:bg-muted/50 border-border'
-                              )}
-                            >
-                              {hospital.name}
-                            </button>
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                    </Carousel>
-                </div>
-            )}
+            <StepLabel icon={CalendarDays}>Select date</StepLabel>
+            <Carousel opts={{align: 'start'}} className="w-full sm:px-8">
+              <CarouselContent className="-ml-2">
+                {dates.map((date, index) => {
+                  const isSelected = selectedDate.toDateString() === date.toDateString();
+                  return (
+                    <CarouselItem key={index} className="basis-[22%] pl-2 sm:basis-[18%] md:basis-[15%]">
+                      <button
+                          type="button"
+                          onClick={() => setSelectedDate(date)}
+                          className={cn(
+                          'flex h-20 w-full flex-col items-center justify-center rounded-xl border transition-colors',
+                          isSelected
+                              ? 'border-secondary bg-secondary text-secondary-foreground'
+                              : 'bg-card hover:border-secondary/40 hover:bg-muted'
+                          )}
+                      >
+                          <span className={cn('text-xs font-medium', !isSelected && 'text-muted-foreground')}>{format(date, 'EEE')}</span>
+                          <span className="text-xl font-bold">{format(date, 'd')}</span>
+                          <span className={cn('text-[11px]', !isSelected && 'text-muted-foreground')}>{format(date, 'MMM')}</span>
+                      </button>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              <CarouselPrevious className="-left-1 hidden h-8 w-8 sm:flex" />
+              <CarouselNext className="-right-1 hidden h-8 w-8 sm:flex" />
+            </Carousel>
         </div>
 
         <div>
-            <h3 className="font-medium text-lg text-foreground/80 mb-3">Select Date</h3>
-            <Carousel opts={{align: 'start'}} className="w-full">
-              <CarouselContent className="-ml-2">
-                {dates.map((date, index) => (
-                  <CarouselItem key={index} className="basis-[22%] sm:basis-[18%] md:basis-[15%] pl-2">
-                    <button
-                        onClick={() => setSelectedDate(date)}
-                        className={cn(
-                        'flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 w-full h-24 transition-colors',
-                        selectedDate.toDateString() === date.toDateString()
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-card hover:bg-muted/50 border-border'
-                        )}
-                    >
-                        <span className="text-xs md:text-sm font-semibold">{format(date, 'EEE')}</span>
-                        <span className="text-xl md:text-2xl font-bold">{format(date, 'd')}</span>
-                        <span className="text-[10px] md:text-xs">{format(date, 'MMM')}</span>
-                    </button>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-[-10px] hidden sm:flex" />
-              <CarouselNext className="right-[-10px] hidden sm:flex"/>
-            </Carousel>
+            <StepLabel icon={Clock}>Available times for {format(selectedDate, 'MMMM d')}</StepLabel>
+            {renderTimeSelection()}
         </div>
-      
-        <div>
-            <h3 className="font-medium text-lg text-foreground/80 mb-3 flex items-center gap-2">
-                <Clock className="h-5 w-5"/>
-                Available Windows for {format(selectedDate, 'MMMM d')}
-            </h3>
-             {renderTimeSelection()}
-        </div>
-      
+
       <Button
-        size="lg"
-        className="w-full font-bold text-base md:text-lg h-12"
+        className={cn(ctaClass, 'w-full text-base')}
         onClick={handleBookNow}
         disabled={!selectedHospitalId || !selectedDate || !selectedSlot}
         variant="accent"

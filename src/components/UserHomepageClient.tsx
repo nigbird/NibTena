@@ -17,6 +17,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import Autoplay from "embla-carousel-autoplay";
 import { type ImagePlaceholder } from '@/lib/placeholder-images';
 import { PatientContext } from '@/context/PatientContext';
+import { HospitalCard } from '@/components/patient-portal/ui';
 
 const actionIcons: { [key: string]: React.ElementType } = {
   Hospital: Hospital,
@@ -304,44 +305,14 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
         </div>
         <Carousel
           setApi={setHospitalApi}
-          opts={{ align: 'start', loop: true }}
+          opts={{ align: 'start' }}
           plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
           className="w-full"
         >
           <CarouselContent className="-ml-3 px-4">
             {topHospitals.map(hospital => (
               <CarouselItem key={hospital.id} className="basis-[85%] pl-3 sm:basis-1/2 lg:basis-1/3">
-                <Link href={`/user/hospitals/${hospital.id}`} className="group block h-full">
-                  <Card className="flex h-full flex-col overflow-hidden rounded-2xl border-0 shadow-sm ring-1 ring-border transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg">
-                    <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                      {hospital.imageUrl ? (
-                        <Image
-                          src={hospital.imageUrl}
-                          alt={hospital.name}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/40 to-primary/10">
-                          <Hospital className="h-12 w-12 text-secondary/60" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                      <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur">
-                        <MapPin className="h-3 w-3 text-secondary" /> {hospital.city}
-                      </span>
-                    </div>
-                    <CardContent className="flex flex-grow items-center justify-between gap-3 p-4">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-headline font-bold">{hospital.name}</h3>
-                        <p className="text-sm text-muted-foreground">Multi-specialty care</p>
-                      </div>
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/30 text-secondary transition-colors group-hover:bg-secondary group-hover:text-secondary-foreground">
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <HospitalCard hospital={hospital} />
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -357,7 +328,7 @@ export default function UserHomepageClient({ heroImage, quickActions, topHospita
         </div>
         <Carousel
           setApi={setDoctorApi}
-          opts={{ align: 'start', loop: true }}
+          opts={{ align: 'start' }}
           plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
           className="w-full"
         >

@@ -9,10 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Input } from '@/components/ui/input';
+import { SearchField, filterTriggerClass } from '@/components/patient-portal/ui';
 
 type DoctorSearchProps = {
   specialties: string[];
@@ -39,13 +38,13 @@ export default function DoctorSearch({
     } else {
       current.set('specialty', selectedSpecialty);
     }
-    
+
     if (debouncedQuery) {
         current.set('q', debouncedQuery);
     } else {
         current.delete('q');
     }
-    
+
     current.set('page', '1');
 
     const search = current.toString();
@@ -55,19 +54,14 @@ export default function DoctorSearch({
   }, [selectedSpecialty, debouncedQuery, router, searchParams]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-      <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by name..."
-          className="w-full h-11 pl-10 rounded-lg"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_240px]">
+      <SearchField
+        placeholder="Search doctors or hospitals..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
       <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
-        <SelectTrigger className="w-full h-11 text-base rounded-lg">
+        <SelectTrigger className={filterTriggerClass}>
           <SelectValue placeholder="Filter by specialty..." />
         </SelectTrigger>
         <SelectContent>

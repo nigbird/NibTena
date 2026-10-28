@@ -4,7 +4,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { User } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import BottomNavbar from '@/components/bottom-navbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -102,38 +102,29 @@ export default function UserLayoutClient({
                  </div>
               </div>
           ) : (
-            <>
+            <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4">
               {!hasMiniAppSession && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="group ml-4"
+                  className="-ml-2 h-9 w-9 shrink-0 rounded-full text-secondary hover:bg-primary/30 hover:text-secondary"
                   onClick={() => router.back()}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="h-6 w-6 fill-secondary transition-colors duration-200 group-hover:fill-primary"
-                    aria-hidden="true"
-                  >
-                    <path d="M10.78 19.03a.75.75 0 0 1-1.06 0l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 1 1 1.06 1.06L4.81 11.5h14.44a.75.75 0 0 1 0 1.5H4.81l5.97 5.97a.75.75 0 0 1 0 1.06Z" />
-                  </svg>
+                  <ArrowLeft className="h-5 w-5" />
                   <span className="sr-only">Back</span>
                 </Button>
               )}
-              <div className="container flex items-center justify-between flex-1">
-                <h1 className="font-headline text-xl font-bold text-foreground">
-                  {pageTitle}
-                </h1>
-                <div className="ml-auto flex items-center gap-2">
-                  {showLoginButton && (
-                    <Button asChild variant="accent" size="sm">
-                      <Link href="/user/profile">Login</Link>
-                    </Button>
-                  )}
-                </div>
+              <h1 className="truncate font-headline text-lg font-bold tracking-tight text-foreground">
+                {pageTitle}
+              </h1>
+              <div className="ml-auto flex items-center gap-2">
+                {showLoginButton && (
+                  <Button asChild variant="accent" size="sm" className="rounded-full px-5">
+                    <Link href="/user/profile">Login</Link>
+                  </Button>
+                )}
               </div>
-            </>
+            </div>
           )}
         </div>
       </header>

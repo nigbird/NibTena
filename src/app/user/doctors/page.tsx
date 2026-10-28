@@ -1,12 +1,8 @@
 
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { User, Hospital as HospitalIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Stethoscope } from 'lucide-react';
 import DoctorSearch from './DoctorSearch';
+import { DoctorRow, EmptyState, PageShell } from '@/components/patient-portal/ui';
 
 async function getDoctorsWithHospitals() {
   const doctors = await prisma.doctor.findMany({
@@ -49,57 +45,18 @@ async function getSpecialties() {
         .sort();
 }
 
-type DoctorWithHospital = Awaited<ReturnType<typeof getDoctorsWithHospitals>>[number];
-
-function DoctorCard({ doctor }: { doctor: DoctorWithHospital }) {
-  const hospital = doctor.hospitals[0]?.hospital;
-
-  return (
-    <Card className="flex items-start p-4 gap-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-       <Avatar className="h-20 w-20 border-2 border-primary/20">
-          {doctor.imageUrl ? (
-            <AvatarImage src={doctor.imageUrl} alt={doctor.name} />
-          ) : null}
-          <AvatarFallback>
-            <User />
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 space-y-1.5">
-            <h3 className="font-bold text-lg">{doctor.name}</h3>
-            <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="border-0 bg-primary/20 text-secondary font-medium px-3 py-1 text-sm"
-                  style={{ color: 'hsl(var(--secondary))', backgroundColor: 'hsla(var(--primary), 0.2)' }}
-                  >
-                  {doctor.specialty}
-                </Badge>
-            </div>
-            {hospital && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
-                <HospitalIcon className="h-4 w-4" />
-                <span>{hospital.name}</span>
-            </div>
-            )}
-        </div>
-        <Button asChild size="sm" variant="primary" className="self-center rounded-lg text-primary-foreground font-semibold hover:bg-primary/90">
-            <Link href={`/user/doctors/${doctor.id}`}>View Profile</Link>
-        </Button>
-    </Card>
-  );
-}
-
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     specialty?: string;
     q?: string;
-  };
+  }>;
 }) {
-  const specialtyQuery = searchParams?.specialty;
-  const nameQuery = searchParams?.q;
+  const resolvedSearchParams = await searchParams;
+  const specialtyQuery = resolvedSearchParams?.specialty;
+  const nameQuery = resolvedSearchParams?.q;
 
   const [allDoctors, specialties] = await Promise.all([
     getDoctorsWithHospitals(),
@@ -111,42 +68,46 @@ export default async function SearchPage({
   if (specialtyQuery && specialtyQuery !== 'all') {
     filteredDoctors = filteredDoctors.filter((doc) => doc.specialty === specialtyQuery);
   }
-  
+
   if (nameQuery) {
-     filteredDoctors = filteredDoctors.filter((doc) => 
-        doc.name.toLowerCase().includes(nameQuery.toLowerCase()) || 
+     filteredDoctors = filteredDoctors.filter((doc) =>
+        doc.name.toLowerCase().includes(nameQuery.toLowerCase()) ||
         doc.hospitals.some(h => h.hospital.name.toLowerCase().includes(nameQuery.toLowerCase()))
      );
   }
 
 
   return (
-    <>
-      <div className="p-4 space-y-8">
-        <DoctorSearch 
-            specialties={specialties} 
-            initialSpecialty={specialtyQuery} 
-            initialQuery={nameQuery}
-        />
+    <PageShell>
+      <DoctorSearch
+          specialties={specialties}
+          initialSpecialty={specialtyQuery}
+          initialQuery={nameQuery}
+      />
 
-        {filteredDoctors.length > 0 ? (
-            <div className="space-y-4">
+      {filteredDoctors.length > 0 ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {filteredDoctors.length} {filteredDoctors.length === 1 ? 'doctor' : 'doctors'}
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {filteredDoctors.map((doctor) => (
-                <DoctorCard key={doctor.id} doctor={doctor} />
+              <DoctorRow
+                key={doctor.id}
+                doctor={doctor}
+                href={`/user/doctors/${doctor.id}`}
+                hospitalName={doctor.hospitals[0]?.hospital.name}
+              />
             ))}
-            </div>
-        ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center mt-12">
-            <User className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-xl font-semibold font-headline">
-                No Doctors Found
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-                Try adjusting your search or filter.
-            </p>
-            </div>
-        )}
-      </div>
-    </>
+          </div>
+        </>
+      ) : (
+        <EmptyState
+          icon={Stethoscope}
+          title="No doctors found"
+          description="Try adjusting your search or specialty filter."
+        />
+      )}
+    </PageShell>
   );
 }

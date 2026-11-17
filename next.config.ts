@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
   // location picker mounts. StrictMode never runs in production, so this only
   // affects local dev. See https://github.com/PaulLeCam/react-leaflet/issues/1133
   reactStrictMode: false,
+  // OpenTelemetry Node SDK is loaded from src/instrumentation.node.ts; keep it
+  // (and pino) out of the server bundle so Node resolves them at runtime.
+  serverExternalPackages: [
+    '@opentelemetry/sdk-node',
+    '@opentelemetry/auto-instrumentations-node',
+    'pino',
+  ],
   typescript: {
     ignoreBuildErrors: true,
   },
